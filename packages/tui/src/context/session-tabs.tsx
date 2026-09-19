@@ -246,9 +246,9 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
       })
     })
 
-    // Load lightweight session and location metadata concurrently so persisted tabs can resolve
-    // their project and branch labels. Delay the heavier per-tab data so the visible session keeps
-    // the first connection slots and switches still render from a warm cache.
+    // Retained tabs may hydrate sessions, but only the selected (or launch) Location may
+    // prefetch Location-scoped data: acquiring an inactive Location also starts its MCP.
+    const activeLocation = createMemo(() => locationKey(location.ref ?? data.location.default()))
     const openTabSessions = createMemo(() =>
       state()
         .tabs.map((tab) => tab.sessionID)
@@ -261,6 +261,7 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
       const signature = openTabSessions()
       if (signature === "") return
       const sessionIDs = signature.split("\n")
+      activeLocation()
       let stale = false
       void (async () => {
         await Promise.allSettled(sessionIDs.map((sessionID) => data.session.sync(sessionID, { children: true })))
@@ -268,7 +269,7 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
         const locations = new Map(
           sessionIDs
             .map((sessionID) => data.session.get(sessionID)?.location)
-            .filter((location) => location !== undefined)
+            .filter((location) => location !== undefined && locationKey(location) === activeLocation())
             .map((location) => [locationKey(location), location]),
         )
         await Promise.allSettled(
@@ -283,11 +284,13 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
           .filter((sessionID) => sessionID !== current())
         for (const sessionID of sessions) {
           if (stale) return
+          const target = data.session.get(sessionID)?.location
           await Promise.allSettled([
             data.session.message.sync(sessionID),
             data.session.pending.sync(sessionID),
-            data.session.permission.sync(sessionID),
-            data.session.form.sync(sessionID),
+            ...(target && locationKey(target) === activeLocation()
+              ? [data.session.permission.sync(sessionID), data.session.form.sync(sessionID)]
+              : []),
           ])
         }
       }, TAB_PREFETCH_DELAY)
@@ -300,6 +303,11 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
     onCleanup(
       event.on("session.moved", (evt) => {
         if (!enabled() || !state().tabs.some((tab) => tab.sessionID === root(evt.data.sessionID))) return
+        if (
+          !(route.data.type === "session" && route.data.sessionID === evt.data.sessionID) &&
+          locationKey(evt.data.location) !== activeLocation()
+        )
+          return
         void Promise.allSettled([data.location.syncInfo(evt.data.location), data.location.vcs.sync(evt.data.location)])
       }),
     )

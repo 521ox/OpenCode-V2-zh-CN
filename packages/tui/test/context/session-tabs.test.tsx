@@ -8,7 +8,7 @@ import { ConfigProvider, useConfig } from "../../src/config"
 import { I18nProvider } from "../../src/context/i18n"
 import { ClientProvider, useClient } from "../../src/context/client"
 import { DataProvider, useData } from "../../src/context/data"
-import { LocationProvider } from "../../src/context/location"
+import { LocationProvider, useLocation } from "../../src/context/location"
 import { RouteProvider, useRoute } from "../../src/context/route"
 import { TuiAppProvider } from "../../src/context/runtime"
 import { SessionTabsProvider, useSessionTabs } from "../../src/context/session-tabs"
@@ -70,10 +70,15 @@ async function renderSessionTabs(
   const viewWatermarks: number[] = []
   const locations: string[] = []
   const vcsLocations: string[] = []
+  const requests: URL[] = []
   const sessionTimes = Object.fromEntries(
     Object.entries(options?.sessionTimes ?? {}).map(([sessionID, time]) => [sessionID, { ...time }]),
   )
   const calls = createFetch(async (url, request) => {
+    requests.push(url)
+    if (/^\/api\/session\/[^/]+\/message$/.test(url.pathname)) return json({ data: [], cursor: {} })
+    if (/^\/api\/session\/[^/]+\/inbox$/.test(url.pathname)) return json({ data: [] })
+    if (/^\/api\/session\/[^/]+\/permission$/.test(url.pathname)) return json({ data: [] })
     if (url.pathname === "/api/location") {
       const requested = url.searchParams.get("location[directory]") ?? directory
       locations.push(requested)
@@ -135,6 +140,7 @@ async function renderSessionTabs(
   let data!: ReturnType<typeof useData>
   let storage!: ReturnType<typeof useStorage>
   let config!: ReturnType<typeof useConfig>
+  let location!: ReturnType<typeof useLocation>
   let configuration = {
     locale: "en",
     tabs: { enabled: options?.tabsEnabled ?? true },
@@ -149,6 +155,7 @@ async function renderSessionTabs(
     data = useData()
     storage = useStorage()
     config = useConfig()
+    location = useLocation()
     return <box />
   }
 
@@ -198,6 +205,8 @@ async function renderSessionTabs(
     viewWatermarks,
     locations,
     vcsLocations,
+    requests,
+    location,
     state,
     setSessionTime(sessionID: string, time: { idle?: number; viewed?: number }) {
       sessionTimes[sessionID] = time
@@ -253,17 +262,34 @@ test("loads persisted tab metadata concurrently on connect", async () => {
   }
 })
 
-test("loads VCS metadata for each persisted tab location", async () => {
+test("prefetches only the launch Location while retaining foreign tab hydration", async () => {
   const other = `${directory}/other-worktree`
   const setup = await renderSessionTabs("first", {
     home: true,
     persisted: ["first", "second"],
     sessionDirectories: { second: other },
+    sessionParents: { child: "second" },
   })
 
   try {
-    await wait(() => setup.locations.includes(other))
-    await wait(() => setup.vcsLocations.includes(other))
+    await wait(() => setup.requests.some((url) => url.pathname === "/api/session/second/inbox"))
+    expect(setup.data.session.get("child")).toBeDefined()
+    expect(setup.requests.some((url) => url.pathname === "/api/session/second/message")).toBe(true)
+    expect(setup.locations.filter((value) => value === other)).toHaveLength(0)
+    expect(setup.vcsLocations.filter((value) => value === other)).toHaveLength(0)
+    expect(setup.locations.filter((value) => value === directory).length).toBeGreaterThan(0)
+    expect(setup.vcsLocations.filter((value) => value === directory).length).toBeGreaterThan(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/permission")).toHaveLength(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/form")).toHaveLength(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/first/form")).toHaveLength(1)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/first/permission")).toHaveLength(1)
+    expect(setup.tabs.tabs().map((tab) => tab.sessionID)).toEqual(["first", "second"])
+
+    setup.location.set({ directory: other })
+    await wait(() => setup.requests.some((url) => url.pathname === "/api/session/second/form"))
+    expect(setup.locations.filter((value) => value === other)).toHaveLength(1)
+    expect(setup.vcsLocations.filter((value) => value === other)).toHaveLength(1)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/permission")).toHaveLength(1)
   } finally {
     await setup.destroy()
   }
@@ -280,6 +306,65 @@ test("opens a background tab without changing the current session", async () => 
     expect(setup.tabs.current()).toBe("first")
     setup.tabs.move("background", 0)
     await wait(() => setup.tabs.tabs()[0]?.sessionID === "background")
+  } finally {
+    await setup.destroy()
+  }
+})
+
+test("uses the server launch Location rather than the tab storage cwd", async () => {
+  const launch = `${directory}/server`
+  const setup = await renderSessionTabs("first", {
+    home: true,
+    launchDirectory: launch,
+    persisted: ["first", "second"],
+    sessionDirectories: { first: launch },
+  })
+  try {
+    await wait(() => setup.requests.some((url) => url.pathname === "/api/session/second/inbox"))
+    expect(setup.locations.filter((value) => value === directory)).toHaveLength(0)
+    expect(setup.vcsLocations.filter((value) => value === directory)).toHaveLength(0)
+    expect(setup.locations.filter((value) => value === launch).length).toBeGreaterThan(0)
+    expect(setup.vcsLocations.filter((value) => value === launch).length).toBeGreaterThan(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/form")).toHaveLength(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/first/form")).toHaveLength(1)
+  } finally {
+    await setup.destroy()
+  }
+})
+
+test("does not activate a background move unless its destination is already selected", async () => {
+  const destination = `${directory}/moved-worktree`
+  const setup = await renderSessionTabs("first", { persisted: ["first", "second", "third"] })
+  try {
+    await wait(() => setup.data.session.get("third") !== undefined)
+    setup.emit({
+      id: "evt_background_moved",
+      created: 1,
+      type: "session.moved",
+      durable: { aggregateID: "second", seq: 1, version: 1 },
+      data: { sessionID: "second", location: { directory: destination }, projectID: "project" },
+    })
+    await wait(() => setup.data.session.get("second")?.location.directory === destination)
+    await wait(() => setup.requests.some((url) => url.pathname === "/api/session/third/inbox"))
+    expect(setup.locations.filter((value) => value === destination)).toHaveLength(0)
+    expect(setup.vcsLocations.filter((value) => value === destination)).toHaveLength(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/form")).toHaveLength(0)
+    expect(setup.requests.filter((url) => url.pathname === "/api/session/second/permission")).toHaveLength(0)
+
+    setup.location.set({ directory: destination })
+    await wait(() => setup.vcsLocations.includes(destination))
+    setup.data.location.invalidate({ directory: destination })
+    const before = setup.locations.filter((value) => value === destination).length
+    setup.emit({
+      id: "evt_active_background_moved",
+      created: 2,
+      type: "session.moved",
+      durable: { aggregateID: "third", seq: 1, version: 1 },
+      data: { sessionID: "third", location: { directory: destination }, projectID: "project" },
+    })
+    await wait(() => setup.locations.filter((value) => value === destination).length > before)
+    expect(setup.tabs.current()).toBe("first")
+    expect(setup.tabs.tabs().map((tab) => tab.sessionID)).toEqual(["first", "second", "third"])
   } finally {
     await setup.destroy()
   }
@@ -306,6 +391,30 @@ test("loads location metadata when an open session moves", async () => {
     await wait(() => setup.data.session.get("first")?.location.directory === destination)
     await wait(() => setup.locations.includes(destination))
     await wait(() => setup.vcsLocations.includes(destination))
+  } finally {
+    await setup.destroy()
+  }
+})
+
+test("does not treat a background child move as the viewed root moving", async () => {
+  const destination = `${directory}/child-worktree`
+  const setup = await renderSessionTabs("root", {
+    persisted: ["root"],
+    sessionParents: { child: "root" },
+  })
+  try {
+    await wait(() => setup.data.session.get("child") !== undefined)
+    setup.emit({
+      id: "evt_child_moved",
+      created: 1,
+      type: "session.moved",
+      durable: { aggregateID: "child", seq: 1, version: 1 },
+      data: { sessionID: "child", location: { directory: destination }, projectID: "project" },
+    })
+    await wait(() => setup.data.session.get("child")?.location.directory === destination)
+    expect(setup.locations.filter((value) => value === destination)).toHaveLength(0)
+    expect(setup.vcsLocations.filter((value) => value === destination)).toHaveLength(0)
+    expect(setup.tabs.current()).toBe("root")
   } finally {
     await setup.destroy()
   }
