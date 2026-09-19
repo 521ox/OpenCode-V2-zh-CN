@@ -261,7 +261,12 @@ export const Plugin = {
                   output.status === "completed"
                     ? `<subagent sessionID="${output.sessionID}" state="completed">\n${output.output}\n</subagent>`
                     : output.output,
-                metadata: { sessionID: output.sessionID, status: output.status },
+                metadata: {
+                  sessionID: output.sessionID,
+                  status: output.status,
+                  // Completed child conclusions must survive the runner's generic output bounding.
+                  ...(output.status === "completed" ? { truncated: false } : {}),
+                },
               })),
             ),
         }),

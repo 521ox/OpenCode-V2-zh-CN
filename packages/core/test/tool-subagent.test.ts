@@ -34,6 +34,7 @@ import { PluginSupervisor } from "@opencode/core/plugin/supervisor"
 import { Permission } from "@opencode/core/permission"
 import { SubagentTool } from "@opencode/core/tool/plugin/subagent"
 import { Tool } from "@opencode/core/tool"
+import { ToolOutput } from "@opencode/core/tool-output"
 import { tmpdir } from "./fixture/tmpdir"
 import { tempGlobalLayer } from "./fixture/global"
 import { offlineModels } from "./fixture/models"
@@ -41,6 +42,10 @@ import { testEffect } from "./lib/effect"
 import { executeTool, registerToolPlugin, toolIdentity } from "./lib/tool"
 
 const childText = "child final response"
+const largeConclusions = [
+  { title: "large bytes", text: "结论".repeat(ToolOutput.MAX_BYTES / 2) },
+  { title: "large lines", text: "line\n".repeat(ToolOutput.MAX_LINES + 1) },
+]
 const completedOutput = (sessionID: Session.ID) =>
   `<subagent sessionID="${sessionID}" state="completed">\n${childText}\n</subagent>`
 const childModel = Model.Ref.make({ id: Model.ID.make("child"), providerID: Provider.ID.make("test") })
@@ -65,37 +70,41 @@ const executionNode = makeGlobalNode({
       const completed = new Set<Session.ID>()
       const complete = Effect.fn("SubagentTest.complete")(function* (sessionID: Session.ID) {
         if (completed.has(sessionID)) return
-        if ((yield* store.get(sessionID))?.title?.includes("fail")) {
+        const session = yield* store.get(sessionID)
+        if (session?.title?.includes("fail")) {
           yield* new SessionRunnerModel.ModelNotSelectedError({ sessionID })
           return
         }
         completed.add(sessionID)
-        const assistantMessageID = SessionMessage.ID.create()
-        yield* bus.publish(SessionEvent.Step.Started, {
-          sessionID,
-          assistantMessageID,
-          agent: Agent.ID.make("reviewer"),
-          model: childModel,
-          started: 0,
-        })
-        yield* bus.publish(SessionEvent.Text.Started, {
-          sessionID,
-          assistantMessageID,
-          ordinal: 0,
-        })
-        yield* bus.publish(SessionEvent.Text.Ended, {
-          sessionID,
-          assistantMessageID,
-          ordinal: 0,
-          text: childText,
-        })
-        yield* bus.publish(SessionEvent.Step.Ended, {
-          sessionID,
-          assistantMessageID,
-          finish: "stop",
-          cost: Money.USD.zero,
-          tokens,
-        })
+        const conclusion = largeConclusions.find((item) => item.title === session?.title)
+        for (const text of conclusion ? ["private child trajectory", conclusion.text] : [childText]) {
+          const assistantMessageID = SessionMessage.ID.create()
+          yield* bus.publish(SessionEvent.Step.Started, {
+            sessionID,
+            assistantMessageID,
+            agent: Agent.ID.make("reviewer"),
+            model: childModel,
+            started: 0,
+          })
+          yield* bus.publish(SessionEvent.Text.Started, {
+            sessionID,
+            assistantMessageID,
+            ordinal: 0,
+          })
+          yield* bus.publish(SessionEvent.Text.Ended, {
+            sessionID,
+            assistantMessageID,
+            ordinal: 0,
+            text,
+          })
+          yield* bus.publish(SessionEvent.Step.Ended, {
+            sessionID,
+            assistantMessageID,
+            finish: "stop",
+            cost: Money.USD.zero,
+            tokens,
+          })
+        }
       })
       return SessionExecution.Service.of({
         active: Effect.succeed(new Set()),
@@ -123,6 +132,7 @@ const nodes = LayerNode.group([
   Session.node,
   SessionExecution.node,
   LocationServiceMap.node,
+  ToolOutput.node,
 ])
 const replacements = [
   SessionExecution.node.replace(executionNode),
@@ -191,6 +201,83 @@ const withSubagent = (location: Location.Ref) =>
   })
 
 describe("SubagentTool", () => {
+  for (const conclusion of largeConclusions) {
+    for (const background of [false, true]) {
+      it.live(`preserves ${conclusion.title} final text in ${background ? "background" : "foreground"}`, () =>
+        Effect.acquireRelease(
+          Effect.promise(() => tmpdir()),
+          (dir) => Effect.promise(() => dir[Symbol.asyncDispose]()),
+        ).pipe(
+          Effect.flatMap((dir) =>
+            Effect.gen(function* () {
+              const sessions = yield* Session.Service
+              const parent = yield* sessions.create({
+                location: Location.Ref.make({ directory: AbsolutePath.make(dir.path) }),
+                model: parentModel,
+              })
+              yield* withSubagent(parent.location)
+              const locations = yield* LocationServiceMap.Service
+              const registry = yield* Tool.Service.pipe(Effect.provide(locations.get(parent.location)))
+              const toolOutput = yield* ToolOutput.Service.pipe(Effect.provide(locations.get(parent.location)))
+              const bus = yield* Bus.Service
+              const admitted = yield* bus.subscribe(SessionEvent.InboxEnqueued).pipe(
+                Stream.filter((event) => event.data.sessionID === parent.id && event.data.item.type === "synthetic"),
+                Stream.take(1),
+                Stream.runCollect,
+                Effect.forkScoped({ startImmediately: true }),
+              )
+              const tools = yield* registry.snapshot()
+              const result = yield* tools.execute({
+                sessionID: parent.id,
+                ...toolIdentity,
+                call: {
+                  type: "tool-call",
+                  id: "call-large-conclusion",
+                  name: SubagentTool.name,
+                  input: { agent: "reviewer", description: conclusion.title, prompt: "review", background },
+                },
+              })
+              const childID = outputSessionID(result.metadata)
+              // Exercise the same generic output seam used by SessionStep, not just the producer.
+              const bounded = yield* toolOutput.truncate(result)
+              if (!background) {
+                expect(bounded.content).toEqual([
+                  {
+                    type: "text",
+                    text: `<subagent sessionID="${childID}" state="completed">\n${conclusion.text}\n</subagent>`,
+                  },
+                ])
+                expect(bounded.metadata).toEqual({ sessionID: childID, status: "completed", truncated: false })
+              }
+              if (background) {
+                expect(result.metadata).toEqual({ sessionID: childID, status: "running" })
+                const admission = Array.from(yield* Fiber.join(admitted))[0]
+                if (admission?.data.item.type !== "synthetic") return yield* Effect.die("Expected synthetic inbox item")
+                const expected = `<subagent sessionID="${childID}" state="completed" description="${conclusion.title}">\n${conclusion.text}\n</subagent>`
+                expect(admission.data.item.payload.text).toBe(expected)
+                const database = yield* Database.Service
+                yield* SessionInbox.promote(database.db, bus, parent.id, "steer")
+                const messages = (yield* sessions.context(parent.id)).filter((message) => message.type === "synthetic")
+                expect(messages).toHaveLength(1)
+                expect(messages[0]?.text).toBe(expected)
+              }
+              // Ordinary tool results with the same oversized text still take the bounded path.
+              const ordinary = yield* toolOutput.truncate({
+                output: conclusion.text,
+                content: [{ type: "text", text: conclusion.text }],
+              })
+              expect(ordinary.metadata?.truncated).toBe(true)
+              expect(ordinary.metadata?.outputPath).toBeString()
+              expect(ordinary.content).not.toEqual([{ type: "text", text: conclusion.text }])
+              const child = yield* sessions.context(childID)
+              expect(child.filter((message) => message.type === "assistant")).toHaveLength(2)
+            }),
+          ),
+        ),
+      )
+    }
+  }
+
   completionIt.live("admits one durable completion across live delivery and restart replay", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -377,6 +464,7 @@ describe("SubagentTool", () => {
           expect(settled.metadata).toEqual({
             sessionID: outputSessionID(settled.metadata),
             status: "completed",
+            truncated: false,
           })
           expect((yield* sessions.get(outputSessionID(settled.metadata))).parentID).toBe(parent.id)
         }),
@@ -418,7 +506,7 @@ describe("SubagentTool", () => {
           })
           const child = yield* sessions.get(outputSessionID(settled.metadata))
           expect(settled.content).toEqual([{ type: "text", text: completedOutput(child.id) }])
-          expect(settled.metadata).toEqual({ sessionID: child.id, status: "completed" })
+          expect(settled.metadata).toEqual({ sessionID: child.id, status: "completed", truncated: false })
           expect(progress[0]).toEqual({ sessionID: child.id, status: "running" })
           expect(child).toMatchObject({
             parentID: parent.id,
