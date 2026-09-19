@@ -7,8 +7,22 @@ The integration branch `sync-v2-20260920` merges official V2 commit
 `f3482291c4b0828ee4debbbf9d32f76afbfce1bd`. The upstream increment contains
 17 commits from the original baseline below and moves source manifests to2.0.10.
 The existing13 functional-history commits and immutable .4 checkpoint remain in
-ancestry. This section records the source integration; final binary acceptance
-and delivery are separate checks.
+ancestry. The clean integration/build commit is
+`0713018a2da5bc7d0b2a239209eb951d19923a15`, with those exact two parents.
+
+Candidate `2.0.10-custom-lite.20260920.1`, channel `latest`, passed its full Windows
+bytecode/WebUI build and isolated default-old-database/API/WebUI/owned-service
+shutdown smoke. It is 205,134,848 bytes, SHA256
+`4160b8eb740989d3a3cd2b82fe62a18c51398cb2989906ebfb9a8ad08c2eff1f`, with embedded
+Bun `1.4.2+744846f84`. Independent integrated review approved the exact source and
+artifact with the scoped residuals below. No source repair or rebuild was required
+by the review.
+
+Local acceptance tag `custom-lite-2.0.10-20260920.1` identifies the integrated
+source plus documentation-only acceptance updates. Adjacent export metadata records
+the build commit separately from that final documentation tip. Timestamped export
+and matching root mirror follow `CUSTOMIZATIONS.md`; the installed fixed-name
+executable, existing backup and live state are not replaced by this workflow.
 
 The only textual merge conflict was the notification listener. Its resolution
 keeps runtime Chinese/English translation and adopts the official session-scoped
@@ -48,7 +62,7 @@ invalid-URI underline or certify old unfinished sidecar state.
   of this local checkpoint.
 - Product behavior and non-goals: `CUSTOMIZATIONS.md`.
 
-The accepted Windows artifact is `2.0.9-custom-lite.20260919.4`, channel `latest`,
+The original accepted Windows artifact is `2.0.9-custom-lite.20260919.4`, channel `latest`,
 203,094,528 bytes, SHA256
 `6a8123b5962633f138b5e9e0615d309e8544731649f7f94d3f5784dee652294b`.
 Its runtime is Bun `1.4.2+744846f84`; the full build includes bytecode and WebUI.

@@ -1,6 +1,8 @@
 # Minimal Custom V2 Distribution
 
-Status: the seven-capability baseline and the three separately authorized upstream-bug repairs passed their bounded integrated reviews with deferred risks. A subsequent manual-upgrade report identified a build-channel error in candidate `2.0.9-custom-lite.20260919.1`; that `local`-channel artifact must not be used as the established distribution's in-place replacement. Corrected candidate `2.0.9-custom-lite.20260919.2` uses `latest` and passes isolated populated-old-database/default-path and completed-transcript checks; its bounded build/export re-review is approved with deferred risks. This is not full legacy-state or production-migration approval. No installed executable or live state is changed by this worktree.
+Status: candidate `2.0.10-custom-lite.20260920.1` integrates the frozen official V2 target `dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c` on the accepted `.4` customization checkpoint. Its focused checks, affected typechecks, full Windows build and isolated default-old-database/API/WebUI smoke passed; independent integrated review approved it with deferred risks. See `UPSTREAM_SYNC.md` for exact provenance and maintenance history. Local acceptance does not activate the installed executable or change live state.
+
+The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 
 This branch starts from official OpenCode V2 source. It keeps the official model
 protocols, remote compaction and recovery policy, Session lifecycle, background
