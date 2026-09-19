@@ -2059,9 +2059,6 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
   const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
-  const renderer = useRenderer()
-  const { navigate } = useRoute()
-  const [hover, setHover] = createSignal(false)
   const metadata = () => (props.message.type === "synthetic" ? props.message.metadata : undefined)
   const source = () => stringValue(metadata()?.source)
   const completion = () => source() === "subagent" || source() === "shell"
@@ -2086,13 +2083,6 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
     return state() ?? t("session.finished")
   }
   const heading = () => `${state() === "completed" ? "↳" : "!"} ${actor()} ${status()}`
-  const suffix = () => Locale.truncateWidth(` · ${description()}`, Math.max(0, ctx.width - 3 - stringWidth(heading())))
-  const color = () => {
-    if (state() === "error") return theme.text.feedback.error.base
-    if (state() === "cancelled") return theme.text.feedback.warning.base
-    if (hover() && childID()) return theme.text.base
-    return theme.text.feedback.info.base
-  }
   return (
     <Show
       when={completion()}
@@ -2102,22 +2092,83 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
         </InlineToolRow>
       }
     >
+      <SessionNoticeCompletionRow
+        childID={childID()}
+        heading={heading()}
+        description={description()}
+        state={state()}
+        width={ctx.width}
+      />
+    </Show>
+  )
+}
+
+export function SessionNoticeCompletionRow(props: {
+  childID?: string
+  heading: string
+  description: string
+  state?: string
+  width: number
+}) {
+  const theme = useTheme()
+  const renderer = useRenderer()
+  const route = useRoute()
+  const [headingHover, setHeadingHover] = createSignal(false)
+  const [titleHover, setTitleHover] = createSignal(false)
+  const width = () => Math.max(0, props.width - 3)
+  const heading = () => Locale.truncateWidth(props.heading, width())
+  const available = () => Math.max(0, width() - stringWidth(heading()))
+  const separator = () => Locale.truncateWidth(" · ", available())
+  const title = () => Locale.truncateWidth(props.description, Math.max(0, available() - stringWidth(separator())))
+  const titleLink = () => Boolean(props.childID && props.description.trim() && title().trim())
+  const color = () => {
+    if (props.state === "error") return theme.text.feedback.error.base
+    if (props.state === "cancelled") return theme.text.feedback.warning.base
+    if (headingHover() && props.childID) return theme.text.base
+    return theme.text.feedback.info.base
+  }
+  const navigate = () => {
+    if (!props.childID || renderer.getSelection()?.getSelectedText()) return
+    route.navigate({ type: "session", sessionID: props.childID })
+  }
+  return (
+    <box marginLeft={3} width={width()} flexDirection="row">
       <box
-        marginLeft={3}
-        onMouseOver={() => childID() && setHover(true)}
-        onMouseOut={() => setHover(false)}
-        onMouseUp={() => {
-          if (renderer.getSelection()?.getSelectedText()) return
-          const id = childID()
-          if (id) navigate({ type: "session", sessionID: id })
-        }}
+        width={stringWidth(heading())}
+        flexShrink={0}
+        onMouseOver={() => props.childID && setHeadingHover(true)}
+        onMouseOut={() => setHeadingHover(false)}
+        onMouseUp={navigate}
       >
-        <text wrapMode="none">
-          <span style={{ fg: color() }}>{heading()}</span>
-          <span style={{ fg: theme.text.muted }}>{suffix()}</span>
+        <text wrapMode="none" fg={color()}>
+          {heading()}
         </text>
       </box>
-    </Show>
+      <text wrapMode="none" fg={theme.text.muted} flexShrink={0}>
+        {separator()}
+      </text>
+      <box
+        width={stringWidth(title())}
+        flexShrink={0}
+        onMouseOver={() => titleLink() && setTitleHover(true)}
+        onMouseOut={() => setTitleHover(false)}
+        onMouseUp={() => titleLink() && navigate()}
+      >
+        <text
+          wrapMode="none"
+          attributes={titleLink() && titleHover() ? TextAttributes.BOLD | TextAttributes.UNDERLINE : undefined}
+          fg={
+            titleLink()
+              ? titleHover()
+                ? theme.text.action.primary.hovered
+                : theme.text.action.primary.base
+              : theme.text.muted
+          }
+        >
+          {title()}
+        </text>
+      </box>
+    </box>
   )
 }
 

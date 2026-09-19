@@ -82,7 +82,7 @@ test.each([40, 120])("shell completion notices do not navigate at width %s", asy
     if (url.pathname === `/api/session/${session.id}/permission`) return json({ data: [] })
     return undefined
   }, createEventStream())
-  const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
   const { run } = await import("../src/app")
   const task = Effect.runPromise(
     run({
@@ -113,12 +113,13 @@ test.each([40, 120])("shell completion notices do not navigate at width %s", asy
       const lines = setup.captureCharFrame().split("\n")
       const y = lines.findIndex((line) => line.includes(notice.label))
       expect(y).toBeGreaterThanOrEqual(0)
-      const x = lines[y].indexOf(notice.label)
-      await setup.mockMouse.click(x + 1, y)
-      await setup.waitForVisualIdle()
-      expect(scroll.scrollTop).toBe(before)
-      expect(setup.renderer.currentFocusedRenderable?.id).toBe(scroll.id)
-      expect(setup.captureCharFrame()).toContain(notice.label)
+      for (const x of [lines[y].indexOf(notice.label) + 1, lines[y].indexOf(" · ") + 3]) {
+        await setup.mockMouse.click(x, y)
+        await setup.waitForVisualIdle()
+        expect(scroll.scrollTop).toBe(before)
+        expect(setup.renderer.currentFocusedRenderable?.id).toBe(scroll.id)
+        expect(setup.captureCharFrame()).toContain(notice.label)
+      }
     }
   } finally {
     setup.renderer.destroy()
@@ -127,7 +128,12 @@ test.each([40, 120])("shell completion notices do not navigate at width %s", asy
   }
 })
 
-test.each([40, 120])("subagent completion notices navigate to the child session at width %s", async (width) => {
+test.each([
+  [40, "heading"],
+  [120, "heading"],
+  [40, "title"],
+  [120, "title"],
+] as const)("subagent completion notices navigate to the child session at width %s via %s", async (width, target) => {
   await using state = await tmpdir()
   const setup = await createTestRenderer({ width, height: 20, useThread: false, kittyKeyboard: true })
   setup.renderer.start()
@@ -163,7 +169,7 @@ test.each([40, 120])("subagent completion notices navigate to the child session 
     if (url.pathname.endsWith("/inbox") || url.pathname.endsWith("/permission")) return json({ data: [] })
     return undefined
   }, createEventStream())
-  const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
   const { run } = await import("../src/app")
   const task = Effect.runPromise(
     run({
@@ -184,7 +190,8 @@ test.each([40, 120])("subagent completion notices navigate to the child session 
     await setup.waitForVisualIdle()
     const lines = setup.captureCharFrame().split("\n")
     const y = lines.findIndex((line) => line.includes("General finished"))
-    const x = lines[y].indexOf("General finished")
+    const x = lines[y].indexOf(target === "title" ? "Diagnose" : "General finished")
+    expect(x).toBeGreaterThanOrEqual(0)
     await setup.mockMouse.click(x + 1, y)
     await setup.waitForFrame((frame) => frame.includes("Investigate authentication"))
   } finally {
