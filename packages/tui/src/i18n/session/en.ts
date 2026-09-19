@@ -213,6 +213,8 @@ export default {
   "session.backgroundHintAfter": " to move running work to the background",
   "session.steps": "{{count}} steps",
   "session.explored": "Explored — {{tools}}",
+  "session.executionsFinished": "Executions finished — {{count}} calls",
+  "session.executionsRunning": "Executing — {{count}} calls",
   "session.exploring": "Exploring — {{tools}}",
   "session.error": "Error: {{error}}",
   "session.interrupted": "interrupted",

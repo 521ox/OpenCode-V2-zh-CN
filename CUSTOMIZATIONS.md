@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: candidate `2.0.10-custom-lite.20260920.1` integrates the frozen official V2 target `dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c` on the accepted `.4` customization checkpoint. Its focused checks, affected typechecks, full Windows build and isolated default-old-database/API/WebUI smoke passed; independent integrated review approved it with deferred risks. See `UPSTREAM_SYNC.md` for exact provenance and maintenance history. Local acceptance does not activate the installed executable or change live state.
+Status: this branch builds on the accepted `2.0.10-custom-lite.20260920.1` synchronization of official V2 target `dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c`, with subsequent TUI-only direct-execution collections described below. See `UPSTREAM_SYNC.md` for synchronization provenance and the adjacent `.exe.build.json` for each Windows candidate's exact source and verification. Source changes and local acceptance do not activate the installed executable or change live state.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 
@@ -45,6 +45,23 @@ it. Dragging to select text does not collapse the block. Reopening preserves
 the displayed input and output; errors remain visible while details are collapsed.
 Unknown generic tools retain their existing inline, heading-only interaction.
 This UI integration does not change model-facing tool descriptions or execution.
+
+Consecutive `direct_exec` calls use a separate execution collection when the
+existing `session.grouping` setting is `auto`. Two or more adjacent calls collapse
+under one neutral execution-count heading; a singleton or `grouping: "none"`
+retains the individual native block. Existing visible text, reasoning, other-tool
+and footer boundaries still separate collections. Execution groups are not
+classified as read-only exploration and never reorder permission-blocked calls.
+
+Expanding the collection renders the original tool blocks and their existing
+detail controls. Collapsing it retains running/streaming calls, tool errors,
+reported nonzero exit codes and pending approvals in their original order. The
+heading follows actual tool states, not a later message boundary; "finished"
+does not assert success. Selection protection applies to both the collection
+heading and individual blocks. Unknown exit metadata is not inferred as failure.
+Grouping does not rewrite stored messages, alter exports or add output pruning;
+existing tool output limits and the separate `environment_tools` display remain
+unchanged.
 
 ### Simplified Chinese and English chrome
 

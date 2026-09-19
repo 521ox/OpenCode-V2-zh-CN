@@ -18,13 +18,13 @@ export type SessionEntry =
   | { type: "assistant-footer"; messageID: string }
   | { type: "turn-usage"; messageIDs: string[]; previousCache?: CacheUsage }
 
-type GroupKind = "reasoning" | "exploration"
+type GroupKind = "reasoning" | "exploration" | "execution"
 type SessionGroup = {
   type: "group"
   children: readonly GroupNode<SessionEntry, GroupKind>[]
   size: number
   completed: boolean
-} & ({ kind: "reasoning" } | { kind: "exploration"; pending: PartRef[] })
+} & ({ kind: "reasoning" | "execution" } | { kind: "exploration"; pending: PartRef[] })
 
 export type SessionRow = SessionEntry | SessionGroup
 
@@ -55,7 +55,7 @@ export function projectEntries(entries: ProjectionEntry[]): SessionRow[] {
             child.entry.part.time?.completed !== undefined,
         ))
     const group = { ...node, children: node.children.map(unwrap), completed }
-    return node.kind === "reasoning" ? { ...group, kind: "reasoning" } : { ...group, kind: "exploration", pending: [] }
+    return node.kind === "exploration" ? { ...group, kind: "exploration", pending: [] } : { ...group, kind: node.kind }
   })
 }
 
@@ -66,6 +66,7 @@ function unwrap(node: GroupNode<ProjectionEntry, GroupKind>): GroupNode<SessionE
 
 function partPath(part: AppendPart): readonly GroupKind[] {
   if (part.type === "reasoning") return ["reasoning"]
+  if (part.type === "tool" && part.name === "direct_exec") return ["execution"]
   if (part.type === "tool" && ["read", "glob", "grep"].includes(part.name.toLowerCase())) return ["exploration"]
   return []
 }
@@ -97,7 +98,9 @@ export function append(rows: SessionRow[], ref: PartRef, part: AppendPart, index
     0,
     node.kind === "reasoning"
       ? { ...node, kind: "reasoning", completed: part.type === "reasoning" && part.time?.completed !== undefined }
-      : { ...node, kind: "exploration", pending: [], completed: false },
+      : node.kind === "execution"
+        ? { ...node, kind: "execution", completed: false }
+        : { ...node, kind: "exploration", pending: [], completed: false },
   )
 }
 

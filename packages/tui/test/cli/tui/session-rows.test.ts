@@ -631,6 +631,43 @@ test("places a running compaction barrier before every queued user message", () 
   ])
 })
 
+test("execution projection crosses empty parts and assistant messages, but respects visible boundaries", () => {
+  const call = (id: string): SessionMessageAssistant["content"][number] => ({
+    type: "tool",
+    id,
+    name: "direct_exec",
+    state: pending(),
+    time: { created: 1 },
+  })
+  const rows = reduceSessionRows([
+    assistant("first", [call("reused"), { type: "text", text: " " }, { type: "reasoning", text: " " }]),
+    assistant("second", [
+      call("reused"),
+      { type: "text", text: "Visible boundary" },
+      call("after-text"),
+      { type: "reasoning", text: "Reasoning boundary" },
+      call("after-reasoning"),
+    ]),
+    { ...assistant("footer", []), finish: "stop" },
+    assistant("last", [call("after-footer")]),
+  ])
+  expect(rows.map((row) => (row.type === "group" ? [row.kind, row.size] : row.type))).toEqual([
+    ["execution", 2],
+    "part",
+    ["execution", 1],
+    ["reasoning", 1],
+    ["execution", 1],
+    "assistant-footer",
+    ["execution", 1],
+  ])
+  expect(rows[0]).toMatchObject({
+    children: [
+      { type: "entry", entry: { type: "part", ref: { messageID: "first", partID: "reused" } } },
+      { type: "entry", entry: { type: "part", ref: { messageID: "second", partID: "reused" } } },
+    ],
+  })
+})
+
 function assistant(id: string, content: SessionMessageAssistant["content"]): SessionMessageAssistant {
   return {
     type: "assistant",

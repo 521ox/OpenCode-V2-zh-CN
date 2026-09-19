@@ -1469,6 +1469,9 @@ function SessionRowView(props: SessionRowViewProps) {
             />
           )}
         </Match>
+        <Match when={props.row.type === "group" && props.row.kind === "execution" ? props.row : undefined}>
+          {(row) => <SessionExecutionGroupView refs={groupRefs(row())} message={props.message} />}
+        </Match>
         <Match when={props.row.type === "assistant-footer" ? props.row : undefined}>
           {(row) => (
             <Show when={props.message(row().messageID)}>
@@ -1965,6 +1968,72 @@ function SessionGroupView(props: {
         <ToolImages parts={grouped()} />
         <For each={pending()}>{(part) => <ToolPart part={part} />}</For>
       </Show>
+    </Show>
+  )
+}
+
+function SessionExecutionGroupView(props: {
+  refs: PartRef[]
+  message: (messageID: string) => SessionMessageInfo | undefined
+}) {
+  const { t } = useI18n()
+  const theme = useTheme()
+  const ctx = use()
+  const data = useData()
+  const renderer = useRenderer()
+  const [expanded, setExpanded] = createSignal(false)
+  const [hover, setHover] = createSignal(false)
+  const parts = createMemo(() =>
+    props.refs.flatMap((ref) => {
+      const message = props.message(ref.messageID)
+      if (message?.type !== "assistant") return []
+      const part = resolvePart(message, ref.partID)
+      return part?.type === "tool" ? [part] : []
+    }),
+  )
+  // A row boundary closes adjacency, not an in-flight execution.
+  const finished = createMemo(() =>
+    parts().every((part) => part.state.status === "completed" || part.state.status === "error"),
+  )
+  const pending = createMemo(
+    () =>
+      new Set(
+        (data.session.permission.list(ctx.sessionID) ?? []).flatMap((request) =>
+          request.source?.type === "tool" ? [request.source.id] : [],
+        ),
+      ),
+  )
+  const visible = createMemo(() =>
+    parts().filter((part) => {
+      if (expanded() || part.state.status !== "completed" || pending().has(part.id)) return true
+      const code = finiteNumber(toolDisplayMetadata(part.state).exitCode)
+      return code !== undefined && code !== 0
+    }),
+  )
+  const label = createMemo(() =>
+    t(finished() ? "session.executionsFinished" : "session.executionsRunning", { count: parts().length }),
+  )
+  return (
+    <Show
+      when={ctx.groupExploration() && parts().length > 1}
+      fallback={<For each={parts()}>{(part) => <ToolPart part={part} />}</For>}
+    >
+      <InlineToolRow
+        icon={finished() ? "→" : "✱"}
+        color={hover() ? theme.text.base : theme.text.muted}
+        complete={finished()}
+        pending={label()}
+        spinner={!finished()}
+        onMouseOver={() => setHover(true)}
+        onMouseOut={() => setHover(false)}
+        onMouseUp={() => {
+          if (renderer.getSelection()?.getSelectedText()) return
+          setExpanded((value) => !value)
+        }}
+      >
+        {label()}
+      </InlineToolRow>
+      <For each={visible()}>{(part) => <ToolPart part={part} />}</For>
     </Show>
   )
 }

@@ -213,6 +213,8 @@ export default {
   "session.backgroundHintAfter": " 将正在运行的工作转入后台",
   "session.steps": "{{count}} 个步骤",
   "session.explored": "探索完成 — {{tools}}",
+  "session.executionsFinished": "执行已结束 — {{count}} 次调用",
+  "session.executionsRunning": "执行中 — {{count}} 次调用",
   "session.exploring": "探索中 — {{tools}}",
   "session.error": "错误：{{error}}",
   "session.interrupted": "已中断",
