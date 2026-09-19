@@ -2633,6 +2633,9 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       <Match when={display() === "skill"}>
         <Skill {...toolprops} />
       </Match>
+      <Match when={display() === "environment_tools" || display() === "direct_exec"}>
+        <NativeTool {...toolprops} />
+      </Match>
       <Match when={true}>
         <GenericTool {...toolprops} />
       </Match>
@@ -2729,8 +2732,6 @@ type ToolProps = {
   part: SessionMessageAssistantTool
 }
 function GenericTool(props: ToolProps) {
-  const { t } = useI18n()
-  const theme = useTheme()
   const output = createMemo(() => props.output?.trim() ?? "")
   const input = createMemo(() => Object.entries(props.input))
   const [expanded, setExpanded] = createSignal(false)
@@ -2751,31 +2752,62 @@ function GenericTool(props: ToolProps) {
       </InlineTool>
       <Show when={expanded()}>
         <box paddingLeft={3 + INLINE_TOOL_ICON_WIDTH}>
-          <For each={input()}>
-            {([key, value]) => (
-              <box flexDirection="row">
-                <text flexShrink={0} fg={theme.text.muted}>
-                  {key}:{" "}
-                </text>
-                <text flexGrow={1} wrapMode="word" fg={theme.text.base}>
-                  {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-                </text>
-              </box>
-            )}
-          </For>
-          <Show when={output()}>
-            {(value) => (
-              <box flexDirection="row">
-                <text flexShrink={0} fg={theme.text.muted}>
-                  {t("session.output")}:{" "}
-                </text>
-                <text flexGrow={1} fg={theme.text.base} wrapMode="word">
-                  {value()}
-                </text>
-              </box>
-            )}
-          </Show>
+          <ToolDetails input={input()} output={output()} />
         </box>
+      </Show>
+    </>
+  )
+}
+
+function NativeTool(props: ToolProps) {
+  const output = createMemo(() => props.output?.trim() ?? "")
+  const input = createMemo(() => Object.entries(props.input))
+  const [expanded, setExpanded] = createSignal(false)
+  const expandable = createMemo(() => input().length > 0 || output().length > 0)
+  const loading = createMemo(() => props.part.state.status === "streaming" || props.part.state.status === "running")
+
+  return (
+    <BlockTool
+      title={genericToolSummary(props.tool, props.input)}
+      part={props.part}
+      spinner={loading()}
+      onClick={expandable() ? () => setExpanded((value) => !value) : undefined}
+    >
+      <Show when={expanded()}>
+        <ToolDetails input={input()} output={output()} />
+      </Show>
+    </BlockTool>
+  )
+}
+
+function ToolDetails(props: { input: [string, unknown][]; output: string }) {
+  const { t } = useI18n()
+  const theme = useTheme()
+  return (
+    <>
+      <For each={props.input}>
+        {([key, value]) => (
+          <box flexDirection="row">
+            <text flexShrink={0} fg={theme.text.muted}>
+              {key}:{" "}
+            </text>
+            <text flexGrow={1} wrapMode="word" fg={theme.text.base}>
+              {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+            </text>
+          </box>
+        )}
+      </For>
+      <Show when={props.output}>
+        {(value) => (
+          <box flexDirection="row">
+            <text flexShrink={0} fg={theme.text.muted}>
+              {t("session.output")}:{" "}
+            </text>
+            <text flexGrow={1} fg={theme.text.base} wrapMode="word">
+              {value()}
+            </text>
+          </box>
+        )}
       </Show>
     </>
   )
@@ -3752,6 +3784,8 @@ function stringValue(value: unknown) {
 }
 
 const toolDisplays = new Set([
+  "environment_tools",
+  "direct_exec",
   "shell",
   "glob",
   "read",
