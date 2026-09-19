@@ -102,6 +102,11 @@ export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
 
 export interface Interface {
   readonly close: Effect.Effect<void>
+  /** Noninteractive authorization for provider-selected searches, not a local tool invocation. */
+  readonly preauthorizeHostedSearch: (input: {
+    readonly sessionID: SessionSchema.ID
+    readonly agent: Agent.ID
+  }) => Effect.Effect<Permission.Effect, SessionErrors.NotFoundError>
   readonly ask: (input: AssertInput) => Effect.Effect<AskResult, SessionErrors.NotFoundError>
   readonly assert: (input: AssertInput) => Effect.Effect<void, Error | SessionErrors.NotFoundError>
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
@@ -118,7 +123,7 @@ interface Pending {
   readonly deferred: Deferred.Deferred<void, DeclinedError | CorrectedError>
 }
 
-const layer = Layer.effect(
+export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
@@ -186,6 +191,34 @@ const layer = Layer.effect(
         effect,
       })
       return { effect: event.effect, message: event.message, rules: all }
+    })
+
+    const preauthorizeHostedSearch = Effect.fn("Permission.preauthorizeHostedSearch")(function* (input: {
+      readonly sessionID: SessionSchema.ID
+      readonly agent: Agent.ID
+    }) {
+      if (closed) return "deny" as const
+      const rules = yield* configured(input.sessionID, input.agent)
+      const agent = yield* agents.resolve(input.agent)
+      // A provider chooses queries after dispatch. Prove blanket permission rather than
+      // evaluating the literal string "*", which would miss query-specific restrictions.
+      const unrestricted = (rules: Permission.Ruleset): Permission.Effect => {
+        const matching = rules.filter((rule) => Wildcard.match("websearch", rule.action))
+        const index = matching.findLastIndex((rule) => rule.resource === "*")
+        if (index < 0) return "ask"
+        const effects = matching.slice(index).map((rule) => rule.effect)
+        if (effects.includes("deny")) return "deny"
+        return effects.includes("ask") ? "ask" : "allow"
+      }
+      const agentEffect = unrestricted(agent?.permissions ?? missingAgentPermissions)
+      if (agentEffect !== "allow") return agentEffect
+      const configuredEffect = unrestricted(rules)
+      if (configuredEffect !== "allow") return configuredEffect
+      // Provider-selected queries have no local tool source. Only Core-owned hooks
+      // with a live blanket-policy adapter can authorize them; unknown hooks block.
+      const savedEffect = unrestricted([...rules, ...(yield* savedRules())])
+      if (savedEffect !== "allow") return savedEffect
+      return (yield* hooks.allowsHostedSearch) ? ("allow" as const) : ("ask" as const)
     })
 
     function request(input: AssertInput, message?: string): Request {
@@ -332,7 +365,7 @@ const layer = Layer.effect(
       return Array.from(pending.values(), (item) => item.request).filter((request) => request.sessionID === sessionID)
     })
 
-    return Service.of({ ask, assert, reply, get, forSession, list, close })
+    return Service.of({ ask, assert, reply, get, forSession, list, close, preauthorizeHostedSearch })
   }),
 )
 

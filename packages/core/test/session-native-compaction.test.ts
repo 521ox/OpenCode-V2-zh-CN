@@ -7,6 +7,7 @@ import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { llmClient } from "@opencode/core/effect/app-node-platform"
 import { Instructions } from "@opencode/core/instructions/index"
+import { Location } from "@opencode/core/location"
 import { NativeCompactionPlugin } from "@opencode/core/plugin/compaction"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Project } from "@opencode/core/project"
@@ -27,6 +28,7 @@ import { SessionStore } from "@opencode/core/session/store"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { DateTime, Deferred, Effect, Fiber, Schema } from "effect"
 import { testEffect } from "./lib/effect"
+import { tempLocationLayer } from "./fixture/location"
 import { host } from "./plugin/host"
 
 const it = testEffect(
@@ -42,7 +44,7 @@ const it = testEffect(
       PluginHooks.node,
       llmClient,
     ]),
-    [Bus.node.replace(Bus.configured({ persist: true }))],
+    [Bus.node.replace(Bus.configured({ persist: true })), Location.node.replace(tempLocationLayer)],
   ),
 )
 

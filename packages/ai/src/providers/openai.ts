@@ -1,7 +1,14 @@
 import { AuthOptions, type ProviderAuthOption } from "../route/auth-options.js"
 import type { Route, RouteDefaultsInput, CompactionOperations } from "../route/client.js"
 import type { ProviderPackage } from "../provider-package.js"
-import { HttpOptions, ProviderID, ToolDefinition, mergeHttpOptions, type ModelID } from "../schema/index.js"
+import {
+  HttpOptions,
+  ProviderID,
+  ToolDefinition,
+  mergeHttpOptions,
+  type LanguageModel,
+  type ModelID,
+} from "../schema/index.js"
 import * as OpenAIChat from "../protocols/openai-chat.js"
 import * as OpenAIResponses from "../protocols/openai-responses.js"
 import { withOpenAIOptions, type OpenAIProviderOptionsInput } from "./openai-options.js"
@@ -13,6 +20,18 @@ export type { OpenAIImageOptions } from "../protocols/openai-images.js"
 export const id = ProviderID.make("openai")
 
 export const routes = [OpenAIResponses.route, OpenAIChat.route]
+
+/** Canonical route capability, not the configurable model.provider label or authorization/entitlement. */
+export const supportsWebSearch = (model: LanguageModel): boolean =>
+  model.route.provider === id && model.route.protocol === OpenAIResponses.protocol.id
+
+export const webSearch = (): ToolDefinition =>
+  ToolDefinition.make({
+    name: "web_search",
+    description: "Search the web using OpenAI's hosted web search tool.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    native: { openai: { type: "web_search" } },
+  })
 
 // This provider facade wraps the lower-level Responses and Chat model factories
 // with OpenAI-specific conveniences: typed options, API-key sugar, env fallback,

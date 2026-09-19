@@ -32,6 +32,11 @@ export const ContextManagement = Schema.Array(
 )
 export type ContextManagement = typeof ContextManagement.Type
 
+const WebSearchTool = Schema.Struct({ type: Schema.Literal("web_search") })
+const decodeWebSearch = ProviderShared.validateWith(
+  Schema.decodeUnknownEffect(Schema.Struct({ openai: WebSearchTool }), { onExcessProperty: "error" }),
+)
+
 const OpenAIResponsesImageGenerationTool = Schema.Struct({
   type: Schema.tag("image_generation"),
   action: Schema.optional(Schema.Literals(["auto", "generate", "edit"])),
@@ -87,12 +92,21 @@ const OpenAIResponsesNamespace = Schema.Struct({
 
 const OpenAIResponsesTools = Schema.Union([
   OpenResponses.Tool,
+  WebSearchTool,
   OpenAIResponsesNamespace,
   OpenAIResponsesImageGenerationTool,
 ])
 
 const OpenAIResponsesToolChoice = Schema.Union([
   OpenResponses.ToolChoice,
+  WebSearchTool,
+  Schema.Struct({
+    type: Schema.Literal("allowed_tools"),
+    mode: Schema.Literals(["auto", "none", "required"]),
+    tools: Schema.Array(
+      Schema.Union([Schema.Struct({ type: Schema.Literal("function"), name: Schema.String }), WebSearchTool]),
+    ),
+  }),
   Schema.Struct({ type: Schema.tag("image_generation") }),
 ])
 
@@ -159,7 +173,16 @@ const nativeImageTool = (tool: ToolDefinition) => {
   return Schema.is(OpenAIResponsesImageGenerationTool)(native) ? native : undefined
 }
 
-const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (tool: ToolDefinition, inputSchema: JsonSchema) {
+const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (
+  tool: ToolDefinition,
+  inputSchema: JsonSchema,
+  request: LLMRequest,
+) {
+  if (ProviderShared.isRecord(tool.native?.openai) && tool.native.openai.type === "web_search") {
+    if (request.model.route.provider !== "openai")
+      return yield* ProviderShared.invalidRequest("Hosted web search requires the native OpenAI Responses provider")
+    return (yield* decodeWebSearch(tool.native)).openai
+  }
   const native = nativeImageToolInput(tool)
   if (native !== undefined) {
     if (Schema.is(OpenAIResponsesImageGenerationTool)(native)) return native
@@ -173,9 +196,10 @@ const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (tool: ToolDe
 const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (
   tool: ToolEntry,
   compatibility: Parameters<typeof ToolSchemaProjection.modelCompatibility>[1],
+  request: LLMRequest,
 ) {
   if (tool.type === "tool")
-    return yield* lowerTool(tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, compatibility))
+    return yield* lowerTool(tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, compatibility), request)
   // OpenAI requires a namespace description; fall back to a generic one so a
   // missing description never blocks the request.
   return {
@@ -194,9 +218,11 @@ const lowerToolChoice = (toolChoice: NonNullable<LLMRequest["toolChoice"]>, tool
     none: () => "none" as const,
     required: () => "required" as const,
     tool: (name) =>
-      tools.some((tool) => tool.type === "tool" && tool.name === name && nativeImageTool(tool) !== undefined)
-        ? ({ type: "image_generation" } as const)
-        : { type: "function" as const, name },
+      tools.some((tool) => tool.type === "tool" && tool.name === name && Schema.is(WebSearchTool)(tool.native?.openai))
+        ? ({ type: "web_search" } as const)
+        : tools.some((tool) => tool.type === "tool" && tool.name === name && nativeImageTool(tool) !== undefined)
+          ? ({ type: "image_generation" } as const)
+          : { type: "function" as const, name },
   })
 
 const decodeBody = ProviderShared.validateWith(Schema.decodeUnknownEffect(OpenAIResponsesBody))
@@ -208,6 +234,7 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
   const options = OpenResponsesOptions.resolve(request)
   const updates = resolveEffortUpdates(request, options.reasoningEffort)
   const toolSchemaCompatibility = request.model.compatibility?.toolSchema
+  const allowed = OpenResponses.allowedToolChoice(request)
   return yield* decodeBody({
     ...(yield* OpenResponses.lowerConversation(updates.request, adapter)),
     ...OpenResponses.lowerGeneration(request, { ...options, reasoningEffort: updates.effort }),
@@ -215,12 +242,25 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
     tools:
       request.tools.length === 0
         ? undefined
-        : yield* Effect.forEach(request.tools, (tool) => lowerToolEntry(tool, toolSchemaCompatibility)),
+        : yield* Effect.forEach(request.tools, (tool) => lowerToolEntry(tool, toolSchemaCompatibility, request)),
     tool_choice:
       request.tools.length === 0
         ? undefined
-        : (OpenResponses.allowedToolChoice(request) ??
-          (request.toolChoice ? yield* lowerToolChoice(request.toolChoice, request.tools) : undefined)),
+        : allowed
+          ? {
+              ...allowed,
+              tools: allowed.tools.map((choice) =>
+                request.tools.some(
+                  (tool) =>
+                    tool.type === "tool" && tool.name === choice.name && Schema.is(WebSearchTool)(tool.native?.openai),
+                )
+                  ? { type: "web_search" as const }
+                  : choice,
+              ),
+            }
+          : request.toolChoice
+            ? yield* lowerToolChoice(request.toolChoice, request.tools)
+            : undefined,
   })
 })
 

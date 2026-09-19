@@ -2,12 +2,17 @@ import { Effect, Schema } from "effect"
 import { Protocol } from "../route/protocol.js"
 import type { LLMRequest } from "../schema/index.js"
 import { OpenResponses } from "./open-responses.js"
-import { JsonObject, optionalNull, ProviderShared } from "./shared.js"
+import { JsonObject, optionalArray, optionalNull, ProviderShared } from "./shared.js"
 import { ResponsesHostedTools } from "./utils/responses-hosted-tools.js"
 import { ResponsesCompaction } from "./utils/responses-compaction.js"
 
 const ADAPTER = "xai-responses"
 const NAME = "xAI Responses"
+
+const WebSearchTool = Schema.Struct({ type: Schema.Literal("web_search") })
+const decodeWebSearch = ProviderShared.validateWith(
+  Schema.decodeUnknownEffect(Schema.Struct({ xai: WebSearchTool }), { onExcessProperty: "error" }),
+)
 
 const XAIResponsesHostedToolItem = Schema.Union([
   Schema.StructWithRest(
@@ -33,6 +38,20 @@ const XAIResponsesHostedToolItem = Schema.Union([
 
 const XAIResponsesBody = Schema.Struct({
   ...OpenResponses.coreFields,
+  tools: optionalArray(Schema.Union([OpenResponses.Tool, WebSearchTool])),
+  tool_choice: Schema.optional(
+    Schema.Union([
+      OpenResponses.ToolChoice,
+      WebSearchTool,
+      Schema.Struct({
+        type: Schema.Literal("allowed_tools"),
+        mode: Schema.Literals(["auto", "none", "required"]),
+        tools: Schema.Array(
+          Schema.Union([Schema.Struct({ type: Schema.Literal("function"), name: Schema.String }), WebSearchTool]),
+        ),
+      }),
+    ]),
+  ),
   input: Schema.Array(Schema.Union([OpenResponses.InputItem, XAIResponsesHostedToolItem])),
   stream: Schema.Literal(true),
 })
@@ -40,6 +59,7 @@ const XAIResponsesBody = Schema.Struct({
 const adapter = {
   id: ADAPTER,
   name: NAME,
+  nativeTool: (native) => decodeWebSearch(native).pipe(Effect.map((value) => value.xai)),
   restoreHostedToolItem: (item: unknown) => (Schema.is(XAIResponsesHostedToolItem)(item) ? item : undefined),
 } satisfies OpenResponses.ProviderAdapter
 
@@ -50,9 +70,31 @@ const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LL
       operation: "in-band-compaction",
       provider: request.model.provider,
       route: request.model.route.id,
-      message: "xAI requires explicit compaction through LLMClient.compact; automatic context management is not supported",
+      message:
+        "xAI requires explicit compaction through LLMClient.compact; automatic context management is not supported",
     })
-  return yield* decodeBody(yield* OpenResponses.fromRequestWithAdapter(request, adapter))
+  const tools = ProviderShared.flattenTools(request.tools)
+  const searches = tools.filter((tool) => Schema.is(WebSearchTool)(tool.native?.xai))
+  if (searches.length > 0 && request.model.route.provider !== "xai")
+    return yield* ProviderShared.invalidRequest("Hosted web search requires the native xAI Responses provider")
+  const body = yield* OpenResponses.fromRequestWithAdapter(request, adapter)
+  const choice = body.tool_choice
+  return yield* decodeBody({
+    ...body,
+    tool_choice:
+      typeof choice !== "object"
+        ? choice
+        : choice.type === "function"
+          ? searches.some((tool) => tool.name === choice.name)
+            ? { type: "web_search" }
+            : choice
+          : {
+              ...choice,
+              tools: choice.tools.map((entry) =>
+                searches.some((tool) => tool.name === entry.name) ? { type: "web_search" } : entry,
+              ),
+            },
+  })
 })
 
 const HOSTED_TOOLS = {

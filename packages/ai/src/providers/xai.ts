@@ -1,7 +1,7 @@
 import { AuthOptions, type ProviderAuthOption } from "../route/auth-options.js"
 import { Route, type RouteDefaultsInput } from "../route/client.js"
 import { Endpoint } from "../route/endpoint.js"
-import { HttpOptions, ProviderID, type ModelID } from "../schema/index.js"
+import { HttpOptions, ProviderID, ToolDefinition, type LanguageModel, type ModelID } from "../schema/index.js"
 import { OpenAIChat } from "../protocols/openai-chat.js"
 import { OpenResponsesChannel } from "../protocols/open-responses-channel.js"
 import { XAIResponses } from "../protocols/xai-responses.js"
@@ -11,6 +11,18 @@ import type { ProviderPackage } from "../provider-package.js"
 
 export const id = ProviderID.make("xai")
 const baseURL = "https://api.x.ai/v1"
+
+/** Canonical route capability, not the configurable model.provider label or authorization/entitlement. */
+export const supportsWebSearch = (model: LanguageModel): boolean =>
+  model.route.provider === id && model.route.protocol === XAIResponses.protocol.id
+
+export const webSearch = (): ToolDefinition =>
+  ToolDefinition.make({
+    name: "web_search",
+    description: "Search the web using xAI's hosted web search tool.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    native: { xai: { type: "web_search" } },
+  })
 
 export type XAIProviderOptionsInput = OpenAIOptionsInput & { readonly contextManagement?: never }
 

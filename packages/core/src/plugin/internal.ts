@@ -90,6 +90,7 @@ import BrowserPlugin from "@opencode/plugin-browser"
 import { CommandPlugin } from "./command.js"
 import { NativeCompactionPlugin } from "./compaction.js"
 import { IdentityPlugin } from "./identity.js"
+import { PluginHooks } from "./hooks.js"
 import { PlanPlugin } from "./plan.js"
 import { ModelsDevPlugin } from "./models-dev.js"
 import { McpCodeModeExclusionPlugin } from "./mcp-codemode-exclusion.js"
@@ -132,6 +133,7 @@ const services = [
   Mcp.Service,
   Npm.Service,
   Permission.Service,
+  PluginHooks.Service,
   Form.Service,
   ReadToolFileSystem.Service,
   Reference.Service,
@@ -184,6 +186,7 @@ export const requirements = LayerNode.group([
   Mcp.node,
   Npm.node,
   Permission.node,
+  PluginHooks.node,
   Form.node,
   ReadToolFileSystem.node,
   Reference.node,

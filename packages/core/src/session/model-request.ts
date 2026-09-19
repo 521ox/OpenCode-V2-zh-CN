@@ -27,6 +27,8 @@ import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { App } from "../app.js"
 import { Permission } from "../permission.js"
+import { WebSearch } from "../websearch.js"
+import { HostedWebSearch } from "./hosted-web-search.js"
 import { PluginHooks } from "../plugin/hooks.js"
 import { QuestionTool } from "../tool/plugin/question.js"
 import { Tool } from "../tool.js"
@@ -199,6 +201,8 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const hooks = yield* PluginHooks.Service
     const transport = yield* SessionModelTransport.Service
+    const permission = yield* Permission.Service
+    const websearch = yield* WebSearch.Service
     const app = yield* App.Metadata
     const store = yield* SessionStore.Service
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
@@ -229,6 +233,17 @@ export const layer = Layer.effect(
           return t ? [[name, { ...t, description: d.description, inputSchema: d.input }] as const] : []
         }),
       )
+      const search = yield* HostedWebSearch.select({
+        kind,
+        model: model.model,
+        sessionID: session.id,
+        agent: input.agent,
+        tools: hooked,
+      }).pipe(
+        Effect.provideService(Permission.Service, permission),
+        Effect.provideService(WebSearch.Service, websearch),
+        Effect.orDie,
+      )
       const entries = Object.entries(shaped.options)
       const generation = Object.fromEntries(entries.filter(([k]) => GENERATION_KEYS.has(k))) as GenerationOptionsFields
       const providerOptions = Object.fromEntries(entries.filter(([k]) => !GENERATION_KEYS.has(k)))
@@ -253,7 +268,10 @@ export const layer = Layer.effect(
             ? [...shaped.system, SystemPart.make(SessionRulesLocation.render(yield* store.rulesLocation(session.id)))]
             : shaped.system,
         messages: boundImages(unsupportedParts(shaped.messages, model.capabilities)),
-        tools: Array.from(hooked, ([name, t]) => ({ ...t, name })),
+        tools: [
+          ...Array.from(search.tools, ([name, t]) => ({ ...t, name })),
+          ...(search.hosted ? [search.hosted] : []),
+        ],
         toolChoice: input.toolChoice,
         generation: Object.keys(generation).length === 0 ? undefined : generation,
         providerOptions: Object.keys(providerOptions).length === 0 ? undefined : providerOptions,
@@ -355,7 +373,7 @@ export const layer = Layer.effect(
         // Permission.assert and the question tool throw declines as defects so tools cannot
         // catch them and turn a "no" into model-visible output. Recover them here as failures.
         executeTool: (call: Parameters<Prepared["executeTool"]>[0]) =>
-          tools.execute({ ...call, definitions: hooked }).pipe(
+          tools.execute({ ...call, definitions: search.tools }).pipe(
             Effect.catchCauseFilter(
               (cause) => {
                 const decline = cause.reasons.flatMap((r) =>
@@ -388,5 +406,5 @@ export const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, SessionModelTransport.node, App.node, SessionStore.node],
+  deps: [PluginHooks.node, SessionModelTransport.node, App.node, SessionStore.node, Permission.node, WebSearch.node],
 })
