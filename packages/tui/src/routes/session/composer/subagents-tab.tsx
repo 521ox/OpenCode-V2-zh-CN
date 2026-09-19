@@ -238,7 +238,7 @@ export function SubagentsTab(props: { sessionID: string }) {
                       wrapMode="none"
                     >
                       {entry.prefix}
-                      {entry.agent}: {entry.title}
+                      {entry.agent}: {entry.title} · {entry.sessionID}
                     </text>
                   </box>
                   <Show when={status()}>
