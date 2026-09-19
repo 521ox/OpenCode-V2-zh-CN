@@ -36,3 +36,7 @@ RELEASE_REVIEW.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# Local Windows candidate delivery mirrors (never the installed executable).
+/opencode2.exe
+/opencode2.exe.build.json
