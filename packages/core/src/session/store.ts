@@ -13,6 +13,7 @@ import { SessionMessage } from "./message.js"
 import { Session } from "@opencode/schema/session"
 import { SessionMessageTable, SessionTable } from "./sql.js"
 import { fromRow } from "./info.js"
+import { SessionRulesLocation } from "./rules-location.js"
 
 const ListInputBase = {
   workspaceID: Workspace.ID.pipe(Schema.optional),
@@ -51,6 +52,7 @@ export type MessagesInput = {
 }
 
 export interface Interface {
+  readonly rulesLocation: (sessionID: Session.ID) => Effect.Effect<SessionRulesLocation.Context>
   readonly get: (sessionID: Session.ID) => Effect.Effect<Session.Info | undefined>
   readonly list: (input?: ListInput) => Effect.Effect<Session.Info[]>
   readonly messages: (input: MessagesInput) => Effect.Effect<SessionMessage.Info[], MessageDecodeError>
@@ -92,6 +94,19 @@ const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     return Service.of({
+      rulesLocation: (sessionID) =>
+        SessionRulesLocation.resolve(sessionID, (id) =>
+          db
+            .select({
+              id: SessionTable.id,
+              parent_id: SessionTable.parent_id,
+              start_directory: SessionTable.start_directory,
+            })
+            .from(SessionTable)
+            .where(eq(SessionTable.id, Session.ID.make(id)))
+            .get()
+            .pipe(Effect.orDie),
+        ),
       get: Effect.fnUntraced(function* (sessionID) {
         const row = yield* db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie)
         return row ? fromRow(row) : undefined

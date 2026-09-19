@@ -37,6 +37,8 @@ import { SessionSchema } from "./schema.js"
 import { SessionSystemPrompt } from "./system-prompt.js"
 import { toLLMMessages } from "./runner/to-llm-message.js"
 import type { SessionMessage } from "./message.js"
+import { SessionStore } from "./store.js"
+import { SessionRulesLocation } from "./rules-location.js"
 
 const IMAGE_BYTES_TRIGGER = 25 * 1024 * 1024 // 25 MiB
 const IMAGE_BYTES_TARGET = 15 * 1024 * 1024 // 15 MiB
@@ -198,6 +200,7 @@ export const layer = Layer.effect(
     const hooks = yield* PluginHooks.Service
     const transport = yield* SessionModelTransport.Service
     const app = yield* App.Metadata
+    const store = yield* SessionStore.Service
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },
     >(kind: SessionRequestKind, input: Input, shape: (draft: SessionRequest, tools: Definitions) => Effect.Effect<S>) {
@@ -245,7 +248,10 @@ export const layer = Layer.effect(
         },
         // TODO: Persist cache lineage so nested forks reuse the root session's cache key.
         promptCacheKey: /^ses_[0-9a-f]{64}$/.test(root) ? root.slice(4) : root,
-        system: shaped.system,
+        system:
+          kind === "primary"
+            ? [...shaped.system, SystemPart.make(SessionRulesLocation.render(yield* store.rulesLocation(session.id)))]
+            : shaped.system,
         messages: boundImages(unsupportedParts(shaped.messages, model.capabilities)),
         tools: Array.from(hooked, ([name, t]) => ({ ...t, name })),
         toolChoice: input.toolChoice,
@@ -382,5 +388,5 @@ export const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, SessionModelTransport.node, App.node],
+  deps: [PluginHooks.node, SessionModelTransport.node, App.node, SessionStore.node],
 })

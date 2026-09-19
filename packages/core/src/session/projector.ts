@@ -24,6 +24,7 @@ import { Project } from "@opencode/schema/project"
 import { AbsolutePath, RelativePath } from "../schema.js"
 import type { SessionSchema } from "./schema.js"
 import { ProjectTable } from "../project/sql.js"
+import { SessionRulesLocation } from "./rules-location.js"
 
 type DatabaseService = Database.Interface["db"]
 type MessageEvent = Exclude<
@@ -155,6 +156,8 @@ const projectFork = Effect.fn("SessionProjector.projectFork")(function* (
       workspace_id: parent.workspace_id,
       slug: Slug.create(),
       directory: parent.directory,
+      // Forked has no creation Location; the source's placement is not a creation fact.
+      start_directory: null,
       path: parent.path,
       title: forkTitle(parent.title ?? undefined),
       agent: parent.agent,
@@ -446,6 +449,7 @@ const layer = Layer.effectDiscard(
             parent_id: event.data.parentID,
             slug: event.data.slug,
             directory: event.data.location.directory,
+            start_directory: SessionRulesLocation.startDirectory(event.data.location.directory),
             path: event.data.subpath,
             title: event.data.title,
             agent: event.data.agent,

@@ -39,6 +39,7 @@ const session = (
   fork_boundary: null,
   slug: "test",
   directory: "/tmp/test",
+  start_directory: null,
   path: null,
   title: "Test",
   version: "1",
