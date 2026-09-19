@@ -5,6 +5,7 @@ export default {
   "feature.notifications.response": "有输入需要回复",
   "feature.notifications.permission": "权限请求需要处理",
   "feature.notifications.failed": "会话失败",
+  "feature.notifications.open": "打开",
   "feature.stats.month.Jan": "1月",
   "feature.stats.month.Feb": "2月",
   "feature.stats.month.Mar": "3月",

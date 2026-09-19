@@ -90,7 +90,7 @@ test("notification listeners read the current locale without resubscription and 
       durable,
       data: { sessionID: "session", error: { type: "unknown", message: "raw $& {{error}}" } },
     })
-    expect(toasts).toEqual([{ title: "会话失败", message: "raw $& {{error}}", variant: "error" }])
+    expect(toasts).toEqual([{ sessionID: "session", title: "会话失败", message: "raw $& {{error}}", variant: "error" }])
     expect(messages[4].message).toBe("raw $& {{error}}")
     expect(subscriptions).toBe(initial)
   } finally {

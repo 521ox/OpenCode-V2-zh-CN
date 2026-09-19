@@ -579,6 +579,33 @@ describe("WebSocket channel execution", () => {
     JSON.stringify({ type: "response.completed", response: { id: "resp_1" } }),
   ]
 
+  it.effect("preserves 1500 synchronous WebSocket frames before consumption", () =>
+    Effect.gen(function* () {
+      class TestSocket extends EventTarget {
+        readyState = globalThis.WebSocket.OPEN
+        send() {}
+        close() {}
+      }
+      const socket = new TestSocket()
+      const connection = yield* Effect.acquireRelease(
+        WebSocketTransport.fromWebSocket(
+          // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- matches the native event surface used by the adapter.
+          socket as unknown as globalThis.WebSocket,
+          { url: "wss://provider.test/responses", headers: Headers.empty },
+        ),
+        (connection) => connection.close,
+      )
+      const burst = Array.from({ length: 1500 }, (_, index) =>
+        JSON.stringify({ type: "response.output_text.delta", item_id: "msg_1", delta: String(index) }),
+      )
+      // Dispatch the entire burst before starting the consumer, as a single socket read can do.
+      for (const frame of burst) socket.dispatchEvent(new MessageEvent("message", { data: frame }))
+
+      const received = yield* connection.messages.pipe(Stream.take(burst.length), Stream.runCollect)
+      expect(Array.from(received)).toEqual(burst)
+    }),
+  )
+
   it.effect("preserves close reasons and native event causes without fabricated HTTP metadata", () =>
     Effect.gen(function* () {
       class TestSocket extends EventTarget {

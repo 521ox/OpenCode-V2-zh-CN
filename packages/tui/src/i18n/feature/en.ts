@@ -3,6 +3,7 @@ export default {
   "feature.notifications.response": "Input needs response",
   "feature.notifications.permission": "Permission needs input",
   "feature.notifications.failed": "Session failed",
+  "feature.notifications.open": "Open",
   "feature.stats.month.Jan": "Jan",
   "feature.stats.month.Feb": "Feb",
   "feature.stats.month.Mar": "Mar",

@@ -75,13 +75,12 @@ export default function Notifications(t: Translator<Key>) {
           }
           errored.add(sessionID)
           notify(context, sessionID, event.data.error.message, "error")
-          const route = context.ui.router.current()
-          if (route.type === "session" && route.sessionID === sessionID)
-            context.ui.toast.show({
-              title: t("feature.notifications.failed"),
-              message: event.data.error.message,
-              variant: "error",
-            })
+          context.ui.toast.show({
+            sessionID,
+            title: t("feature.notifications.failed"),
+            message: event.data.error.message,
+            variant: "error",
+          })
           ended(sessionID)
         }),
       ]

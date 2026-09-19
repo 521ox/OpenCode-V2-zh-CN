@@ -22,6 +22,7 @@ import { useStorage } from "../context/storage"
 import { useSessionTabs } from "../context/session-tabs"
 import { useOptionalPanel } from "../context/panel"
 import { abbreviateHome } from "../util/path-format"
+import { useI18n } from "../context/i18n"
 
 export type Dispose = () => Promise<void>
 
@@ -70,6 +71,7 @@ export function usePluginHost() {
     storage: useStorage(),
     sessionTabs: useSessionTabs(),
     panel: useOptionalPanel(),
+    i18n: useI18n(),
   }
 }
 
@@ -95,7 +97,30 @@ export function createPluginContext(input: {
   const dialogApi = createDialogApi(host.dialog, provide)
   const toastApi: Toast = {
     show(options) {
-      host.toast.show({ ...options, variant: options.variant ?? "info" })
+      const toast = {
+        title: options.title,
+        message: options.message,
+        variant: options.variant ?? "info",
+        duration: options.duration,
+      }
+      const sessionID = options.sessionID
+      if (sessionID === undefined) {
+        host.toast.show(toast)
+        return
+      }
+      const route = host.route.data
+      if (route.type === "session" && host.data.session.root(route.sessionID) === host.data.session.root(sessionID)) {
+        host.toast.show(toast)
+        return
+      }
+      host.toast.show({
+        ...toast,
+        title: toast.title ?? host.data.session.get(sessionID)?.title,
+        action: {
+          label: host.i18n.t("feature.notifications.open"),
+          run: () => host.route.navigate({ type: "session", sessionID }),
+        },
+      })
     },
   }
   // Unregistering after deactivation is a no-op: deactivate already resets

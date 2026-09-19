@@ -1,6 +1,43 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## Recorded baseline and delivery
+## September 20 synchronization
+
+The integration branch `sync-v2-20260920` merges official V2 commit
+`dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c` into the accepted custom checkpoint
+`f3482291c4b0828ee4debbbf9d32f76afbfce1bd`. The upstream increment contains
+17 commits from the original baseline below and moves source manifests to2.0.10.
+The existing13 functional-history commits and immutable .4 checkpoint remain in
+ancestry. This section records the source integration; final binary acceptance
+and delivery are separate checks.
+
+The only textual merge conflict was the notification listener. Its resolution
+keeps runtime Chinese/English translation and adopts the official session-scoped
+toast route. New mention-kind labels and the toast Open action are localized using
+the existing dictionaries. Official mention layout, removal of MCP-resource
+autocomplete candidates, and the question-form focused-action token are retained.
+No separate routing or translation framework was introduced.
+
+The upstream Responses error extraction, skill/MCP Session-permission discovery,
+model-catalog refresh and Code Mode Headers changes are integrated. WebSocket
+inbound queues now follow upstream's unbounded buffering: burst regressions cover
+ordered delivery but do not establish a long-running memory bound or backpressure.
+Two additional regressions cover the actual AI WebSocket adapter's1500-frame burst
+and Session permission narrowing through the real SessionContext owner.
+
+Focused source verification passed715 distinct cases across46 files. Affected
+AI, CodeMode, Core, Plugin, TUI, CLI, Session UI and App typechecks passed. The new
+Core test's required discovery flags were corrected after its initial typecheck
+failure. Windows' text-form checkout of the App type-declaration symlink was
+restored as a real symlink for verification; this is not a product source patch.
+All integration-owned files passed scoped format/lint checks. Full repository
+checks and browser end-to-end suites are not claimed by those scoped results.
+
+Startup-delay repair, changing the default shared-service lifetime, and continuing
+parent notifications after a child is reactivated by a later background Shell
+remain explicitly deferred. This sync does not claim to fix the intermittent
+invalid-URI underline or certify old unfinished sidecar state.
+
+## Original baseline and delivery
 
 - Custom branch: `v2-custom-lite`.
 - Official source baseline: `417f6d234d8d3e810c0bd72cd2ef52ad95fe2413`.
