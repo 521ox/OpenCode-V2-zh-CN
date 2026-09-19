@@ -146,14 +146,15 @@ function formRequestOptions(sessionID: string, ref?: LocationRef) {
 function createSync() {
   // `started` is false while a reload waits for the load it replaces. Invalidations that land in
   // that window are already covered, since the reload has not read anything yet.
-  type Pending = { promise: Promise<void>; invalidated: boolean; started: boolean }
+  type Pending = { promise: Promise<void>; invalidated: boolean; started: boolean; discarded?: boolean }
   const state = new Map<string, true | Pending>()
-  const start = (key: string, load: () => Promise<void>, wait?: Promise<void>) => {
+  const start = (key: string, load: (current: () => boolean) => Promise<void>, wait?: Promise<void>) => {
     const entry: Pending = { promise: Promise.resolve(), invalidated: false, started: !wait }
     state.set(key, entry)
     const run = () => {
       entry.started = true
-      return load()
+      // Refresh invalidation still permits a current snapshot; eviction revokes publication.
+      return load(() => state.get(key) === entry && !entry.discarded)
     }
     entry.promise = (wait ? wait.catch(() => undefined).then(run) : run())
       .then(() => {
@@ -165,7 +166,7 @@ function createSync() {
     return entry.promise
   }
   return {
-    run(key: string, load: () => Promise<void>) {
+    run(key: string, load: (current: () => boolean) => Promise<void>) {
       const active = state.get(key)
       if (active === true) return Promise.resolve()
       if (!active) return start(key, load)
@@ -183,11 +184,14 @@ function createSync() {
       const active = state.get(key)
       return active !== undefined && active !== true
     },
-    invalidate(key?: string) {
+    invalidate(key?: string, discard = false) {
       if (key) {
         const active = state.get(key)
         if (active === true) state.delete(key)
-        if (active !== undefined && active !== true && active.started) active.invalidated = true
+        if (active !== undefined && active !== true) {
+          if (active.started || discard) active.invalidated = true
+          if (discard) active.discarded = true
+        }
         return
       }
       state.forEach((active, current) => {
@@ -539,8 +543,8 @@ export function createData(config: CreateDataInput) {
 
   function evictSession(sessionID: string) {
     if (sessionOutbox.has(sessionID)) return
-    sync.invalidate(`session.pending:${sessionID}`)
-    sync.invalidate(`session.message:${sessionID}`)
+    sync.invalidate(`session.pending:${sessionID}`, true)
+    sync.invalidate(`session.message:${sessionID}`, true)
     messageLoads.delete(sessionID)
     // Keep unacknowledged submissions until their echo or rollback settles them.
     const pending = store.session.pending[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
@@ -562,12 +566,13 @@ export function createData(config: CreateDataInput) {
 
   function removeSession(sessionID: string) {
     activeUpdates?.set(sessionID, undefined)
+    messageLoads.delete(sessionID)
     store.session.pending[sessionID]?.forEach((item) => outbox.delete(item.id))
     messageIndex.delete(sessionID)
     sync.invalidate(`session:${sessionID}`)
     sync.invalidate(`session.family:${sessionID}`)
-    sync.invalidate(`session.pending:${sessionID}`)
-    sync.invalidate(`session.message:${sessionID}`)
+    sync.invalidate(`session.pending:${sessionID}`, true)
+    sync.invalidate(`session.message:${sessionID}`, true)
     sync.invalidate(`session.permission:${sessionID}`)
     sync.invalidate(`session.form:${sessionID}:`)
     setStore(
@@ -1048,7 +1053,8 @@ export function createData(config: CreateDataInput) {
             (item) =>
               item.type === "assistant" &&
               item.content.some(
-                (part) => part.type === "tool" && (part.state.status === "streaming" || part.state.status === "running"),
+                (part) =>
+                  part.type === "tool" && (part.state.status === "streaming" || part.state.status === "running"),
               ),
           )
         ) {
@@ -1396,11 +1402,12 @@ export function createData(config: CreateDataInput) {
           return store.session.pending[sessionID] ?? []
         },
         sync(sessionID: string) {
-          return sync.run(`session.pending:${sessionID}`, async () => {
+          return sync.run(`session.pending:${sessionID}`, async (valid) => {
             const updates = new Map<string, SessionInboxInfo | SessionInbox.Delivery | undefined>()
             pendingUpdates.set(sessionID, updates)
             try {
               const snapshot = await api().session.inbox.list({ sessionID })
+              if (!valid()) return
               // Events can overtake this HTTP response on a remote connection.
               // Reconcile them before an older snapshot can resurrect delivered input.
               const current = new Map(snapshot.map((item) => [item.id, item]))
@@ -1621,12 +1628,13 @@ export function createData(config: CreateDataInput) {
           return position === undefined ? undefined : messages?.[position]
         },
         sync(sessionID: string) {
-          return sync.run(`session.message:${sessionID}`, async () => {
+          return sync.run(`session.message:${sessionID}`, async (current) => {
             const response = await api().message.list({
               sessionID,
               limit: config.initialMessageLimit?.() ?? messagePageLimit,
               order: "desc",
             })
+            if (!current()) return
             const fetched = response.data.toReversed()
             // Same protection as the pending sync: a re-fetch racing an
             // admission must not wipe its local transcript row.
@@ -1682,39 +1690,42 @@ export function createData(config: CreateDataInput) {
           const cursor = store.session.messageCursor[sessionID]
           if (!cursor || signal?.aborted) return
           setStore("session", "messageLoading", sessionID, true)
-          const request = (async () => {
-            const fetched: SessionMessageInfo[] = []
-            let next: string | undefined = cursor
-            do {
-              const response = await api().message.list(
-                {
-                  sessionID,
-                  limit: options?.all ? 200 : messagePageLimit,
-                  cursor: next,
-                },
-                { signal },
-              )
-              if (signal?.aborted) return
-              fetched.push(...response.data)
-              next = response.cursor.next ?? undefined
-              if (!options?.all) break
-            } while (next)
-            // A jump through history publishes once, not once per page of offscreen messages.
-            const existing = store.session.message[sessionID] ?? []
-            const ids = new Set(existing.map((item) => item.id))
-            const messages = [...fetched.reverse().filter((item) => !ids.has(item.id)), ...existing]
-            batch(() => {
-              options?.beforePublish?.()
-              messageIndex.set(sessionID, new Map(messages.map((item, position) => [item.id, position])))
-              setStore("session", "message", sessionID, reconcile(messages))
-              setStore("session", "messageCursor", sessionID, next)
+          const request = Promise.resolve()
+            .then(async () => {
+              const fetched: SessionMessageInfo[] = []
+              let next: string | undefined = cursor
+              do {
+                const response = await api().message.list(
+                  {
+                    sessionID,
+                    limit: options?.all ? 200 : messagePageLimit,
+                    cursor: next,
+                  },
+                  { signal },
+                )
+                if (signal?.aborted || messageLoads.get(sessionID) !== request) return
+                fetched.push(...response.data)
+                next = response.cursor.next ?? undefined
+                if (!options?.all) break
+              } while (next)
+              // A jump through history publishes once, not once per page of offscreen messages.
+              const existing = store.session.message[sessionID] ?? []
+              const ids = new Set(existing.map((item) => item.id))
+              const messages = [...fetched.reverse().filter((item) => !ids.has(item.id)), ...existing]
+              batch(() => {
+                options?.beforePublish?.()
+                messageIndex.set(sessionID, new Map(messages.map((item, position) => [item.id, position])))
+                setStore("session", "message", sessionID, reconcile(messages))
+                setStore("session", "messageCursor", sessionID, next)
+              })
+              return true
             })
-            return true
-          })()
             .catch((error) => {
               if (!signal?.aborted) throw error
             })
-            .finally(() => setStore("session", "messageLoading", sessionID, false))
+            .finally(() => {
+              if (messageLoads.get(sessionID) === request) setStore("session", "messageLoading", sessionID, false)
+            })
           track(messageLoads, sessionID, request)
           await request
         },

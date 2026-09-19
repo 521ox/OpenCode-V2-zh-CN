@@ -6,13 +6,16 @@ import { createRoot, createSignal } from "solid-js"
 import { createSessionRetention } from "../../src/context/session-retention"
 import { createApi, createFetch, directory, json } from "../fixture/tui-client"
 
-function setup(options: { keep?: string[]; current?: string; limit?: number } = {}) {
+function setup(
+  options: { keep?: string[]; current?: string; limit?: number; read?: (url: URL) => Promise<void> } = {},
+) {
   return createRoot((dispose) => {
     const events = createGlobalEmitter<{
       [Type in OpenCodeEvent["type"]]: Extract<OpenCodeEvent, { type: Type }>
     }>()
     const api = createApi(
-      createFetch((url) => {
+      createFetch(async (url) => {
+        await options.read?.(url)
         if (url.pathname.endsWith("/message"))
           return json({
             data: [{ id: "msg_test", type: "user", text: "Transcript", time: { created: 1 } }],
@@ -200,6 +203,45 @@ test("uses the caller's recent-family limit", async () => {
     expect(scope.cached("b")).toBe(false)
     expect(scope.cached("c")).toBe(true)
   } finally {
+    scope.dispose()
+  }
+})
+
+test("a delayed transcript cannot refill a family excluded by the recent-three owner", async () => {
+  const requested = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  const scope = setup({
+    current: "child",
+    read: async (url) => {
+      if (!url.pathname.includes("/child/")) return
+      requested.resolve()
+      await release.promise
+    },
+  })
+  try {
+    scope.remember("parent")
+    scope.remember("child", "parent")
+    const initial = scope.view("child")
+    await requested.promise
+    for (const id of ["b", "c", "d"]) {
+      scope.remember(id)
+      await scope.view(id)
+    }
+    const count = scope.evictions.filter((id) => id === "parent").length
+    expect(count).toBeGreaterThan(0)
+    release.resolve()
+    await initial
+    expect(scope.data.session.message.list("child")).toEqual([])
+    expect(scope.data.session.message.get("child", "msg_test")).toBeUndefined()
+    expect(scope.data.session.message.more("child")).toBe(false)
+    scope.remember("parent", undefined, 100)
+    await scope.view("c")
+    expect(scope.evictions.filter((id) => id === "parent")).toHaveLength(count)
+    expect(scope.cached("child")).toBe(false)
+    await scope.view("child")
+    expect(scope.cached("child")).toBe(true)
+  } finally {
+    release.resolve()
     scope.dispose()
   }
 })
