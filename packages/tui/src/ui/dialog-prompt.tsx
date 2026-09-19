@@ -109,7 +109,7 @@ export function DialogPrompt(props: DialogPromptProps) {
             if (!props.busy) (props.onCancel ?? dialog.clear)()
           }}
         >
-          esc
+          {" × "}
         </text>
       </box>
       <box gap={1}>

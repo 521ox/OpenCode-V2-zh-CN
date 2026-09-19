@@ -91,7 +91,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           {t("main.export.session")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <box flexDirection="row" gap={1}>

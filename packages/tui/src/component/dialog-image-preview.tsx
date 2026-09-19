@@ -45,7 +45,7 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
           {t("main.image.count", { index: index() + 1, count: props.images.length })}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <image

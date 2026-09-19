@@ -457,7 +457,7 @@ function CommandView(props: { title: string; output: string; message: string }) 
           {props.title}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc {t("main.close")}
+          {" × "} {t("main.close")}
         </text>
       </box>
       <box
@@ -761,7 +761,7 @@ function OAuthView(props: {
           {props.title}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <Show when={props.url}>

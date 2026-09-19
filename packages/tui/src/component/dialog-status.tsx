@@ -25,7 +25,7 @@ export function DialogStatus() {
           {t("main.status")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <Show when={mcp().length > 0} fallback={<text fg={theme.text.base}>{t("main.mcp.empty")}</text>}>

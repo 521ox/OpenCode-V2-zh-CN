@@ -88,7 +88,7 @@ for (const width of [40, 100]) {
       await app.waitForFrame((frame) => frame.includes("Reference: err_a1b2c3d4"))
       const lines = app.captureCharFrame().split("\n")
       const heading = lines.find((line) => line.includes("Server plugin error"))
-      expect(heading).toContain("esc")
+      expect(heading).toContain("×")
       expect(lines.some((line) => line.includes("broken/index.ts"))).toBe(true)
       expect(lines.join("\n")).not.toContain("very-long-temporary-directory")
       const message = lines.find((line) => line.includes("Plugin failed to load"))

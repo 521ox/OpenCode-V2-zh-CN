@@ -109,7 +109,7 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
         </text>
         <text fg={failed() ? theme.text.feedback.error.base : theme.text.muted}>{status()}</text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <scrollbox

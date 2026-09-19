@@ -648,7 +648,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             </text>
           )}
           <text fg={theme.text.muted} onMouseUp={() => (props.onCancel ?? dialog.clear)()}>
-            esc
+            {" × "}
           </text>
         </box>
         <Show when={props.renderFilter !== false}>

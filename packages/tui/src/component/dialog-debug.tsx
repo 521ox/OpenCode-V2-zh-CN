@@ -61,7 +61,7 @@ export function DialogDebug() {
           {t("main.group.debug")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       {/* No click-to-copy here: releasing a mouse selection must trigger the

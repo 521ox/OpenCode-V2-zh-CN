@@ -55,7 +55,7 @@ export function DialogWorktreeName(props: { onConfirm: (name: string) => void })
           {t("main.worktree.name")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <input

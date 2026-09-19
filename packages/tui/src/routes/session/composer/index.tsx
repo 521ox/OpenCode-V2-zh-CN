@@ -149,7 +149,7 @@ export function Composer(props: ComposerProps) {
                 </box>
               </Show>
               <text fg={theme.text.muted} onMouseUp={close}>
-                esc
+                {" × "}
               </text>
             </box>
             <SubagentsTab sessionID={props.sessionID} />

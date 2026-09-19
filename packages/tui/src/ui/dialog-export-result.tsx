@@ -33,7 +33,7 @@ export function DialogExportResult(props: { path: string; onClose?: () => void }
           {t("main.export.done")}
         </text>
         <text fg={theme.text.muted} onMouseUp={close}>
-          esc
+          {" × "}
         </text>
       </box>
       <box>

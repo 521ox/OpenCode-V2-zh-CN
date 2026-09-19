@@ -25,7 +25,7 @@ export function DialogHelp() {
           {t("main.help")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc/enter
+          {"    ×    "}
         </text>
       </box>
       <box paddingBottom={1}>

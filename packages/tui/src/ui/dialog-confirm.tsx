@@ -63,7 +63,7 @@ export function DialogConfirm(props: DialogConfirmProps) {
           {props.title}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <box paddingBottom={1}>

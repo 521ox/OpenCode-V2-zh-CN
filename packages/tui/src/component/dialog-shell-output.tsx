@@ -110,7 +110,7 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
         </text>
         <text fg={theme.text.muted}>{status()}</text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <text fg={theme.text.muted} maxHeight={3} wrapMode="word">

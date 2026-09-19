@@ -1145,7 +1145,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
           {i18n.t("feature.diff.shortcuts")}
         </text>
         <text fg={theme.text.muted} selectable={false} onMouseUp={() => props.context.ui.dialog.clear()}>
-          esc {i18n.t("feature.diff.closeShort")}
+          {" × "} {i18n.t("feature.diff.closeShort")}
         </text>
       </box>
       <scrollbox

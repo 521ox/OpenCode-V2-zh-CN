@@ -123,7 +123,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
           {t("main.pair")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <Show

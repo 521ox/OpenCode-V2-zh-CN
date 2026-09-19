@@ -772,7 +772,7 @@ test.each([undefined, "Binary files a/assets/preview.png and b/assets/preview.pn
 
 async function chooseSource(viewer: Awaited<ReturnType<typeof renderDiffViewer>>, index: number, key = "d") {
   viewer.app.mockInput.pressKey(key)
-  await viewer.app.waitForFrame((frame) => /Diff source\s+esc/.test(frame))
+  await viewer.app.waitForFrame((frame) => /Diff source\s+×/.test(frame))
   viewer.app.mockInput.pressKey("HOME")
   await viewer.app.flush()
   for (let i = 0; i < index; i++) {
@@ -780,7 +780,7 @@ async function chooseSource(viewer: Awaited<ReturnType<typeof renderDiffViewer>>
     await viewer.app.flush()
   }
   viewer.app.mockInput.pressEnter()
-  await viewer.app.waitForFrame((frame) => !/Diff source\s+esc/.test(frame))
+  await viewer.app.waitForFrame((frame) => !/Diff source\s+×/.test(frame))
 }
 
 test("brackets navigate diff hunks", async () => {

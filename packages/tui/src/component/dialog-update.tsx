@@ -101,7 +101,7 @@ export function DialogUpdate(props: {
               : t("main.update")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <box paddingBottom={1}>

@@ -87,7 +87,7 @@ export function DialogErrorDetails(props: {
             {props.title}
           </text>
           <text fg={theme.text.muted} flexShrink={0} onMouseUp={props.onBack}>
-            esc
+            {" × "}
           </text>
         </box>
         <Show when={props.source}>

@@ -78,7 +78,7 @@ export function DialogWorkspaceFileChanges(props: {
           {props.title ?? t("main.workspace.changes")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
+          {" × "}
         </text>
       </box>
       <box paddingLeft={2} paddingRight={2}>
