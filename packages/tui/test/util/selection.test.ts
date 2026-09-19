@@ -2,6 +2,21 @@ import { expect, test } from "bun:test"
 import type { SelectionBehavior } from "@opentui/core"
 import type { ClipboardService } from "../../src/context/clipboard"
 import { Selection, copy, copyOnSelectRelease } from "../../src/util/selection"
+import { translate, type Locale } from "../../src/i18n"
+
+test.each(["en", "zh"] as const)("selection copy localizes only toast chrome in %s", async (locale: Locale) => {
+  const raw = "C:\\literal\\$&{{name}}$t(main.close)"
+  const value = setup(raw, false)
+  const messages: string[] = []
+  const toast = { show: (input: { message: string }) => messages.push(input.message), error: () => {} }
+  const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) =>
+    translate(locale, key, params)
+  expect(copyOnSelectRelease({ isDragging: true }, value.renderer, toast, value.clipboard, t)).toBeTrue()
+  await Promise.resolve()
+  expect(value.writes).toEqual([raw])
+  expect(messages).toEqual([locale === "en" ? "Copied to clipboard" : "已复制到剪贴板"])
+  expect(value.clears()).toBe(0)
+})
 
 function renderer() {
   return {

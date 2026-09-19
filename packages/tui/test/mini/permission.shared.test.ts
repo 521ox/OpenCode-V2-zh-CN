@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { translate, type Key, type Params } from "../../src/i18n"
+
+const t = (key: Key, params?: Params) => translate("en", key, params)
 import {
   createPermissionBodyState,
   permissionAlwaysLines,
@@ -100,6 +103,9 @@ describe("run permission shared", () => {
             "call-shell",
           ),
         }),
+        undefined,
+        false,
+        "en",
       ),
     ).toMatchObject({
       title: "Shell command",
@@ -112,17 +118,20 @@ describe("run permission shared", () => {
           action: "external_directory",
           resources: ["/tmp/work/**/*.ts", "/tmp/work/**/*.tsx"],
         }),
+        undefined,
+        false,
+        "en",
       ),
     ).toMatchObject({
       title: "Access external directory /tmp/work",
       lines: ["- /tmp/work/**/*.ts", "- /tmp/work/**/*.tsx"],
     })
 
-    expect(permissionInfo(req({ action: "doom_loop" }))).toMatchObject({
+    expect(permissionInfo(req({ action: "doom_loop" }), undefined, false, "en")).toMatchObject({
       title: "Continue after repeated failures",
     })
 
-    expect(permissionInfo(req({ action: "custom_tool" }))).toMatchObject({
+    expect(permissionInfo(req({ action: "custom_tool" }), undefined, false, "en")).toMatchObject({
       title: "Call tool custom_tool",
       lines: ["Tool: custom_tool"],
     })
@@ -145,6 +154,9 @@ describe("run permission shared", () => {
             "call-search",
           ),
         }),
+        undefined,
+        false,
+        "en",
       ),
     ).toMatchObject({
       title: 'Web Search via Parallel "current releases"',
@@ -168,12 +180,12 @@ describe("run permission shared", () => {
         "call-edit",
       ),
     })
-    expect(permissionInfo(request)).toMatchObject({
+    expect(permissionInfo(request, undefined, false, "en")).toMatchObject({
       title: "Edit src/index.ts",
       diff: undefined,
       patch,
     })
-    expect(permissionInfo(request, undefined, true)).toMatchObject({
+    expect(permissionInfo(request, undefined, true, "en")).toMatchObject({
       title: "Edit src/index.ts",
       lines: [patch],
       diff: undefined,
@@ -182,11 +194,11 @@ describe("run permission shared", () => {
   })
 
   test("formats always-allow copy for wildcard and explicit patterns", () => {
-    expect(permissionAlwaysLines(req({ action: "bash", save: ["*"] }))).toEqual([
+    expect(permissionAlwaysLines(req({ action: "bash", save: ["*"] }), t)).toEqual([
       "This will always allow bash for this project.",
     ])
 
-    expect(permissionAlwaysLines(req({ save: ["src/**/*.ts", "src/**/*.tsx"] }))).toEqual([
+    expect(permissionAlwaysLines(req({ save: ["src/**/*.ts", "src/**/*.tsx"] }), t)).toEqual([
       "This will always allow the following patterns for this project.",
       "- src/**/*.ts",
       "- src/**/*.tsx",

@@ -15,14 +15,16 @@ import { useTheme } from "../context/theme"
 import { useUpdateNotification } from "../context/update-notification"
 import { useExit } from "../context/exit"
 import { FadeInText } from "../component/fade-in-text"
+import { useI18n } from "../context/i18n"
 
 let once = false
-const placeholder = {
-  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
-  shell: ["ls -la", "git status", "pwd"],
-}
 
 export function Home() {
+  const { t } = useI18n()
+  const placeholder = () => ({
+    normal: [t("session.home.todo"), t("session.home.stack"), t("session.home.tests")],
+    shell: ["ls -la", "git status", "pwd"],
+  })
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const [ref, setRef] = createSignal<PromptRef | undefined>()
@@ -98,7 +100,7 @@ export function Home() {
         <box height={1} flexShrink={0} />
         <UpdateNotification width={logoWidth()} />
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0} position="relative">
-          <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
+          <Prompt ref={bind} placeholders={placeholder()} disabled={forms().length > 0} />
         </box>
         <box flexGrow={1} minHeight={0} />
       </box>
@@ -122,6 +124,7 @@ export function Home() {
 }
 
 function UpdateNotification(props: { width: number }) {
+  const { t } = useI18n()
   const update = useUpdateNotification()
   const exit = useExit()
   const theme = useTheme()
@@ -161,10 +164,10 @@ function UpdateNotification(props: { width: number }) {
                   </span>
                 </Show>
                 {remote
-                  ? "remote server update available"
+                  ? t("session.home.remoteUpdate")
                   : state.type === "installed"
-                    ? ` restart to use v${state.version}`
-                    : ` to install v${state.version}`}
+                    ? t("session.home.restart", { version: state.version })
+                    : t("session.home.install", { version: state.version })}
               </FadeInText>
             </box>
           </Show>

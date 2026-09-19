@@ -45,7 +45,10 @@ async function setup(
   })
   const out = {
     ...renderer,
-    scrollback: new RunScrollbackStream(renderer.renderer, options.mono ? RUN_THEME_MONO : RUN_THEME_FALLBACK, options),
+    scrollback: new RunScrollbackStream(renderer.renderer, options.mono ? RUN_THEME_MONO : RUN_THEME_FALLBACK, {
+      ...options,
+      locale: () => "en",
+    }),
     previews: [] as Preview[],
   }
   cleanups.push(() => {

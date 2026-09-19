@@ -24,8 +24,10 @@ import { useConfig } from "../config"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { projectName } from "../util/project"
 import { useLocation } from "../context/location"
+import { useI18n } from "../context/i18n"
 
 export function DialogSessionList() {
+  const { t, locale } = useI18n()
   const dialog = useDialog()
   const route = useRoute()
   const data = useData()
@@ -111,14 +113,14 @@ export function DialogSessionList() {
   const searchState = createMemo(() => {
     const query = filter().trim()
     if (query !== search().trim() || searchResults.loading)
-      return { message: query ? "Searching sessions…" : "Loading sessions…", error: false }
+      return { message: query ? t("main.sessions.searching") : t("main.sessions.loading"), error: false }
     const result = searchResults()
     if (result?.query === query && result.error)
       return {
-        message: query ? "Could not search sessions. Change the search to try again." : "Could not load sessions.",
+        message: query ? t("main.sessions.searchFailed") : t("main.sessions.loadFailed"),
         error: true,
       }
-    return { message: query ? "No sessions found" : "No sessions available", error: false }
+    return { message: query ? t("main.sessions.noMatch") : t("main.sessions.empty"), error: false }
   })
 
   const quickSwitchHint = createMemo(() => {
@@ -126,11 +128,11 @@ export function DialogSessionList() {
     const first = shortcuts.get("session.quick_switch.1")
     const last = shortcuts.get("session.quick_switch.9")
     if (!first || !last) return
-    return quickSwitchRange(first, last)
+    return quickSwitchRange(first, last, t)
   })
   const quickSwitchFooterHints = createMemo(() => {
     const hint = quickSwitchHint()
-    return hint && local.session.slots().length > 0 ? [{ title: "switch", label: hint }] : []
+    return hint && local.session.slots().length > 0 ? [{ title: t("main.switch"), label: hint }] : []
   })
   const currentProjectName = createMemo(() => {
     const current = data.location.info(pickerLocation())
@@ -163,7 +165,7 @@ export function DialogSessionList() {
       const deleting = toDelete() === session.id
       return {
         title: deleting
-          ? `Press ${shortcuts.get("session.delete")} again to confirm`
+          ? t("main.confirmAgain", { key: shortcuts.get("session.delete") ?? "" })
           : withTimestampedFallback(session),
         value: session.id,
         category,
@@ -184,24 +186,27 @@ export function DialogSessionList() {
       .filter((session) => !session.parentID && !pinnedSet.has(session.id))
       .map((session) => {
         const date = new Date(session.time.updated).toDateString()
-        return option(session, date === today ? "Today" : date)
+        return option(
+          session,
+          date === today ? t("main.today") : new Intl.DateTimeFormat(locale()).format(session.time.updated),
+        )
       })
 
-    return [...pinned.map((sessionID) => option(sessionMap.get(sessionID)!, "Pinned")), ...remaining]
+    return [...pinned.map((sessionID) => option(sessionMap.get(sessionID)!, t("main.pinned"))), ...remaining]
   })
 
   onMount(() => dialog.setSize("large"))
 
   return (
     <DialogSelect
-      title="Sessions"
+      title={t("main.sessions")}
       titleView={
         <box flexDirection="row">
           <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
-            Sessions
+            {t("main.sessions")}
           </text>
           <Show when={!allProjects() && currentProjectName()}>
-            <text fg={theme.text.muted}> for {currentProjectName()}</text>
+            <text fg={theme.text.muted}>{t("main.sessions.forProject", { name: currentProjectName() })}</text>
           </Show>
         </box>
       }
@@ -215,8 +220,8 @@ export function DialogSessionList() {
       bindings={[
         {
           bind: "ctrl+a",
-          title: allProjects() ? "Show current directory sessions" : "Show all project sessions",
-          group: "Dialog",
+          title: allProjects() ? t("main.sessions.currentDirectory") : t("main.sessions.allProjects"),
+          group: t("main.group.dialog"),
           run: () => {
             void updatePrefs((draft) => {
               draft.allProjects = !draft.allProjects
@@ -246,13 +251,13 @@ export function DialogSessionList() {
       actions={[
         {
           command: "session.pin.toggle",
-          title: "pin/unpin",
+          title: t("main.pin"),
           hidden: sessionTabs.enabled(),
           onTrigger: (option) => local.session.togglePin(option.value),
         },
         {
           command: "session.delete",
-          title: "delete",
+          title: t("main.delete"),
           onTrigger: (option: { value: string }) => {
             if (toDelete() !== option.value) {
               setToDelete(option.value)
@@ -270,7 +275,7 @@ export function DialogSessionList() {
               .catch((error) => {
                 setToDelete(undefined)
                 toast.show({
-                  message: `Failed to delete session: ${errorMessage(error)}`,
+                  message: t("main.sessions.deleteFailed", { error: errorMessage(error) }),
                   variant: "error",
                   duration: 5000,
                 })
@@ -279,21 +284,21 @@ export function DialogSessionList() {
         },
         {
           command: "session.rename",
-          title: "rename",
+          title: t("main.rename"),
           onTrigger: (option: { value: string; title: string }) =>
             DialogSessionRename.show(dialog, option.value, option.title),
         },
       ]}
       footerHints={[
         ...quickSwitchFooterHints(),
-        { title: allProjects() ? "current directory" : "all projects", label: "ctrl+a", side: "right" },
+        { title: allProjects() ? t("main.value.cwd") : t("main.projects.all"), label: "ctrl+a", side: "right" },
       ]}
     />
   )
 }
 
-function quickSwitchRange(first: string, last: string) {
+function quickSwitchRange(first: string, last: string, t: ReturnType<typeof useI18n>["t"]) {
   const prefix = first.slice(0, -1)
   if (first.endsWith("1") && last === `${prefix}9`) return `${prefix}1-9`
-  return `${first} through ${last}`
+  return t("main.keyRange", { first, last })
 }

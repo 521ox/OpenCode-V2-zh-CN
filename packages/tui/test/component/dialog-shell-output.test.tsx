@@ -5,6 +5,7 @@ import type { ShellInfo } from "@opencode/client"
 import { expect, test } from "bun:test"
 import { createSignal, onMount } from "solid-js"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { ClientProvider } from "../../src/context/client"
 import { DataProvider, useData } from "../../src/context/data"
 import { Keymap } from "../../src/context/keymap"
@@ -66,22 +67,24 @@ async function setup(width: number, output = "") {
   const app = await testRender(
     () => (
       <TestTuiContexts directory={temporary.path} paths={{ state: temporary.path }}>
-        <ConfigProvider config={createTuiResolvedConfig({}, { terminal: false })}>
-          <RouteProvider initialRoute={{ type: "session", sessionID: "ses_fixture" }}>
-            <ClientProvider api={api}>
-              <DataProvider directory={temporary.path}>
-                <ThemeProvider mode={width === 40 ? "light" : "dark"} source={emptyThemeSource}>
-                  <Keymap.Provider>
-                    <ToastProvider>
-                      <DialogProvider>
-                        <Shells />
-                      </DialogProvider>
-                    </ToastProvider>
-                  </Keymap.Provider>
-                </ThemeProvider>
-              </DataProvider>
-            </ClientProvider>
-          </RouteProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" }, { terminal: false })}>
+          <I18nProvider>
+            <RouteProvider initialRoute={{ type: "session", sessionID: "ses_fixture" }}>
+              <ClientProvider api={api}>
+                <DataProvider directory={temporary.path}>
+                  <ThemeProvider mode={width === 40 ? "light" : "dark"} source={emptyThemeSource}>
+                    <Keymap.Provider>
+                      <ToastProvider>
+                        <DialogProvider>
+                          <Shells />
+                        </DialogProvider>
+                      </ToastProvider>
+                    </Keymap.Provider>
+                  </ThemeProvider>
+                </DataProvider>
+              </ClientProvider>
+            </RouteProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

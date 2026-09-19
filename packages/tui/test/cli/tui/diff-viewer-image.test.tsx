@@ -4,6 +4,7 @@ import { ImageRenderable, type Renderable } from "@opentui/core"
 import { testRender } from "@opentui/solid"
 import { createSignal, Show, type JSX } from "solid-js"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ThemeProvider } from "../../../src/context/theme"
 import { Keymap } from "../../../src/context/keymap"
 import { DialogProvider } from "../../../src/ui/dialog"
@@ -151,14 +152,16 @@ function renderImage(
   return testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <Keymap.Provider>
-            <ThemeProvider mode={options.mode} source={emptyThemeSource}>
-              <ToastProvider>
-                <DialogProvider>{component()}</DialogProvider>
-              </ToastProvider>
-            </ThemeProvider>
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ThemeProvider mode={options.mode} source={emptyThemeSource}>
+                <ToastProvider>
+                  <DialogProvider>{component()}</DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

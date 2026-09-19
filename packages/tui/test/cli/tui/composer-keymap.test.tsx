@@ -3,6 +3,7 @@ import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import type { TuiKeybind } from "../../../src/config/keybind"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData } from "../../../src/context/data"
@@ -103,25 +104,27 @@ async function renderComposer(
   const app = await testRender(
     () => (
       <TestTuiContexts directory={directory}>
-        <ConfigProvider config={createTuiResolvedConfig({ keybinds }, { terminal: false })}>
-          <Keymap.Provider>
-            <ClientProvider api={createApi(calls.fetch)}>
-              <DataProvider directory={process.cwd()}>
-                <LocationProvider>
-                  <RouteProvider initialRoute={{ type: "session", sessionID: "parent" }}>
-                    <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
-                      <ToastProvider>
-                        <DialogProvider>
-                          <Content />
-                        </DialogProvider>
-                      </ToastProvider>
-                    </ThemeProvider>
-                  </RouteProvider>
-                </LocationProvider>
-              </DataProvider>
-            </ClientProvider>
-            <AppExit />
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", keybinds }, { terminal: false })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ClientProvider api={createApi(calls.fetch)}>
+                <DataProvider directory={process.cwd()}>
+                  <LocationProvider>
+                    <RouteProvider initialRoute={{ type: "session", sessionID: "parent" }}>
+                      <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
+                        <ToastProvider>
+                          <DialogProvider>
+                            <Content />
+                          </DialogProvider>
+                        </ToastProvider>
+                      </ThemeProvider>
+                    </RouteProvider>
+                  </LocationProvider>
+                </DataProvider>
+              </ClientProvider>
+              <AppExit />
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

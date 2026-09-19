@@ -5,8 +5,10 @@ import { useClipboard } from "../context/clipboard"
 import { useDialog } from "./dialog"
 import { DialogSelect } from "./dialog-select"
 import { useToast } from "./toast"
+import { useI18n } from "../context/i18n"
 
 export function useWorkingDirectoryActions(input: { directory: () => string | undefined; onMove?: () => void }) {
+  const { t } = useI18n()
   const clipboard = useClipboard()
   const dialog = useDialog()
   const renderer = useRenderer()
@@ -19,24 +21,24 @@ export function useWorkingDirectoryActions(input: { directory: () => string | un
     if (!directory) return
     dialog.replace(() => (
       <DialogSelect
-        title="Working directory"
+        title={t("main.directory")}
         renderFilter={false}
         options={[
           {
-            title: "Copy path",
+            title: t("main.path.copy"),
             value: "location.copy",
             description: directory,
             onSelect: (dialog) => {
               void clipboard.write(directory).then(() => {
                 dialog.clear()
-                toast.show({ message: "Path copied to clipboard", variant: "info" })
+                toast.show({ message: t("main.path.copied"), variant: "info" })
               }, toast.error)
             },
           },
           {
-            title: "Open folder",
+            title: t("main.folder.open"),
             value: "location.open",
-            description: "in system file manager",
+            description: t("main.folder.system"),
             onSelect: (dialog) => {
               dialog.clear()
               void open(directory).catch(toast.error)
@@ -45,9 +47,9 @@ export function useWorkingDirectoryActions(input: { directory: () => string | un
           ...(input.onMove
             ? [
                 {
-                  title: "Workspaces",
+                  title: t("main.workspaces"),
                   value: "session.move",
-                  description: "to another working directory",
+                  description: t("main.directory.another"),
                   onSelect: () => void input.onMove?.(),
                 },
               ]

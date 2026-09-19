@@ -11,6 +11,7 @@ import { Keymap } from "../../../context/keymap"
 import { useComposerTab } from "./index"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { sessionFamily } from "../../../util/session"
+import { useI18n } from "../../../context/i18n"
 
 interface SubagentEntry {
   sessionID: string
@@ -22,6 +23,7 @@ interface SubagentEntry {
 }
 
 export function SubagentsTab(props: { sessionID: string }) {
+  const { t } = useI18n()
   const route = useRouteData("session")
   const data = useData()
   const client = useClient()
@@ -47,7 +49,7 @@ export function SubagentsTab(props: { sessionID: string }) {
             ? Locale.titlecase(session.agent)
             : agentMatch
               ? Locale.titlecase(agentMatch[1])
-              : "Subagent",
+              : t("session.subagent"),
           title: agentMatch ? title.replace(agentMatch[0], "").trim() || title : title,
           status: data.session.status(session.id),
           current: session.id === route.sessionID,
@@ -113,15 +115,17 @@ export function SubagentsTab(props: { sessionID: string }) {
   onMount(() => {
     const cleanup = composer.register({
       id: "subagents",
-      label: "Subagents",
+      get label() {
+        return t("session.subagents")
+      },
       hints: () => {
         const entry = selectedEntry()
         return [
           ...(entry?.status === "running"
-            ? [{ label: "interrupt", shortcut: shortcuts.get("composer.subagent.interrupt") ?? "" }]
+            ? [{ label: t("session.interrupt"), shortcut: shortcuts.get("composer.subagent.interrupt") ?? "" }]
             : []),
           {
-            label: `show ${store.active ? "inactive" : "active"}`,
+            label: t(store.active ? "session.showInactive" : "session.showActive"),
             shortcut: shortcuts.get("composer.subagent.toggle-activity") ?? "",
           },
         ]
@@ -137,8 +141,8 @@ export function SubagentsTab(props: { sessionID: string }) {
     commands: [
       {
         id: "composer.subagent.up",
-        title: "Previous subagent",
-        group: "Composer",
+        title: t("session.previousSubagent"),
+        group: t("session.composer"),
         run() {
           if (store.selected === 0) {
             composer.close()
@@ -149,8 +153,8 @@ export function SubagentsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.subagent.down",
-        title: "Next subagent",
-        group: "Composer",
+        title: t("session.nextSubagent"),
+        group: t("session.composer"),
         run() {
           const list = entries()
           if (list.length === 0) return
@@ -159,8 +163,8 @@ export function SubagentsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.subagent.select",
-        title: "Navigate to subagent",
-        group: "Composer",
+        title: t("session.navigateSubagent"),
+        group: t("session.composer"),
         run() {
           const entry = entries()[store.selected]
           if (entry) navigate({ type: "session", sessionID: entry.sessionID })
@@ -168,8 +172,8 @@ export function SubagentsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.subagent.toggle-activity",
-        title: "Toggle active subagents",
-        group: "Composer",
+        title: t("session.toggleActive"),
+        group: t("session.composer"),
         bind: "ctrl+a",
         run() {
           setStore({ selected: 0, active: !store.active })
@@ -178,8 +182,8 @@ export function SubagentsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.subagent.interrupt",
-        title: "Interrupt subagent",
-        group: "Composer",
+        title: t("session.interruptSubagent"),
+        group: t("session.composer"),
         run() {
           const entry = selectedEntry()
           if (!entry || entry.status !== "running") return
@@ -194,13 +198,13 @@ export function SubagentsTab(props: { sessionID: string }) {
       <scrollbox scrollbarOptions={{ visible: false }} maxHeight={5} ref={(r: ScrollBoxRenderable) => (scroll = r)}>
         <Show
           when={entries().length > 0}
-          fallback={<text fg={theme.text.muted}> No {store.active ? "active" : "inactive"} subagents</text>}
+          fallback={<text fg={theme.text.muted}> {t(store.active ? "session.noActive" : "session.noInactive")}</text>}
         >
           <For each={entries()}>
             {(entry, index) => {
               const active = createMemo(() => index() === store.selected)
               const status = createMemo(() => {
-                if (entry.status === "running") return "Running"
+                if (entry.status === "running") return t("session.running")
                 return ""
               })
               return (

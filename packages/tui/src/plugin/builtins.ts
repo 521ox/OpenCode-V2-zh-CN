@@ -11,15 +11,16 @@ import Storybook from "../feature-plugins/system/storybook"
 import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
+import type { Key, Translator } from "../i18n"
 
-export const builtins = [
+export const builtins = (t: Translator<Key>) => [
   HomeFooter,
   PromptFooter,
   PromptBtw,
   SidebarContext,
   SidebarMcp,
   SidebarFooter,
-  Notifications,
+  Notifications(t),
   Plugins,
   Stats,
   Merman,

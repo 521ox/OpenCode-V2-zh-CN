@@ -7,7 +7,9 @@ import { createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { Logo } from "../../component/logo"
 import { useTheme } from "../../context/theme"
 import { tint } from "../../theme/color"
-import { statsMetrics, statsNumber } from "./stats-data"
+import { statsMetrics, statsMonthLabel, statsNumber } from "./stats-data"
+import { useI18n } from "../../context/i18n"
+import { stringWidth } from "../../util/string-width"
 
 const digits: Record<string, string[]> = {
   "0": ["111", "101", "101", "101", "111"],
@@ -28,6 +30,7 @@ const digits: Record<string, string[]> = {
 }
 
 export function StatsPoster(props: { stats: SessionStatsInfo }) {
+  const i18n = useI18n()
   const dimensions = useTerminalDimensions()
   const theme = useTheme()
   const width = () => Math.max(12, Math.min(110, dimensions().width - 8))
@@ -35,7 +38,10 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
   const metrics = createMemo(() => statsMetrics(props.stats))
   const number = () => statsNumber(metrics()[0].value)
   const dates = createMemo(() =>
-    new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).formatRange(
+    new Intl.DateTimeFormat(i18n.locale() === "zh" ? "zh-CN" : "en-US", {
+      month: "short",
+      year: "numeric",
+    }).formatRange(
       new Date(props.stats.range.from),
       new Date(Math.max(props.stats.range.from, props.stats.range.to - 1)),
     ),
@@ -53,16 +59,14 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
   )
   const shades = createMemo(() => [
     theme.text.muted,
-    ...[0.3, 0.5, 0.75, 1].map((alpha) =>
-      tint(theme.background.base, theme.categorical[0][200], alpha),
-    ),
+    ...[0.3, 0.5, 0.75, 1].map((alpha) => tint(theme.background.base, theme.categorical[0][200], alpha)),
   ])
 
   return (
     <box width={width()} flexDirection="column" alignItems="center" flexShrink={0} gap={compact() ? 1 : 2}>
       <box width="100%" flexDirection={width() < 44 ? "column" : "row"} justifyContent="space-between">
         <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
-          opencode / stats
+          opencode / {i18n.t("feature.stats.title")}
         </text>
         <text fg={theme.text.muted}>{dates()}</text>
       </box>
@@ -90,19 +94,27 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
             </For>
           </box>
         </Show>
-        <text fg={theme.text.muted}>TOKENS</text>
+        <text fg={theme.text.muted}>{i18n.t("feature.stats.tokens")}</text>
       </box>
       <box alignItems="center">
         <text fg={theme.text.muted}>
           {"    " +
             calendar()
-              .months.map((month) => (month.label.length <= month.span * 2 ? month.label : "").padEnd(month.span * 2))
+              .months.map((month) => {
+                const label = statsMonthLabel(month.label, i18n.t)
+                const width = stringWidth(label)
+                return width <= month.span * 2 ? label + " ".repeat(month.span * 2 - width) : " ".repeat(month.span * 2)
+              })
               .join("")}
         </text>
-        <For each={["M", "T", "W", "T", "F", "S", "S"]}>
+        <For
+          each={
+            i18n.locale() === "zh" ? ["一", "二", "三", "四", "五", "六", "日"] : ["M", "T", "W", "T", "F", "S", "S"]
+          }
+        >
           {(day, index) => (
             <box flexDirection="row" height={1}>
-              <text fg={theme.text.muted}>{day + "   "}</text>
+              <text fg={theme.text.muted}>{day + " ".repeat(4 - stringWidth(day))}</text>
               <For each={calendar().weeks}>
                 {(week) => (
                   <text fg={shades()[Math.max(0, week[index()].level)]} selectable={false}>
@@ -114,7 +126,7 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
           )}
         </For>
         <Show when={calendar().clipped}>
-          <text fg={theme.text.muted}>Your last {calendar().weeks.length} weeks</text>
+          <text fg={theme.text.muted}>{i18n.t("feature.stats.weeks", { count: calendar().weeks.length })}</text>
         </Show>
       </box>
       <box width="100%" flexDirection="row" justifyContent="space-around">
@@ -123,9 +135,17 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
             <box alignItems="center">
               <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
                 {statsNumber(metric.value)}
-                {metric.label === "best streak" ? " days" : ""}
+                {metric.label === "best streak" ? i18n.t("feature.stats.days") : ""}
               </text>
-              <text fg={theme.text.muted}>{metric.label}</text>
+              <text fg={theme.text.muted}>
+                {i18n.t(
+                  metric.label === "best streak"
+                    ? "feature.stats.streak"
+                    : metric.label === "active days"
+                      ? "feature.stats.activeDays"
+                      : "feature.stats.sessions",
+                )}
+              </text>
             </box>
           )}
         </For>
@@ -138,6 +158,7 @@ export function StatsPoster(props: { stats: SessionStatsInfo }) {
 }
 
 function StatsPage(props: { context: Plugin.Context; onClose: () => void }) {
+  const i18n = useI18n()
   const [result] = createResource(() => {
     const now = new Date()
     return props.context.client.session.stats({
@@ -149,7 +170,7 @@ function StatsPage(props: { context: Plugin.Context; onClose: () => void }) {
   const theme = useTheme()
 
   props.context.keymap.layer(() => ({
-    commands: [{ bind: "escape", title: "back", run: props.onClose }],
+    commands: [{ bind: "escape", title: i18n.t("feature.stats.back"), run: props.onClose }],
   }))
 
   return (
@@ -166,11 +187,9 @@ function StatsPage(props: { context: Plugin.Context; onClose: () => void }) {
       >
         <Show
           when={!result.error}
-          fallback={
-            <text fg={theme.text.feedback.error.base}>Could not load stats. Reopen /stats to try again.</text>
-          }
+          fallback={<text fg={theme.text.feedback.error.base}>{i18n.t("feature.stats.loadError")}</text>}
         >
-          <Show when={result()} fallback={<text fg={theme.text.muted}>Gathering your stats…</text>}>
+          <Show when={result()} fallback={<text fg={theme.text.muted}>{i18n.t("feature.stats.loading")}</text>}>
             {(value) => <StatsPoster stats={value()} />}
           </Show>
         </Show>
@@ -190,13 +209,14 @@ export default Plugin.define({
     context.ui.slot({
       append: "app",
       render() {
+        const i18n = useI18n()
         context.keymap.layer(() => ({
           mode: "global",
           commands: [
             {
               id: "stats.open",
-              title: "Usage statistics",
-              group: "System",
+              title: i18n.t("feature.stats.command"),
+              group: i18n.t("feature.group.system"),
               slash: { name: "stats" },
               palette: true,
               run() {

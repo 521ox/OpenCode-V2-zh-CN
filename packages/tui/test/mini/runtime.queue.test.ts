@@ -5,6 +5,7 @@ import { createFooterApiFixture } from "./fixture/footer-api"
 
 function runPromptQueue(input: Omit<QueueInput, "admit" | "settle"> & Partial<Pick<QueueInput, "admit" | "settle">>) {
   return runPromptQueueBase({
+    locale: "en",
     admit: async () => {},
     settle: async () => {},
     ...input,

@@ -6,6 +6,7 @@ import { readStdin } from "./util/io"
 import { createMiniHost, INTERACTIVE_INPUT_ERROR, usingInteractiveStdin } from "./mini-host"
 import { parseSessionTargetModel, resolveSessionTarget, type SessionTargetPreparation } from "./session-target"
 import { Env } from "./env"
+import { DEFAULT_LOCALE, resolveLocale, translate, type Locale } from "@opencode/tui/i18n"
 
 export type MiniCommandInput = {
   server: {
@@ -31,16 +32,17 @@ type Model = MiniFrontendInput["model"]
 class MiniInputError extends Error {}
 
 export async function runMini(input: MiniCommandInput) {
+  const locale = resolveLocale((await Promise.resolve(input.tuiConfig).catch(() => undefined))?.locale)
   try {
-    validate(input)
+    validate(input, locale)
     const result = await usingInteractiveStdin(async (terminal) => {
       const initialInput = mergeInput(process.stdin.isTTY ? undefined : await readStdin(), input.prompt)
       const frontendTask = import("@opencode/tui/mini")
-      const directory = localDirectory()
+      const directory = localDirectory(locale)
       const connection = createMiniConnection(input.server)
       const sdk = connection.sdk
       const environment = input.server.reconnect ? Env.session() : undefined
-      const requested = parseModel(input.model)
+      const requested = parseModel(input.model, locale)
       const model = requested ? { providerID: requested.providerID, modelID: requested.id } : undefined
       const prepare = prepareTarget(input.agent)
       const resolveTarget = async (initial: OpenCodeClient, signal: AbortSignal) => {
@@ -62,7 +64,7 @@ export async function runMini(input: MiniCommandInput) {
               signal,
             }).catch((error) => {
               if (error instanceof Error && error.message === "Session not found")
-                throw new MiniInputError(error.message)
+                throw new MiniInputError(translate(locale, "miniCli.sessionMissing"))
               throw error
             }),
         })
@@ -129,8 +131,9 @@ export async function runMini(input: MiniCommandInput) {
     })
     if (result.exitCode !== 0) process.exit(result.exitCode)
   } catch (error) {
-    if (error instanceof MiniInputError || (error instanceof Error && error.message === INTERACTIVE_INPUT_ERROR))
-      fail(error.message)
+    if (error instanceof MiniInputError) fail(error.message, locale)
+    if (error instanceof Error && error.message === INTERACTIVE_INPUT_ERROR)
+      fail(translate(locale, "miniCli.inputTerminal"), locale)
     throw error
   }
 }
@@ -180,8 +183,8 @@ export async function resolveMiniTarget<A>(input: {
   }
 }
 
-export function validateMiniTerminal() {
-  if (!process.stdout.isTTY) fail("opencode mini requires a TTY stdout")
+export function validateMiniTerminal(locale: Locale = DEFAULT_LOCALE) {
+  if (!process.stdout.isTTY) fail(translate(locale, "miniCli.ttyRequired"), locale)
 }
 
 /** @internal Exported for testing. */
@@ -191,29 +194,29 @@ export function mergeInput(piped: string | undefined, prompt: string | undefined
   return piped + "\n" + prompt
 }
 
-function validate(input: MiniCommandInput) {
-  validateMiniTerminal()
+function validate(input: MiniCommandInput, locale: Locale) {
+  validateMiniTerminal(locale)
   if (input.replayLimit !== undefined && (!Number.isInteger(input.replayLimit) || input.replayLimit <= 0)) {
-    fail("--replay-limit must be a positive integer")
+    fail(translate(locale, "miniCli.replayLimit"), locale)
   }
-  if (input.fork && !input.continue && !input.session) fail("--fork requires --continue or --session")
+  if (input.fork && !input.continue && !input.session) fail(translate(locale, "miniCli.forkRequired"), locale)
 }
 
-function localDirectory(): string {
+function localDirectory(locale: Locale): string {
   const root = process.env.PWD ?? process.cwd()
   try {
     process.chdir(root)
     return process.cwd()
   } catch {
-    throw new MiniInputError(`Failed to change directory to ${root}`)
+    throw new MiniInputError(translate(locale, "miniCli.directoryFailed", { path: root }))
   }
 }
 
-function parseModel(value?: string) {
+function parseModel(value: string | undefined, locale: Locale) {
   try {
     return parseSessionTargetModel(value)
   } catch {
-    throw new MiniInputError("--model must use the format provider/model[#variant]")
+    throw new MiniInputError(translate(locale, "miniCli.modelFormat"))
   }
 }
 
@@ -221,7 +224,7 @@ function prepareTarget(requestedAgent?: string): SessionTargetPreparation {
   return async (input) => ({ model: input.model, agent: requestedAgent ?? input.agent })
 }
 
-function fail(message: string): never {
-  process.stderr.write(`\x1b[91m\x1b[1mError: \x1b[0m${message}\n`)
+function fail(message: string, locale: Locale): never {
+  process.stderr.write(`\x1b[91m\x1b[1m${translate(locale, "miniCli.error")}\x1b[0m${message}\n`)
   process.exit(1)
 }

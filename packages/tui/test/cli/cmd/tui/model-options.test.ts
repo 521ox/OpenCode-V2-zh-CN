@@ -28,7 +28,7 @@ describe("sortModelOptions", () => {
     const options = [
       { providerID: "opencode", title: "Claude Haiku 3", releaseDate: 1 },
       { providerID: "anthropic", title: "Claude Haiku 4.5", releaseDate: 2 },
-      { providerID: "anthropic", title: "Claude Haiku Free", releaseDate: 0, footer: "Free" },
+      { providerID: "anthropic", title: "Claude Haiku Free", releaseDate: 0, footer: "Free", free: true },
     ].map((item) => ({ ...item, providerID: mode === "provider" ? "anthropic" : item.providerID }))
     const matches = mode === "search" ? go("haik", options, { key: "title" }).map((item) => item.obj) : options
     expect(sortModelOptions(matches, mode === "provider").map((item) => item.title)).toEqual([
@@ -53,7 +53,7 @@ describe("sortModelOptions", () => {
     const sorted = sortModelOptions(
       [
         { providerID: "opencode-go", releaseDate: 3, title: "Go model" },
-        { providerID: "opencode", releaseDate: 1, title: "Free Zen model", footer: "Free" },
+        { providerID: "opencode", releaseDate: 1, title: "Free Zen model", footer: "Free", free: true },
         { providerID: "anthropic", releaseDate: 4, title: "Anthropic model" },
       ],
       false,

@@ -4,10 +4,12 @@ import { useTheme } from "../context/theme"
 import { SplitBorder } from "../ui/border"
 import { useToast } from "../ui/toast"
 import { Spinner } from "./spinner"
+import { useI18n } from "../context/i18n"
 
 type Progress = { label: string; numerator?: number; denominator?: number }
 
 export function MigrationOverlay() {
+  const { t } = useI18n()
   const client = useClient()
   const toast = useToast()
   const theme = useTheme()
@@ -29,7 +31,7 @@ export function MigrationOverlay() {
       setProgress(undefined)
       toast.show({
         variant: "error",
-        title: "Data migration failed",
+        title: t("main.migration.failed"),
         message: error instanceof Error ? error.message : String(error),
         duration: 10_000,
       })

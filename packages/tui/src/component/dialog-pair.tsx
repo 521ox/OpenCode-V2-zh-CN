@@ -7,6 +7,7 @@ import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
 import { Link } from "../ui/link"
 import { errorMessage } from "../util/error"
+import { useI18n } from "../context/i18n"
 
 export type DialogPairCredentials = {
   readonly username: string
@@ -14,6 +15,7 @@ export type DialogPairCredentials = {
 }
 
 export function DialogPair(props: { credentials?: DialogPairCredentials }) {
+  const { t } = useI18n()
   const client = useClient()
   const dialog = useDialog()
   const dimensions = useTerminalDimensions()
@@ -61,7 +63,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
       <box flexDirection={horizontal() ? "row" : "column"} alignItems={horizontal() ? "flex-start" : "center"} gap={2}>
         <box width={horizontal() ? 29 : "100%"} flexShrink={0} gap={1}>
           <box>
-            <text fg={theme.text.muted}>This device</text>
+            <text fg={theme.text.muted}>{t("main.pair.device")}</text>
             <Show when={localhost()}>
               {(url) => (
                 <Link href={href(url())} fg={theme.text.base}>
@@ -71,7 +73,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
             </Show>
           </box>
           <box>
-            <text fg={theme.text.muted}>URLs</text>
+            <text fg={theme.text.muted}>{t("main.pair.urls")}</text>
             <For each={value.urls}>
               {(url) => (
                 <Link href={href(url)} fg={theme.text.base}>
@@ -81,11 +83,11 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
             </For>
           </box>
           <box>
-            <text fg={theme.text.muted}>Username</text>
+            <text fg={theme.text.muted}>{t("main.pair.username")}</text>
             <text fg={theme.text.base}>{value.username}</text>
           </box>
           <box>
-            <text fg={theme.text.muted}>Password</text>
+            <text fg={theme.text.muted}>{t("main.pair.password")}</text>
             <text
               fg={passwordHover() ? theme.text.base : theme.text.muted}
               wrapMode="word"
@@ -98,7 +100,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
           </box>
           <Show when={value.urls.some((url) => ["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname))}>
             <text fg={theme.text.muted} wrapMode="word">
-              Run `opencode service set hostname 0.0.0.0` to access the service remotely.
+              {t("main.pair.remote", { command: "opencode service set hostname 0.0.0.0" })}
             </text>
           </Show>
         </box>
@@ -118,7 +120,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
     <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
-          Pair
+          {t("main.pair")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
           esc
@@ -127,7 +129,7 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
       <Show
         when={loadError()}
         fallback={
-          <Show when={info()} fallback={<text fg={theme.text.muted}>Loading server information…</text>}>
+          <Show when={info()} fallback={<text fg={theme.text.muted}>{t("main.pair.loading")}</text>}>
             <Show
               when={dimensions().height >= 36}
               fallback={
@@ -147,10 +149,10 @@ export function DialogPair(props: { credentials?: DialogPairCredentials }) {
         {(error) => (
           <box>
             <text fg={theme.text.feedback.error.base} attributes={TextAttributes.BOLD}>
-              Could not load server information
+              {t("main.pair.failed")}
             </text>
             <text fg={theme.text.muted}>{errorMessage(error())}</text>
-            <text fg={theme.text.muted}>Close and reopen Pair to try again.</text>
+            <text fg={theme.text.muted}>{t("main.pair.retry")}</text>
           </box>
         )}
       </Show>

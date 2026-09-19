@@ -97,6 +97,7 @@ async function setup(
     renderOnce: out.renderOnce,
     externalOutput: out.externalOutput,
     scrollback: new RunScrollbackStream(out.renderer, input.theme ?? RUN_THEME_FALLBACK, {
+      locale: () => "en",
       treeSitterClient,
       wrote: input.wrote ?? false,
       onThemeRelease: input.onThemeRelease,

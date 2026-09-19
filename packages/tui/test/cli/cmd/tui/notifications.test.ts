@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import Notifications from "../../../../src/feature-plugins/system/notifications"
+import { translate } from "../../../../src/i18n"
 import type { OpenCodeEvent, PermissionAsked } from "@opencode/client"
 import type { AttentionNotifyOptions, Context, Route, ToastOptions } from "@opencode/plugin/tui/context"
 
@@ -21,7 +22,7 @@ async function setup(route: Route = { type: "session", sessionID: "session" }) {
     timeout: session("timeout", "Timeout session"),
   }
 
-  await Notifications.setup({
+  await Notifications((key, params) => translate("en", key, params)).setup({
     ui: {
       router: { current: () => route },
       toast: { show: (toast: ToastOptions) => toasts.push(toast) },

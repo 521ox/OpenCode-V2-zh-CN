@@ -29,11 +29,11 @@ describe("Mini form state", () => {
       { key: "external", type: "external", url: "https://example.com/action" },
     ])
     let state = formSetField(createFormBodyState(form), form, 1)
-    state = formCommitInput(state, form, "1.5")
+    state = formCommitInput(state, form, "1.5", "en")
     state = formSetField(state, form, 4)
     state = formSetSelected(state, 0)
     state = formPick(state, form)
-    state = formCommitInput(state, form, "custom")
+    state = formCommitInput(state, form, "custom", "en")
     state = formSetField(state, form, 5)
     state = formAcknowledge(formSetExternalReady(state, "external"), form)
 
@@ -52,14 +52,15 @@ describe("Mini form state", () => {
       { key: "required", type: "string", required: true },
       { key: "external", type: "external", url: "https://example.com" },
     ])
-    expect(formValidate(invalid, createFormBodyState(invalid))).toContain("Answer required")
-    expect(formUnsupported(request([{ key: "value", type: "string", pattern: "^a" }]))).toContain("Pattern")
+    expect(formValidate(invalid, createFormBodyState(invalid), "en")).toContain("Answer required")
+    expect(formUnsupported(request([{ key: "value", type: "string", pattern: "^a" }]), "en")).toContain("Pattern")
     expect(
       formUnsupported(
         request([
           { key: "toggle", type: "boolean" },
           { key: "value", type: "string", when: [{ key: "toggle", op: "eq", value: true }] },
         ]),
+        "en",
       ),
     ).toContain("Conditional")
   })

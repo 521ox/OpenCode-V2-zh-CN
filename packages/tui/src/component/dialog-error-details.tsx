@@ -13,6 +13,7 @@ import { dialogWidth, useDialog } from "../ui/dialog"
 import { FilePath } from "../ui/file-path"
 import { useToast } from "../ui/toast"
 import { errorDetails } from "../util/error-details"
+import { useI18n } from "../context/i18n"
 
 export function DialogErrorDetails(props: {
   title: string
@@ -22,6 +23,7 @@ export function DialogErrorDetails(props: {
   diagnosticRef?: string
   onBack: () => void
 }) {
+  const { t } = useI18n()
   const clipboard = useClipboard()
   const dialog = useDialog()
   const location = useLocation()
@@ -55,9 +57,9 @@ export function DialogErrorDetails(props: {
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
-      { bind: "escape", title: "Back", group: "Dialog", run: props.onBack },
-      { bind: "c", title: "Copy details", group: "Dialog", run: copy },
-      { bind: "i", title: "Investigate error", group: "Dialog", run: investigate },
+      { bind: "escape", title: t("main.back"), group: t("main.group.dialog"), run: props.onBack },
+      { bind: "c", title: t("main.details.copy"), group: t("main.group.dialog"), run: copy },
+      { bind: "i", title: t("main.error.investigate"), group: t("main.group.dialog"), run: investigate },
     ],
   }))
 
@@ -111,7 +113,7 @@ export function DialogErrorDetails(props: {
           </text>
         </scrollbox>
         <Show when={props.diagnosticRef}>
-          <text fg={theme.text.muted}>Reference: {props.diagnosticRef}</text>
+          <text fg={theme.text.muted}>{t("main.error.reference", { reference: props.diagnosticRef ?? "" })}</text>
         </Show>
       </box>
       <box flexDirection="row" gap={3} flexWrap="wrap">
@@ -119,15 +121,15 @@ export function DialogErrorDetails(props: {
           <span style={{ fg: theme.text.base }}>
             <b>i</b>
           </span>
-          <span style={{ fg: theme.text.muted }}> investigate</span>
+          <span style={{ fg: theme.text.muted }}> {t("main.investigate")}</span>
         </text>
         <text onMouseUp={copy}>
           <span style={{ fg: copied() ? theme.text.feedback.success.base : theme.text.base }}>
-            <b>{copied() ? "✓ copied" : "c"}</b>
+            <b>{copied() ? t("main.copy.done") : "c"}</b>
           </span>
-          <span style={{ fg: theme.text.muted }}>{copied() ? "" : " copy details"}</span>
+          <span style={{ fg: theme.text.muted }}>{copied() ? "" : ` ${t("main.details.copy")}`}</span>
         </text>
-        <text fg={theme.text.muted}>↑/↓ scroll</text>
+        <text fg={theme.text.muted}>↑/↓ {t("main.scroll")}</text>
       </box>
     </box>
   )

@@ -67,6 +67,7 @@ import type {
   RunTuiConfig,
 } from "./types"
 import { EmptyBorder } from "../ui/border"
+import { resolveLocale, translate, type Key, type Params } from "../i18n"
 
 const AUTOCOMPLETE_ROWS = FOOTER_MENU_ROWS
 
@@ -112,6 +113,7 @@ type PromptOption = Auto | SlashOption
 type MenuMode = false | "mention" | "slash"
 
 type PromptInput = {
+  locale?: () => RunTuiConfig["locale"]
   directory: Accessor<string>
   findFiles: (query: string) => Promise<string[]>
   agents: Accessor<RunAgent[]>
@@ -212,6 +214,7 @@ export function selectedCommand(text: string, command: RunPrompt["command"]) {
 }
 
 export function RunPromptBody(props: {
+  locale?: RunTuiConfig["locale"]
   theme: () => RunFooterTheme
   background: () => ColorInput
   rail: () => ColorInput
@@ -291,7 +294,14 @@ export function RunPromptBody(props: {
                 const [failed, setFailed] = createSignal(false)
                 return (
                   <box width={props.layout().images * 2} height="100%" flexShrink={1}>
-                    <Show when={!failed()} fallback={<text fg={props.theme().muted}>No preview</text>}>
+                    <Show
+                      when={!failed()}
+                      fallback={
+                        <text fg={props.theme().muted}>
+                          {translate(resolveLocale(props.locale), "miniCli.noPreview")}
+                        </text>
+                      }
+                    >
                       <image
                         id={`mini-prompt-image-${index()}`}
                         source={image}
@@ -342,6 +352,7 @@ export function RunPromptBody(props: {
 }
 
 export function createPromptState(input: PromptInput): PromptState {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(input.locale?.()), key, params)
   const renderer = useRenderer()
   const term = useTerminalDimensions()
   const [lines, setLines] = createSignal(TEXTAREA_MIN_ROWS)
@@ -349,7 +360,7 @@ export function createPromptState(input: PromptInput): PromptState {
   const [shell, setShell] = createSignal(false)
   const placeholder = createMemo(() => {
     if (shell()) {
-      return new StyledText([fg(input.theme().muted)('Run a command… "git status"')])
+      return new StyledText([fg(input.theme().muted)(t("miniCli.prompt.shell"))])
     }
 
     if (!input.state().first) {
@@ -357,7 +368,7 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     return new StyledText([
-      fg(input.theme().muted)(`Ask anything, / for commands, @ for context${input.mono() ? "..." : "…"}`),
+      fg(input.theme().muted)(t("miniCli.prompt.placeholder", { ellipsis: input.mono() ? "..." : "…" })),
     ])
   })
 
@@ -515,23 +526,33 @@ export function createPromptState(input: PromptInput): PromptState {
         action: "editor" as const,
         name: "editor",
         display: "/editor",
-        description: "compose in your external editor",
+        description: t("miniCli.prompt.editorDescription"),
       } satisfies SlashOption,
       {
         kind: "slash",
         action: "settings" as const,
         name: "settings",
         display: "/settings",
-        description: "configure Mini transcript output",
+        description: t("miniCli.prompt.settingsDescription"),
       } satisfies SlashOption,
-      { kind: "slash", name: "new", display: "/new", description: "start a new session" } satisfies SlashOption,
+      {
+        kind: "slash",
+        name: "new",
+        display: "/new",
+        description: t("miniCli.prompt.newDescription"),
+      } satisfies SlashOption,
       {
         kind: "slash",
         name: "compact",
         display: "/compact",
-        description: "compact older session context to free space",
+        description: t("miniCli.prompt.compactDescription"),
       } satisfies SlashOption,
-      { kind: "slash", name: "exit", display: "/exit", description: "close OpenCode" } satisfies SlashOption,
+      {
+        kind: "slash",
+        name: "exit",
+        display: "/exit",
+        description: t("miniCli.prompt.exitDescription"),
+      } satisfies SlashOption,
     ]
     const hidden = new Set(builtins.map((item) => item.name))
     return [
@@ -566,11 +587,7 @@ export function createPromptState(input: PromptInput): PromptState {
 
     return fuzzysort
       .go(next, mixed, {
-        keys: [
-          (item) => (item.kind === "mention" ? item.value : item.name).trimEnd(),
-          "display",
-          "description",
-        ],
+        keys: [(item) => (item.kind === "mention" ? item.value : item.name).trimEnd(), "display", "description"],
       })
       .map((item) => item.obj)
   })
@@ -874,7 +891,7 @@ export function createPromptState(input: PromptInput): PromptState {
         if (!content || changed()) return
         const image = content.mime.startsWith("image/")
         if (image && shell()) {
-          input.onStatus("image attachments are unavailable in shell mode")
+          input.onStatus(t("miniCli.prompt.noShellImages"))
           return
         }
         if (!image && content.mime !== "text/plain") return
@@ -1028,7 +1045,7 @@ export function createPromptState(input: PromptInput): PromptState {
       })
     } catch {
       restore(current)
-      input.onStatus("failed to open editor")
+      input.onStatus(t("miniCli.prompt.editorFailed"))
     }
   }
 
@@ -1170,8 +1187,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         id: "prompt.clear",
-        title: "Clear prompt or exit",
-        group: "Prompt",
+        title: t("miniCli.prompt.clear"),
+        group: t("miniCli.group.prompt"),
         run() {
           if (requestExit()) return
           return false
@@ -1186,13 +1203,13 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         id: "prompt.paste",
         title: "Paste",
-        group: "Prompt",
+        group: t("miniCli.group.prompt"),
         run: () => paste(),
       },
       {
         id: "session.interrupt",
-        title: "Interrupt session",
-        group: "Session",
+        title: t("miniCli.prompt.interrupt"),
+        group: t("miniCli.category.session"),
         run() {
           if (input.onInterrupt()) return
           return false
@@ -1207,8 +1224,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         id: "prompt.queue",
-        title: "Queue prompt",
-        group: "Prompt",
+        title: t("miniCli.prompt.queue"),
+        group: t("miniCli.group.prompt"),
         palette: true,
         run() {
           onSubmit("queue")
@@ -1223,8 +1240,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         id: "prompt.editor",
-        title: "Open editor",
-        group: "Prompt",
+        title: t("miniCli.command.editor"),
+        group: t("miniCli.group.prompt"),
         run() {
           void openEditor()
         },
@@ -1238,8 +1255,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         id: "prompt.history.previous",
-        title: "Previous prompt history",
-        group: "Prompt",
+        title: t("miniCli.prompt.previous"),
+        group: t("miniCli.group.prompt"),
         run(_input: string | undefined, event?: KeyEvent) {
           if (!event) return false
           return historyCommand(-1, event)
@@ -1247,8 +1264,8 @@ export function createPromptState(input: PromptInput): PromptState {
       },
       {
         id: "prompt.history.next",
-        title: "Next prompt history",
-        group: "Prompt",
+        title: t("miniCli.prompt.next"),
+        group: t("miniCli.group.prompt"),
         run(_input: string | undefined, event?: KeyEvent) {
           if (!event) return false
           return historyCommand(1, event)
@@ -1262,8 +1279,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         bind: "!",
-        title: "Shell mode",
-        group: "Prompt",
+        title: t("miniCli.prompt.shellMode"),
+        group: t("miniCli.group.prompt"),
         run() {
           if (shell()) return false
           if (!area || area.isDestroyed) return false
@@ -1279,14 +1296,14 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         bind: "escape",
-        title: "Exit shell mode",
-        group: "Prompt",
+        title: t("miniCli.prompt.exitShell"),
+        group: t("miniCli.group.prompt"),
         run: () => setShellMode(false),
       },
       {
         bind: "backspace",
-        title: "Exit shell mode",
-        group: "Prompt",
+        title: t("miniCli.prompt.exitShell"),
+        group: t("miniCli.group.prompt"),
         run() {
           if (!area || area.isDestroyed) return false
           if (area.cursorOffset !== 0) return false
@@ -1301,26 +1318,26 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         id: "prompt.autocomplete.prev",
-        title: "Previous autocomplete item",
-        group: "Autocomplete",
+        title: t("miniCli.prompt.previousItem"),
+        group: t("miniCli.group.autocomplete"),
         run: () => menu.move(-1),
       },
       {
         id: "prompt.autocomplete.next",
-        title: "Next autocomplete item",
-        group: "Autocomplete",
+        title: t("miniCli.prompt.nextItem"),
+        group: t("miniCli.group.autocomplete"),
         run: () => menu.move(1),
       },
       {
         id: "prompt.autocomplete.hide",
-        title: "Hide autocomplete",
-        group: "Autocomplete",
+        title: t("miniCli.prompt.hideItems"),
+        group: t("miniCli.group.autocomplete"),
         run: cancelAutocomplete,
       },
       {
         id: "prompt.autocomplete.select",
-        title: "Select autocomplete item",
-        group: "Autocomplete",
+        title: t("miniCli.prompt.selectItem"),
+        group: t("miniCli.group.autocomplete"),
         run() {
           if (mode() === "slash" && options().length === 0) {
             hide()
@@ -1331,8 +1348,8 @@ export function createPromptState(input: PromptInput): PromptState {
       },
       {
         id: "prompt.autocomplete.complete",
-        title: "Complete autocomplete item",
-        group: "Autocomplete",
+        title: t("miniCli.prompt.completeItem"),
+        group: t("miniCli.group.autocomplete"),
         run() {
           if (mode() === "slash" && options().length === 0) {
             hide()
@@ -1381,7 +1398,7 @@ export function createPromptState(input: PromptInput): PromptState {
         })
         return
       }
-      input.onStatus(input.state().phase === "running" ? "waiting for current response" : "empty prompt ignored")
+      input.onStatus(t(input.state().phase === "running" ? "miniCli.prompt.wait" : "miniCli.prompt.empty"))
       return
     }
 
@@ -1394,7 +1411,7 @@ export function createPromptState(input: PromptInput): PromptState {
         isExitCommand(next.text) ||
         next.text.trim().toLowerCase() === "/settings")
     ) {
-      input.onStatus("this prompt cannot be queued")
+      input.onStatus(t("miniCli.prompt.noQueue"))
       return
     }
     if (!command && next.mode !== "shell" && isExitCommand(next.text)) {
@@ -1413,7 +1430,7 @@ export function createPromptState(input: PromptInput): PromptState {
         ? undefined
         : parseSlashCommand(next.text, input.commands())
     if (parsed?.type === "pending") {
-      input.onStatus("loading commands")
+      input.onStatus(t("miniCli.prompt.loading"))
       return
     }
 

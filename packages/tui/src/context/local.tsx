@@ -25,10 +25,12 @@ import { useData } from "./data"
 import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
+import { useI18n } from "./i18n"
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
   init: () => {
+    const i18n = useI18n()
     const data = useData()
     const toast = useToast()
     const theme = useTheme()
@@ -98,7 +100,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (!agents().some((agent) => agent.id === id))
             return toast.show({
               variant: "warning",
-              message: `Agent not found: ${id}`,
+              message: i18n.t("feature.local.agentNotFound", { id }),
               duration: 3000,
             })
           batch(() => {
@@ -396,8 +398,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const value = currentSelection()
           if (!value) {
             return {
-              provider: "Connect a provider",
-              model: "No provider selected",
+              provider: i18n.t("feature.local.connectProvider"),
+              model: i18n.t("feature.local.noProvider"),
               reasoning: false,
             }
           }
@@ -405,7 +407,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const info = models()?.find((item) => item.providerID === value.providerID && item.id === value.modelID)
           return {
             provider: provider?.name ?? value.providerID,
-            model: info?.name ?? `${value.modelID} (unavailable)`,
+            model: info?.name ?? i18n.t("feature.local.unavailableModel", { model: value.modelID }),
             reasoning: (info?.variants?.length ?? 0) !== 0,
           }
         }),
@@ -426,7 +428,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (!favorites.length) {
             toast.show({
               variant: "info",
-              message: "Add a favorite model to use this shortcut",
+              message: i18n.t("feature.local.favoriteModel"),
               duration: 3000,
             })
             return

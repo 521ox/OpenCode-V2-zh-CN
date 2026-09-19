@@ -11,13 +11,15 @@ import { UpdatePreflight } from "../../services/update-preflight"
 import { Npm } from "@opencode/util/npm"
 import { OPENCODE_ARTIFACT, OPENCODE_CHANNEL, OPENCODE_VERSION } from "../../version"
 import { Env } from "../../env"
+import { translate } from "@opencode/tui/i18n"
 
 export default Runtime.handler(Commands, (input) =>
   Effect.gen(function* () {
     const requestedDirectory = Option.getOrUndefined(input.directory)
     const requestedServer = Option.getOrUndefined(input.server)
     if (requestedDirectory !== undefined) process.chdir(requestedDirectory)
-    const preflight = UpdatePreflight.make()
+    const config = yield* Config.Service
+    const preflight = UpdatePreflight.make(config.locale())
     yield* Effect.addFinalizer(() => Effect.promise(() => preflight.close()))
     const serviceStarts = yield* Queue.unbounded<{
       readonly reason: "missing" | "version-mismatch"
@@ -37,14 +39,12 @@ export default Runtime.handler(Commands, (input) =>
         if (reason === "version-mismatch" && preflight.begin(previousVersion)) return
         process.stderr.write(
           reason === "version-mismatch"
-            ? "Restarting background server (version mismatch)...\n"
-            : "Starting background server...\n",
+            ? translate(config.locale(), "miniCli.startup.restarting") + "\n"
+            : translate(config.locale(), "miniCli.startup.starting") + "\n",
         )
       },
     }).pipe(
-      Effect.tapError(() =>
-        Effect.promise(() => preflight.fail("OpenCode update could not start the new background service")),
-      ),
+      Effect.tapError(() => Effect.promise(() => preflight.fail(translate(config.locale(), "miniCli.update.failed")))),
     )
     const updater = yield* Updater.Service
     let installing: string | undefined
@@ -56,7 +56,6 @@ export default Runtime.handler(Commands, (input) =>
       })
       .pipe(Effect.ensuring(Effect.sync(() => (installing = undefined))), Effect.forkScoped)
     preflight.loading()
-    const config = yield* Config.Service
     const npm = yield* Npm.Service
     const fileSystem = yield* FileSystem.FileSystem
     const runServicePromise = Effect.runPromiseWith(Context.make(FileSystem.FileSystem, fileSystem))

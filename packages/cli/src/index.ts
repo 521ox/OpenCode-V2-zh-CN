@@ -14,6 +14,7 @@ import { Config } from "./config"
 import { Npm } from "@opencode/util/npm"
 import { Heap } from "./heap"
 import { CpuProfile } from "./cpu-profile"
+import { translate } from "@opencode/tui/i18n"
 
 if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   const { askpass } = await import("./ssh-askpass")
@@ -101,10 +102,12 @@ Effect.gen(function* () {
   return yield* Runtime.run(Commands, Handlers, { version: OPENCODE_VERSION })
 }).pipe(
   Effect.catchCause((cause) =>
-    Effect.logError("cli process failed", {
-      cause,
-      args: process.argv.slice(2),
-    }).pipe(Effect.andThen(Effect.failCause(cause))),
+    Effect.gen(function* () {
+      const config = yield* Config.Service
+      yield* Effect.sync(() => process.stderr.write(translate(config.locale(), "miniCli.startup.failed") + "\n"))
+      yield* Effect.logError("cli process failed", { cause, args: process.argv.slice(2) })
+      return yield* Effect.failCause(cause)
+    }),
   ),
   Effect.annotateLogs({ role: "cli" }),
   Effect.provide(Config.layer),

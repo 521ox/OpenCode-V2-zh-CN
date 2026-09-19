@@ -12,12 +12,14 @@ import { dialogWidth, useDialog } from "../../ui/dialog"
 import { useToast } from "../../ui/toast"
 import { Locale } from "../../util/locale"
 import { getScrollAcceleration } from "../../util/scroll"
+import { useI18n } from "../../context/i18n"
 
 const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 
 // The part is passed as a live accessor prop so the dialog follows the tool
 // while child calls stream and the output arrives.
 export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const clipboard = useClipboard()
   const toast = useToast()
@@ -65,13 +67,13 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
   })
   const status = createMemo(() => {
     const state = props.part.state
-    if (state.status === "streaming") return "Receiving code…"
-    if (state.status === "running") return "Running"
+    if (state.status === "streaming") return t("session.receivingCode")
+    if (state.status === "running") return t("session.running")
     const duration = props.part.time.completed
       ? ` · ${Locale.duration(props.part.time.completed - (props.part.time.ran ?? props.part.time.created))}`
       : ""
-    if (failed()) return `Failed${duration}`
-    return `Completed${duration}`
+    if (failed()) return `${t("session.failed")}${duration}`
+    return `${t("session.completed")}${duration}`
   })
 
   const copy = (kind: "code" | "output") => {
@@ -86,16 +88,16 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
-      { bind: "up", title: "Scroll up", group: "Execute", run: () => scroll?.scrollBy(-1) },
-      { bind: "down", title: "Scroll down", group: "Execute", run: () => scroll?.scrollBy(1) },
-      { bind: "pageup", title: "Previous page", group: "Execute", run: () => scroll?.scrollBy(-maxHeight()) },
-      { bind: "pagedown", title: "Next page", group: "Execute", run: () => scroll?.scrollBy(maxHeight()) },
-      { bind: "left", title: "Scroll left", group: "Execute", run: () => pan(-8) },
-      { bind: "right", title: "Scroll right", group: "Execute", run: () => pan(8) },
-      { bind: "home", title: "Scroll to code", group: "Execute", run: () => scroll?.scrollTo(0) },
-      { bind: "end", title: "Scroll to output", group: "Execute", run: () => scroll?.scrollTo(Infinity) },
-      { bind: "c", title: "Copy code", group: "Execute", run: () => copy("code") },
-      { bind: "o", title: "Copy output", group: "Execute", run: () => copy("output") },
+      { bind: "up", title: t("session.scrollUp"), group: "Execute", run: () => scroll?.scrollBy(-1) },
+      { bind: "down", title: t("session.scrollDown"), group: "Execute", run: () => scroll?.scrollBy(1) },
+      { bind: "pageup", title: t("session.pageUp"), group: "Execute", run: () => scroll?.scrollBy(-maxHeight()) },
+      { bind: "pagedown", title: t("session.pageDown"), group: "Execute", run: () => scroll?.scrollBy(maxHeight()) },
+      { bind: "left", title: t("session.scrollLeft"), group: "Execute", run: () => pan(-8) },
+      { bind: "right", title: t("session.scrollRight"), group: "Execute", run: () => pan(8) },
+      { bind: "home", title: t("session.scrollCode"), group: "Execute", run: () => scroll?.scrollTo(0) },
+      { bind: "end", title: t("session.scrollOutput"), group: "Execute", run: () => scroll?.scrollTo(Infinity) },
+      { bind: "c", title: t("session.copyCode"), group: "Execute", run: () => copy("code") },
+      { bind: "o", title: t("session.copyOutput"), group: "Execute", run: () => copy("output") },
     ],
   }))
 
@@ -120,15 +122,15 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
         <box gap={1}>
           <box>
             <text fg={theme.text.muted} attributes={TextAttributes.BOLD}>
-              Code
+              {t("session.code")}
             </text>
-            <Show when={code()} fallback={<text fg={theme.text.muted}>Waiting for code…</text>}>
+            <Show when={code()} fallback={<text fg={theme.text.muted}>{t("session.waitingCode")}</text>}>
               {(value) => <GutteredCode content={value()} filetype="typescript" digits={digits()} blocks={blocks} />}
             </Show>
           </box>
           <box>
             <text fg={theme.text.muted} attributes={TextAttributes.BOLD}>
-              Output
+              {t("session.output")}
             </text>
             <Show
               when={highlighted()}
@@ -137,7 +139,8 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
                   fg={text() ? (failed() ? theme.text.feedback.error.base : theme.text.base) : theme.text.muted}
                   wrapMode="word"
                 >
-                  {text() ?? (props.part.state.status === "completed" ? "No output" : "Waiting for output…")}
+                  {text() ??
+                    (props.part.state.status === "completed" ? t("session.noOutput") : t("session.waitingOutput"))}
                 </text>
               }
             >
@@ -160,20 +163,20 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
         </box>
       </scrollbox>
       <box flexDirection="row" gap={3} flexWrap="wrap">
-        <text fg={theme.text.muted}>↑/↓ ←/→ scroll</text>
+        <text fg={theme.text.muted}>↑/↓ ←/→ {t("session.scroll")}</text>
         <text onMouseUp={() => copy("code")}>
           <span style={{ fg: copied() === "code" ? theme.text.feedback.success.base : theme.text.base }}>
-            <b>{copied() === "code" ? "✓ copied" : "c"}</b>
+            <b>{copied() === "code" ? `✓ ${t("session.copied")}` : "c"}</b>
           </span>
-          <span style={{ fg: theme.text.muted }}>{copied() === "code" ? "" : " copy code"}</span>
+          <span style={{ fg: theme.text.muted }}>{copied() === "code" ? "" : ` ${t("session.copyCode")}`}</span>
         </text>
         <text onMouseUp={() => copy("output")}>
           <span style={{ fg: copied() === "output" ? theme.text.feedback.success.base : theme.text.base }}>
-            <b>{copied() === "output" ? "✓ copied" : "o"}</b>
+            <b>{copied() === "output" ? `✓ ${t("session.copied")}` : "o"}</b>
           </span>
-          <span style={{ fg: theme.text.muted }}>{copied() === "output" ? "" : " copy output"}</span>
+          <span style={{ fg: theme.text.muted }}>{copied() === "output" ? "" : ` ${t("session.copyOutput")}`}</span>
         </text>
-        <text fg={theme.text.muted}>esc back</text>
+        <text fg={theme.text.muted}>esc {t("session.back")}</text>
       </box>
     </box>
   )

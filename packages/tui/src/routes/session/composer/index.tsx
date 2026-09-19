@@ -8,6 +8,7 @@ import { SubagentsTab } from "./subagents-tab"
 import { ShellTab } from "./shell-tab"
 import { TerminalsTab } from "./terminals-tab"
 import { useConfig } from "../../../config"
+import { useI18n } from "../../../context/i18n"
 
 export interface ComposerHint {
   label: string
@@ -42,6 +43,7 @@ export type ComposerProps = {
 }
 
 export function Composer(props: ComposerProps) {
+  const { t } = useI18n()
   const theme = useTheme()
   const config = useConfig().data
 
@@ -100,10 +102,10 @@ export function Composer(props: ComposerProps) {
     enabled: () => props.open,
     priority: 1,
     commands: [
-      { bind: "left", title: "Previous tab", group: "Composer", run: () => switchTab(-1) },
-      { bind: "right", title: "Next tab", group: "Composer", run: () => switchTab(1) },
-      { bind: "escape", title: "Close composer", group: "Composer", run: close },
-      { bind: "ctrl+c", title: "Close composer", group: "Composer", run: close },
+      { bind: "left", title: t("session.previousTab"), group: t("session.composer"), run: () => switchTab(-1) },
+      { bind: "right", title: t("session.nextTab"), group: t("session.composer"), run: () => switchTab(1) },
+      { bind: "escape", title: t("session.closeComposer"), group: t("session.composer"), run: close },
+      { bind: "ctrl+c", title: t("session.closeComposer"), group: t("session.composer"), run: close },
     ],
   }))
 
@@ -169,7 +171,7 @@ export function Composer(props: ComposerProps) {
               <Show when={tabList().length > 1}>
                 <text>
                   <span style={{ fg: theme.text.base }}>
-                    <b>tabs</b>{" "}
+                    <b>{t("session.tabs")}</b>{" "}
                   </span>
                   <span style={{ fg: theme.text.muted }}>←/→</span>
                 </text>

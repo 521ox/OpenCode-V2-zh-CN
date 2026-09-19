@@ -193,6 +193,7 @@ export type TurnSummary = {
 }
 
 export type ScrollbackOptions = {
+  locale?: Config.Resolved["locale"]
   suppressBackgrounds?: boolean
   shellOutput?: boolean
   mono?: boolean
@@ -396,7 +397,8 @@ export type FormCancel = {
 export type RunTuiConfig = Pick<
   Config.Resolved,
   "keybinds" | "leader" | "theme" | "mini" | "prompt" | "session" | "cursor" | "animations"
->
+> &
+  Partial<Pick<Config.Resolved, "locale">>
 
 export type MiniSettings = {
   thinking: "show" | "hide"

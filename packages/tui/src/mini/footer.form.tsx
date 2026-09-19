@@ -35,8 +35,10 @@ import type { FormBodyState } from "./form.shared"
 import type { RunFooterTheme } from "./theme"
 import type { FormCancel, FormReply, MiniFormRequest } from "./types"
 import { stringWidth } from "../util/string-width"
+import { resolveLocale, translate, type Locale, type Key, type Params } from "../i18n"
 
 export function RunFormBody(props: {
+  locale?: Locale
   request: MiniFormRequest
   theme: RunFooterTheme
   onReply: (input: FormReply) => void | Promise<void>
@@ -46,6 +48,7 @@ export function RunFormBody(props: {
   onState?: (state: FormBodyState) => void
   mono?: boolean
 }) {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
   const dims = useTerminalDimensions()
   const [size, setSize] = createSignal(dims())
   const [contentHeight, setContentHeight] = createSignal(1)
@@ -57,7 +60,7 @@ export function RunFormBody(props: {
     setLocalState(value)
     props.onState?.(value)
   }
-  const unsupported = createMemo(() => formUnsupported(props.request))
+  const unsupported = createMemo(() => formUnsupported(props.request, props.locale))
   const current = createMemo(() => formCurrent(props.request, state()))
   const answerField = createMemo(() => {
     const field = current()
@@ -68,7 +71,7 @@ export function RunFormBody(props: {
     return field?.type === "external" ? field : undefined
   })
   const confirm = createMemo(() => formConfirm(props.request, state()))
-  const rows = createMemo(() => formRows(current()))
+  const rows = createMemo(() => formRows(current(), t))
   const custom = createMemo(() => formCustom(current()))
   const textual = createMemo(() => formTextual(current()))
   const multiple = createMemo(() => current()?.type === "multiselect")
@@ -98,12 +101,19 @@ export function RunFormBody(props: {
   })
 
   const action = createMemo(() => {
-    if (confirm()) return "submit"
-    if (textual() || state().editing) return "save"
+    if (confirm()) return t("miniCli.form.submit")
+    if (textual() || state().editing) return t("miniCli.form.save")
     const field = externalField()
-    if (!field) return "choose"
-    if (state().answers[field.key] === true) return formSingle(props.request) ? "submit" : "next"
-    return state().externalReady[field.key] ? (size().width < 24 ? "done" : "acknowledge") : "open URL"
+    if (!field) return t("miniCli.form.choose")
+    if (state().answers[field.key] === true)
+      return t(formSingle(props.request) ? "miniCli.form.submit" : "miniCli.form.next")
+    return t(
+      state().externalReady[field.key]
+        ? size().width < 24
+          ? "miniCli.done"
+          : "miniCli.form.acknowledge"
+        : "miniCli.form.open",
+    )
   })
 
   createEffect(() => {
@@ -136,12 +146,14 @@ export function RunFormBody(props: {
     try {
       await props.onReply(input)
     } catch (error) {
-      setState((previous) => (previous.formID === formID ? formSetError(previous, formErrorMessage(error)) : previous))
+      setState((previous) =>
+        previous.formID === formID ? formSetError(previous, formErrorMessage(error, props.locale)) : previous,
+      )
     }
   }
 
   const submit = (next = state()) => {
-    const invalid = formValidate(props.request, next)
+    const invalid = formValidate(props.request, next, props.locale)
     if (invalid) {
       setState((previous) => formSetError(previous, invalid))
       return
@@ -160,12 +172,14 @@ export function RunFormBody(props: {
         location: props.request.location,
       })
     } catch (error) {
-      setState((previous) => (previous.formID === formID ? formSetError(previous, formErrorMessage(error)) : previous))
+      setState((previous) =>
+        previous.formID === formID ? formSetError(previous, formErrorMessage(error, props.locale)) : previous,
+      )
     }
   }
 
   const commitInput = () => {
-    const next = formCommitInput(state(), props.request, area?.plainText ?? formInput(state(), current()))
+    const next = formCommitInput(state(), props.request, area?.plainText ?? formInput(state(), current()), props.locale)
     setState(next)
     if (next.error) return
     if (formSingle(props.request)) {
@@ -198,11 +212,11 @@ export function RunFormBody(props: {
     const field = current()
     if (field?.type === "external") {
       if (state().answers[field.key] !== true) {
-        setState((previous) => formSetError(previous, `Acknowledge ${formLabel(field)}`))
+        setState((previous) => formSetError(previous, t("miniCli.form.acknowledgeField", { field: formLabel(field) })))
         return
       }
     } else if (field) {
-      const invalid = formValidateValue(field, state().answers[field.key])
+      const invalid = formValidateValue(field, state().answers[field.key], t)
       if (invalid) {
         setState((previous) => formSetError(previous, invalid))
         return
@@ -234,7 +248,7 @@ export function RunFormBody(props: {
       setState((previous) => formSetExternalReady(previous, field.key))
     } catch {
       setState((previous) => formSetExternalReady(previous, field.key))
-      setState((previous) => formSetError(previous, "Could not open the URL. Open it manually, then press enter."))
+      setState((previous) => formSetError(previous, t("miniCli.form.openFailed")))
     }
   }
 
@@ -325,7 +339,7 @@ export function RunFormBody(props: {
         <Show when={!unsupported() && !formSingle(props.request)}>
           <text fg={props.theme.muted} wrapMode="none" flexShrink={0}>
             {confirm()
-              ? "Review"
+              ? t("miniCli.form.review")
               : `${Math.min(state().field + 1, props.request.fields.length)}/${props.request.fields.length}`}
           </text>
         </Show>
@@ -373,7 +387,7 @@ export function RunFormBody(props: {
                   {value()}
                 </text>
                 <text width="100%" fg={props.theme.muted} flexShrink={0}>
-                  This request remains pending until you dismiss it.
+                  {t("miniCli.form.pending")}
                 </text>
               </box>
             )}
@@ -393,10 +407,10 @@ export function RunFormBody(props: {
                   flexShrink={0}
                 >
                   {state().answers[field().key] === true
-                    ? "Acknowledged"
+                    ? t("miniCli.form.acknowledged")
                     : state().externalReady[field().key]
-                      ? "Press enter to acknowledge completion"
-                      : "Press enter to open the URL"}
+                      ? t("miniCli.form.enterAcknowledge")
+                      : t("miniCli.form.enterOpen")}
                 </text>
               </box>
             )}
@@ -405,8 +419,8 @@ export function RunFormBody(props: {
             <box width="100%" flexDirection="column" flexShrink={0} gap={compact() ? 0 : 1}>
               <text width="100%" fg={props.theme.text} wrapMode="word" flexShrink={0}>
                 {answerField()!.description ?? formLabel(answerField()!)}
-                {answerField()!.required ? " (required)" : ""}
-                {multiple() ? " (select all that apply)" : ""}
+                {answerField()!.required ? t("miniCli.form.requiredSuffix") : ""}
+                {multiple() ? t("miniCli.form.multipleSuffix") : ""}
               </text>
               <Show when={!textual() && !state().editing}>
                 <box width="100%" flexDirection="column" flexShrink={0}>
@@ -513,7 +527,7 @@ export function RunFormBody(props: {
                             : props.theme.formfieldText
                         }
                       >
-                        Type your own answer
+                        {t("miniCli.form.custom")}
                       </text>
                     </box>
                   </Show>
@@ -529,9 +543,9 @@ export function RunFormBody(props: {
                     {formLabel(field)}:{" "}
                     {field.type === "external"
                       ? state().answers[field.key] === true
-                        ? "acknowledged"
-                        : "required"
-                      : formDisplay(field, state().answers[field.key]) || "(not answered)"}
+                        ? t("miniCli.form.acknowledged")
+                        : t("miniCli.form.required")
+                      : formDisplay(field, state().answers[field.key], props.locale) || t("miniCli.form.unanswered")}
                   </text>
                 )}
               </For>
@@ -555,7 +569,7 @@ export function RunFormBody(props: {
           flexShrink={0}
           marginTop={compact() ? 0 : 1}
           initialValue={formInput(state(), current())}
-          placeholder={formPlaceholder(answerField())}
+          placeholder={formPlaceholder(answerField(), props.locale)}
           placeholderColor={props.theme.muted}
           textColor={props.theme.formfieldText}
           focusedTextColor={props.theme.formfieldFocusedText}
@@ -596,18 +610,16 @@ export function RunFormBody(props: {
               minWidth={0}
             >
               {state().submitting
-                ? "submitting…"
+                ? t("miniCli.form.submitting")
                 : unsupported()
-                  ? "esc dismiss"
+                  ? t("miniCli.form.dismiss")
                   : confirm()
-                    ? "enter submit   esc dismiss"
+                    ? t("miniCli.form.actionHint", { action: t("miniCli.form.submit") })
                     : editing()
-                      ? "enter save   esc dismiss"
+                      ? t("miniCli.form.actionHint", { action: t("miniCli.form.save") })
                       : externalField()
-                        ? `enter ${action()}   esc dismiss`
-                        : props.mono
-                          ? "up/down select   enter choose   tab next   esc dismiss"
-                          : "↑↓ select   enter choose   tab next   esc dismiss"}
+                        ? t("miniCli.form.actionHint", { action: action() })
+                        : t("miniCli.form.choiceHint", { arrows: props.mono ? "up/down" : "↑↓" })}
             </text>
             <Show when={state().error}>
               <text fg={props.theme.error} wrapMode="none" truncate flexShrink={1}>
@@ -625,18 +637,18 @@ export function RunFormBody(props: {
               wrapMode="none"
               flexShrink={0}
             >
-              {state().submitting ? "submitting…" : `enter ${action()}`}
+              {state().submitting ? t("miniCli.form.submitting") : `enter ${action()}`}
             </text>
           </Show>
           <Show when={!state().submitting}>
             <text height={1} fg={props.theme.muted} wrapMode="none" flexShrink={0}>
-              esc dismiss
+              {t("miniCli.form.dismiss")}
             </text>
           </Show>
           <Show when={!state().submitting && size().height >= 10}>
             <text fg={props.theme.muted} wrapMode="word" maxWidth="100%" flexShrink={0}>
-              {size().width >= 56 && rows().length > 0 && !state().editing ? "up/down select  tab next  " : ""}pgup/pgdn
-              scroll
+              {size().width >= 56 && rows().length > 0 && !state().editing ? t("miniCli.form.navigation") : ""}pgup/pgdn
+              {` ${t("miniCli.scroll")}`}
             </text>
           </Show>
         </box>

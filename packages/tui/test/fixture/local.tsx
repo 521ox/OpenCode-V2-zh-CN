@@ -2,6 +2,7 @@ import { testRender } from "@opentui/solid"
 import type { AgentInfo, ModelInfo, SessionInfo } from "@opencode/client"
 import path from "node:path"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { ArgsProvider, type Args } from "../../src/context/args"
 import { ClientProvider } from "../../src/context/client"
 import { DataProvider, useData } from "../../src/context/data"
@@ -60,28 +61,30 @@ export async function renderLocal(
     () => (
       <TestTuiContexts paths={{ state: temporary.path }}>
         <ArgsProvider {...input.args}>
-          <ConfigProvider config={createTuiResolvedConfig()}>
-            <Keymap.Provider>
-              <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
-                <ToastProvider>
-                  <RouteProvider initialRoute={{ type: "home" }}>
-                    <ClientProvider api={createApi(calls.fetch)}>
-                      <DataProvider directory={directory}>
-                        <LocationProvider>
-                          <PermissionProvider>
-                            <LocalProvider>
-                              <DialogProvider>
-                                <Probe />
-                              </DialogProvider>
-                            </LocalProvider>
-                          </PermissionProvider>
-                        </LocationProvider>
-                      </DataProvider>
-                    </ClientProvider>
-                  </RouteProvider>
-                </ToastProvider>
-              </ThemeProvider>
-            </Keymap.Provider>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+            <I18nProvider>
+              <Keymap.Provider>
+                <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
+                  <ToastProvider>
+                    <RouteProvider initialRoute={{ type: "home" }}>
+                      <ClientProvider api={createApi(calls.fetch)}>
+                        <DataProvider directory={directory}>
+                          <LocationProvider>
+                            <PermissionProvider>
+                              <LocalProvider>
+                                <DialogProvider>
+                                  <Probe />
+                                </DialogProvider>
+                              </LocalProvider>
+                            </PermissionProvider>
+                          </LocationProvider>
+                        </DataProvider>
+                      </ClientProvider>
+                    </RouteProvider>
+                  </ToastProvider>
+                </ThemeProvider>
+              </Keymap.Provider>
+            </I18nProvider>
           </ConfigProvider>
         </ArgsProvider>
       </TestTuiContexts>

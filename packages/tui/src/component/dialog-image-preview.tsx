@@ -4,6 +4,7 @@ import { createMemo, createSignal } from "solid-js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
+import { useI18n } from "../context/i18n"
 
 type ImagePreviewItem = Readonly<{
   uri: string
@@ -11,6 +12,7 @@ type ImagePreviewItem = Readonly<{
 }>
 
 export function DialogImagePreview(props: { images: readonly ImagePreviewItem[]; initial: number }) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const dimensions = useTerminalDimensions()
   const theme = useTheme().surface("dialog")
@@ -31,8 +33,8 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
-      { bind: "left", title: "Previous image", group: "Dialog", run: () => move(-1) },
-      { bind: "right", title: "Next image", group: "Dialog", run: () => move(1) },
+      { bind: "left", title: t("main.image.previous"), group: t("main.group.dialog"), run: () => move(-1) },
+      { bind: "right", title: t("main.image.next"), group: t("main.group.dialog"), run: () => move(1) },
     ],
   }))
 
@@ -40,7 +42,7 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
     <box id="prompt-image-viewer" paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          Image {index() + 1} of {props.images.length}
+          {t("main.image.count", { index: index() + 1, count: props.images.length })}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
           esc
@@ -57,13 +59,15 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
       />
       <box flexDirection="row" justifyContent="space-between">
         <text fg={theme.text.muted} onMouseUp={() => move(-1)}>
-          {props.images.length > 1 ? "← previous" : ""}
+          {props.images.length > 1 ? `← ${t("main.previous")}` : ""}
         </text>
         <text fg={failed() ? theme.text.feedback.error.base : theme.text.muted} wrapMode="none" truncate>
-          {failed() ? "No preview" : (current().mention?.text ?? `Image ${index() + 1}`)}
+          {failed()
+            ? t("main.image.noPreview")
+            : (current().mention?.text ?? t("main.image.index", { index: index() + 1 }))}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => move(1)}>
-          {props.images.length > 1 ? "next →" : ""}
+          {props.images.length > 1 ? `${t("main.next")} →` : ""}
         </text>
       </box>
     </box>

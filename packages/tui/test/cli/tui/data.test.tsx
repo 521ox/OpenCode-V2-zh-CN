@@ -8,6 +8,7 @@ import { Event } from "@opencode/schema/event"
 import { Expected } from "../../../../core/test/lib/session-message"
 import { createEffect, onMount, type ParentProps } from "solid-js"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ClientProvider, useClient } from "../../../src/context/client"
 import { DataProvider as DataProviderBase, useData } from "../../../src/context/data"
 import { Keymap } from "../../../src/context/keymap"
@@ -43,17 +44,19 @@ function emitEvent(events: ReturnType<typeof createEventStream>, event: OpenCode
   events.emit({ ...event, location: { directory } })
 }
 
-const config = createTuiResolvedConfig({}, { terminal: false })
+const config = createTuiResolvedConfig({ locale: "en" }, { terminal: false })
 
 function DataProvider(props: ParentProps) {
   return (
     <ConfigProvider config={config}>
-      <DataProviderBase directory={process.cwd()}>
-        <LocationProvider>
-          <SyncLocation />
-          {props.children}
-        </LocationProvider>
-      </DataProviderBase>
+      <I18nProvider>
+        <DataProviderBase directory={process.cwd()}>
+          <LocationProvider>
+            <SyncLocation />
+            {props.children}
+          </LocationProvider>
+        </DataProviderBase>
+      </I18nProvider>
     </ConfigProvider>
   )
 }
@@ -2176,9 +2179,7 @@ test("keeps shell state scoped to location", async () => {
         },
       },
     })
-    await wait(() =>
-      data.shell.list({ directory: other }).some((shell) => shell.id === "sh_live_other"),
-    )
+    await wait(() => data.shell.list({ directory: other }).some((shell) => shell.id === "sh_live_other"))
     expect(data.shell.list().map((shell) => shell.id)).toEqual(["sh_default"])
     expect(
       data.shell.listBySession("ses_shared").find((shell) => shell.id === "sh_live_other")?.location.directory,
@@ -2638,9 +2639,7 @@ test("resyncs global forms only for the active location after reconnect", async 
     await wait(() => data.session.form.list("global", home)?.[0]?.id === "frm_default_2", 4000)
     expect(data.session.form.list("global", other)?.[0]?.id).toBe("frm_other_1")
     expect(requests).toHaveLength(1)
-    expect(requests.map((url) => url.searchParams.get("location[directory]") ?? directory)).toEqual([
-      home.directory,
-    ])
+    expect(requests.map((url) => url.searchParams.get("location[directory]") ?? directory)).toEqual([home.directory])
   } finally {
     app.renderer.destroy()
   }

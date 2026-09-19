@@ -1,4 +1,5 @@
 import { EOL } from "node:os"
+import { DEFAULT_LOCALE, translate, type Locale } from "@opencode/tui/i18n"
 
 export const Style = {
   TEXT_DIM: "\x1b[90m",
@@ -19,9 +20,8 @@ export function empty() {
   blank = true
 }
 
-export function error(message: string) {
-  if (message.startsWith("Error: ")) message = message.slice("Error: ".length)
-  println(Style.TEXT_DANGER_BOLD + "Error: " + Style.TEXT_NORMAL + message)
+export function error(message: string, locale: Locale = DEFAULT_LOCALE) {
+  println(Style.TEXT_DANGER_BOLD + translate(locale, "miniCli.error") + Style.TEXT_NORMAL + message)
 }
 
 export * as UI from "./ui"

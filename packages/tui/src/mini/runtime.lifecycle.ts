@@ -37,6 +37,7 @@ import type {
 } from "./types"
 import { resolveMiniSettings } from "./runtime.boot"
 import { formatModelLabel } from "./variant.shared"
+import { resolveLocale, translate } from "../i18n"
 
 const FOOTER_HEIGHT = 4
 
@@ -215,7 +216,9 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
     agents: input.agents,
     references: input.references,
     agent: input.agent,
-    modelLabel: input.model ? formatModelLabel(input.model, input.variant) : "Default model",
+    modelLabel: input.model
+      ? formatModelLabel(input.model, input.variant)
+      : translate(resolveLocale(tuiConfig.locale), "miniCli.defaultModel"),
     model: input.model,
     variant: input.variant,
     first: input.first,
@@ -322,6 +325,7 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
           state,
           "exit",
           exitSplash({
+            locale: tuiConfig.locale,
             title: splashTitle(next.sessionTitle ?? input.sessionTitle, next.history ?? input.history),
             session_id: sessionID,
             theme: footer.currentTheme().splash,
@@ -365,12 +369,12 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
     },
     async resetForReplay() {
       if (closed || renderer.isDestroyed || footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error(translate(resolveLocale(tuiConfig.locale), "miniCli.runtimeClosed"))
       }
 
       await footer.idle()
       if (closed || renderer.isDestroyed || footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error(translate(resolveLocale(tuiConfig.locale), "miniCli.runtimeClosed"))
       }
 
       footer.resetForReplay(true)

@@ -4,6 +4,7 @@ import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { ConfigProvider, resolve, type Info, type Interface } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { CommandPaletteDialog } from "../../../src/component/command-palette"
 import { Keymap } from "../../../src/context/keymap"
 import { ThemeProvider } from "../../../src/context/theme"
@@ -13,7 +14,7 @@ import { TestTuiContexts } from "../../fixture/tui-environment"
 import { emptyThemeSource } from "../../fixture/fixture"
 
 test("searches settings globally and opens the matching setting", async () => {
-  let current: Info = {}
+  let current: Info = { locale: "en" }
   const service: Interface = {
     get: async () => current,
     update: async (update) => {
@@ -53,15 +54,17 @@ test("searches settings globally and opens the matching setting", async () => {
     () => (
       <TestTuiContexts>
         <ConfigProvider config={resolve(current, { terminalSuspend: true })} service={service}>
-          <Keymap.Provider>
-            <ThemeProvider mode="dark" source={emptyThemeSource}>
-              <ToastProvider>
-                <DialogProvider>
-                  <Fixture />
-                </DialogProvider>
-              </ToastProvider>
-            </ThemeProvider>
-          </Keymap.Provider>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ThemeProvider mode="dark" source={emptyThemeSource}>
+                <ToastProvider>
+                  <DialogProvider>
+                    <Fixture />
+                  </DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

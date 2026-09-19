@@ -9,6 +9,7 @@ import { ClientProvider } from "../../../src/context/client"
 import { ThemeProvider } from "../../../src/context/theme"
 import { Keymap } from "../../../src/context/keymap"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ToastProvider } from "../../../src/ui/toast"
 import { emptyThemeSource, tmpdir } from "../../fixture/fixture"
 import { TestTuiContexts } from "../../fixture/tui-environment"
@@ -32,7 +33,7 @@ async function mountForm(
   let terminal = false
   let formLists = 0
   const events = createEventStream()
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig({ locale: "en" })
   const form = {
     id: "frm_test",
     sessionID: "ses_test",
@@ -104,15 +105,17 @@ async function mountForm(
         }}
       >
         <ConfigProvider config={config}>
-          <Keymap.Provider>
-            <ClientProvider api={createApi(transport.fetch)}>
-              <DataProvider directory={process.cwd()}>
-                <ThemeProvider mode="dark" source={emptyThemeSource}>
-                  <ToastProvider>{response ? <CurrentForm /> : <FormPrompt form={form} />}</ToastProvider>
-                </ThemeProvider>
-              </DataProvider>
-            </ClientProvider>
-          </Keymap.Provider>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ClientProvider api={createApi(transport.fetch)}>
+                <DataProvider directory={process.cwd()}>
+                  <ThemeProvider mode="dark" source={emptyThemeSource}>
+                    <ToastProvider>{response ? <CurrentForm /> : <FormPrompt form={form} />}</ToastProvider>
+                  </ThemeProvider>
+                </DataProvider>
+              </ClientProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     )

@@ -5,7 +5,7 @@ import { RunFooter } from "../../src/mini/footer"
 import { resolveMiniSettings } from "../../src/mini/runtime.boot"
 import { RUN_THEME_FALLBACK, RUN_THEME_MONO } from "../../src/mini/theme"
 import type { RunPrompt } from "../../src/mini/types"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig } from "./fixture/english"
 
 const sizes = [
   [112, 30],

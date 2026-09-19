@@ -23,6 +23,7 @@ import {
 import { createRuntimeLifecycle } from "./runtime.lifecycle"
 import { cycleVariant, formatModelLabel, resolveVariant } from "./variant.shared"
 import { verbosityPreset } from "./verbosity"
+import { resolveLocale, translate, type Key, type Params } from "../i18n"
 import type {
   LocalReplayRow,
   MiniHost,
@@ -201,6 +202,8 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     return tuiConfig
   })
   const ctx = await input.boot()
+  const tuiConfig = await tuiConfigTask
+  const t = (key: Key, params?: Params) => translate(resolveLocale(tuiConfig.locale), key, params)
   const runtimeController = new AbortController()
   const session = {
     first: true,
@@ -276,7 +279,10 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     onFormReply: async (next) => {
       if (state.demo?.formReply(next)) return
       try {
-        await state.sdk.session.form.reply(next, formRequestOptions(next.sessionID === "global" ? next.location : undefined))
+        await state.sdk.session.form.reply(
+          next,
+          formRequestOptions(next.sessionID === "global" ? next.location : undefined),
+        )
       } catch (error) {
         if (!formAlreadySettled(error)) throw error
       }
@@ -285,7 +291,10 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     onFormCancel: async (next) => {
       if (state.demo?.formCancel(next)) return
       try {
-        await state.sdk.session.form.cancel(next, formRequestOptions(next.sessionID === "global" ? next.location : undefined))
+        await state.sdk.session.form.cancel(
+          next,
+          formRequestOptions(next.sessionID === "global" ? next.location : undefined),
+        )
       } catch (error) {
         if (!formAlreadySettled(error)) throw error
       }
@@ -295,7 +304,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       const model = state.model ?? state.defaultModel
       if (!model || state.variants.length === 0) {
         return {
-          status: "no variants available",
+          status: t("miniCli.noVariants"),
         }
       }
 
@@ -303,7 +312,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       state.activeVariant = cycleVariant(state.activeVariant, state.variants)
       void input.host.preferences.saveVariant(model, state.activeVariant)
       return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "variant default",
+        status: state.activeVariant ? t("miniCli.variant", { name: state.activeVariant }) : t("miniCli.variantDefault"),
         modelLabel: formatModelLabel(model, state.activeVariant, state.providers),
         variant: state.activeVariant,
       }
@@ -340,7 +349,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
 
       return {
         modelLabel: formatModelLabel(model, state.activeVariant, state.providers),
-        status: `model ${model.modelID}`,
+        status: t("miniCli.model", { name: model.modelID }),
         variant: state.activeVariant,
         variants: state.variants,
       }
@@ -349,13 +358,13 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       const model = state.model ?? state.defaultModel
       if (!model || state.variants.length === 0) {
         return {
-          status: "no variants available",
+          status: t("miniCli.noVariants"),
         }
       }
 
       if (variant && !state.variants.includes(variant)) {
         return {
-          status: `variant ${variant} unavailable`,
+          status: t("miniCli.variantUnavailable", { name: variant }),
         }
       }
 
@@ -363,7 +372,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       state.activeVariant = variant
       void input.host.preferences.saveVariant(model, state.activeVariant)
       return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "variant default",
+        status: state.activeVariant ? t("miniCli.variant", { name: state.activeVariant }) : t("miniCli.variantDefault"),
         modelLabel: formatModelLabel(model, state.activeVariant, state.providers),
         variant: state.activeVariant,
         variants: state.variants,
@@ -784,15 +793,16 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     const next = (async () => {
       await ensureSession()
       if (footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error(t("miniCli.runtimeClosed"))
       }
 
       const mod = await loadStreamTransport()
       if (footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error(t("miniCli.runtimeClosed"))
       }
 
       const handle = await mod.createSessionTransport({
+        locale: tuiConfig.locale,
         sdk: state.sdk,
         reconnect: input.reconnect,
         onClient: updateClient,
@@ -816,7 +826,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       })
       if (footer.isClosed) {
         await handle.close()
-        throw new Error("runtime closed")
+        throw new Error(t("miniCli.runtimeClosed"))
       }
 
       state.selectSubagent = (sessionID) => handle.selectSubagent(sessionID)
@@ -862,8 +872,10 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
   const renderPromptError = async (prompt: RunPrompt, error: unknown, signal?: AbortSignal) => {
     if (signal?.aborted || footer.isClosed) return
     const text =
-      (await state.stream?.then((item) => item.mod).catch(() => undefined))?.formatUnknownError(error) ??
-      (error instanceof Error ? error.message : String(error))
+      (await state.stream?.then((item) => item.mod).catch(() => undefined))?.formatUnknownError(
+        error,
+        resolveLocale(tuiConfig.locale),
+      ) ?? (error instanceof Error ? error.message : String(error))
     const commit = {
       kind: "error",
       text,
@@ -890,6 +902,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     const mod = await import("./runtime.queue")
     const createSession = input.createSession
     await mod.runPromptQueue({
+      locale: tuiConfig.locale,
       footer,
       initialInput: input.initialInput,
       trace: log,
@@ -949,7 +962,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                 },
                 runtimeController.signal,
               )
-              if (!created.sessionID) throw new Error("Failed to create session")
+              if (!created.sessionID) throw new Error(t("miniCli.createSessionFailed"))
               await footer.idle().catch(() => {})
               await state.stream?.then((item) => item.handle.close()).catch(() => {})
               state.stream = undefined
@@ -992,7 +1005,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
               })
               footer.append({
                 kind: "system",
-                text: `new session ${state.sessionID}`,
+                text: t("miniCli.newSession", { id: state.sessionID }),
                 phase: "final",
                 source: "system",
               })
@@ -1002,7 +1015,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                 type: "stream.patch",
                 patch: {
                   phase: "idle",
-                  status: "failed to start new session",
+                  status: t("miniCli.newSessionFailed"),
                 },
               })
               const commit = {

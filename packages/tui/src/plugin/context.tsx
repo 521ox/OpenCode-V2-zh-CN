@@ -34,6 +34,7 @@ import { createPluginSources } from "./source"
 import { isMissingPath } from "../util/config-directories"
 import { createMarkdownRenderer } from "./markdown"
 import { useLog, type LogTags } from "../context/log"
+import { useI18n } from "../context/i18n"
 
 export interface PackageSource {
   readonly prepare: (spec: string, install?: boolean) => Promise<Host.Target>
@@ -86,6 +87,7 @@ type Trace = <T>(stage: string, tags: LogTags, task: () => Promise<T>) => Promis
 const PluginContext = createContext<Value>()
 
 export function PluginProvider(props: ParentProps<{ packages: PackageSource; directories: string[] }>) {
+  const i18n = useI18n()
   const host = usePluginHost()
   const log = useLog({ component: "plugin" })
   const config = useConfig()
@@ -234,7 +236,11 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
   // vanish either: the old generation may still own listeners or intervals.
   const deactivateNoisily = (id: string) =>
     deactivate(id).catch((error) =>
-      host.toast.show({ variant: "error", title: "Plugin", message: `${id}: cleanup failed: ${errorMessage(error)}` }),
+      host.toast.show({
+        variant: "error",
+        title: i18n.t("feature.plugins.singular"),
+        message: i18n.t("feature.plugins.cleanupFailed", { id, error: errorMessage(error) }),
+      }),
     )
 
   // Every lifecycle mutation — reconciles, manual dialog toggles, shutdown —
@@ -312,7 +318,7 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
     // to import keeps its running previous version and only reports failure.
     const { builtins } = await import("./builtins")
     const desired = new Map<string, Desired>()
-    for (const plugin of builtins)
+    for (const plugin of builtins(i18n.t))
       desired.set(plugin.id, { plugin, source: "builtin", version: "builtin", enabled: true })
     const failures: State[] = []
     for (const source of entries) {
@@ -479,9 +485,9 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
       )
         host.toast.show({
           variant: "error",
-          title: `Plugin failed: ${state.target}`,
-          message: "Run /plugins to view details.",
-          action: { label: "Open plugins", run: () => host.keymap.dispatch("plugins.list") },
+          title: i18n.t("feature.plugins.failedTarget", { target: state.target }),
+          message: i18n.t("feature.plugins.details"),
+          action: { label: i18n.t("feature.plugins.open"), run: () => host.keymap.dispatch("plugins.list") },
         })
     setStore("states", reconcileStore(states))
     log.info("plugin reconciliation completed", { id, durationMs: Date.now() - started, plugins: desired.size })
@@ -553,10 +559,14 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
         if (!first) return
         host.toast.show({
           variant: "error",
-          title: failed.length === 1 ? `Plugin failed: ${serverPluginName(first)}` : `${failed.length} plugins failed`,
+          title:
+            failed.length === 1
+              ? i18n.t("feature.plugins.failedTarget", { target: serverPluginName(first) })
+              : i18n.t("feature.plugins.failedMany", { count: failed.length }),
           message:
-            (failed.length > 1 ? `${failed.map(serverPluginName).join(", ")}\n` : "") + "Run /plugins to view details.",
-          action: { label: "Open plugins", run: () => host.keymap.dispatch("plugins.list") },
+            (failed.length > 1 ? `${failed.map(serverPluginName).join(", ")}\n` : "") +
+            i18n.t("feature.plugins.details"),
+          action: { label: i18n.t("feature.plugins.open"), run: () => host.keymap.dispatch("plugins.list") },
         })
       })
       .catch(() => undefined)

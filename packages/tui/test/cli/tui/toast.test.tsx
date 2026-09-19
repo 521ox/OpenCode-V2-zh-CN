@@ -3,6 +3,7 @@ import { expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import { onMount } from "solid-js"
 import { ToastProvider, useToast, type ToastContext } from "../../../src/ui/toast"
+import { TestI18n } from "../../fixture/i18n"
 
 function captureToast(setToast: (toast: ToastContext) => void) {
   return function Capture() {
@@ -16,9 +17,11 @@ test("activation runs an action and keeps a queued toast paused", async () => {
   let toast: ToastContext | undefined
   const Capture = captureToast((value) => (toast = value))
   const app = await testRender(() => (
-    <ToastProvider>
-      <Capture />
-    </ToastProvider>
+    <TestI18n>
+      <ToastProvider>
+        <Capture />
+      </ToastProvider>
+    </TestI18n>
   ))
 
   try {
@@ -56,9 +59,11 @@ test("activation dismisses a toast without an action", async () => {
   let toast: ToastContext | undefined
   const Capture = captureToast((value) => (toast = value))
   const app = await testRender(() => (
-    <ToastProvider>
-      <Capture />
-    </ToastProvider>
+    <TestI18n>
+      <ToastProvider>
+        <Capture />
+      </ToastProvider>
+    </TestI18n>
   ))
 
   try {

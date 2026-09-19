@@ -4,6 +4,7 @@
 import { createCliRenderer, RGBA, TextAttributes, type CliRenderer } from "@opentui/core"
 import { render, useTerminalDimensions } from "@opentui/solid"
 import { OPENCODE_VERSION } from "../version"
+import { DEFAULT_LOCALE, translate, type Locale } from "@opencode/tui/i18n"
 import { registerOpencodeSpinner } from "@opencode/tui/component/register-spinner"
 import { SPINNER_FRAMES } from "@opencode/tui/component/spinner"
 import { go } from "@opencode/tui/logo"
@@ -22,7 +23,7 @@ import {
   untrack,
 } from "solid-js"
 
-const stages = ["Keeping your session safe", "Starting the new background service", "Loading OpenCode"] as const
+const stageKeys = ["miniCli.update.safe", "miniCli.update.starting", "miniCli.update.loading"] as const
 const stageFloor = 480
 const transitionDuration = 420
 const completionHold = 650
@@ -35,13 +36,13 @@ export type Handle = {
   readonly close: () => Promise<void>
 }
 
-export const make = (): Handle => {
+export const make = (locale: Locale = DEFAULT_LOCALE): Handle => {
   let session: Promise<Session | undefined> | undefined
   return {
     begin: (from) => {
       if (!process.stdout.isTTY || !process.stdin.isTTY) return false
-      session ??= open(from).catch(() => {
-        process.stderr.write("Restarting background server (version mismatch)...\n")
+      session ??= open(from, locale).catch(() => {
+        process.stderr.write(translate(locale, "miniCli.startup.restarting") + "\n")
         return undefined
       })
       return true
@@ -71,7 +72,7 @@ type Session = {
   readonly close: () => Promise<void>
 }
 
-async function open(from?: string): Promise<Session> {
+async function open(from: string | undefined, locale: Locale): Promise<Session> {
   registerOpencodeSpinner()
   const [active, setActive] = createSignal(0)
   const [outcome, setOutcome] = createSignal<"running" | "success" | "failure">("running")
@@ -97,6 +98,7 @@ async function open(from?: string): Promise<Session> {
   await render(
     () => (
       <UpdateFooter
+        locale={locale}
         from={from}
         active={active}
         outcome={outcome}
@@ -310,6 +312,7 @@ const smoothstep = (value: number) => value * value * (3 - 2 * value)
 const frameDone = Promise.resolve()
 
 function UpdateFooter(props: {
+  locale: Locale
   from?: string
   active: () => number
   outcome: () => "running" | "success" | "failure"
@@ -318,6 +321,7 @@ function UpdateFooter(props: {
   renderer: CliRenderer
   onOutcomeSettled: () => void
 }) {
+  const stages = stageKeys.map((key) => translate(props.locale, key))
   const term = useTerminalDimensions()
   const [position, setPosition] = createSignal(0)
   const [pulse, setPulse] = createSignal(0)
@@ -326,25 +330,28 @@ function UpdateFooter(props: {
   const runningHeader = () =>
     phrase(
       ["OpenCode", colors.muted, true],
-      ["is updating", colors.muted],
+      [translate(props.locale, "miniCli.update.updating"), colors.muted],
       ...(props.from
         ? ([
-            ["from", colors.muted],
+            [translate(props.locale, "miniCli.update.from"), colors.muted],
             [props.from, colors.accentDim],
           ] as const)
         : []),
-      ["to", colors.muted],
+      [translate(props.locale, "miniCli.update.to"), colors.muted],
       [OPENCODE_VERSION, colors.accent],
     )
   const completedHeader = phrase(
     ["OpenCode", colors.muted, true],
-    ["updated to", colors.muted],
+    [translate(props.locale, "miniCli.update.updated"), colors.muted],
     [OPENCODE_VERSION, colors.accent],
   )
-  const pausedHeader = phrase(["OpenCode", colors.muted, true], ["update paused", colors.muted])
+  const pausedHeader = phrase(
+    ["OpenCode", colors.muted, true],
+    [translate(props.locale, "miniCli.update.paused"), colors.muted],
+  )
   const outcomeStatus = () =>
     props.outcome() === "success"
-      ? [...styled("✓", colors.success), ...styled(" Ready", colors.text)]
+      ? [...styled("✓", colors.success), ...styled(" " + translate(props.locale, "miniCli.update.ready"), colors.text)]
       : [...styled("!", colors.error), ...styled(" " + props.failure(), colors.text)]
   let previousStage: string = stages[0]
   createEffect(

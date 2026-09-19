@@ -5,19 +5,26 @@ import { useSessionTerminals } from "../../../context/session-terminals"
 import { useTheme } from "../../../context/theme"
 import { useToast } from "../../../ui/toast"
 import { useComposerTab } from "./index"
+import { useI18n } from "../../../context/i18n"
 
 export function TerminalsTab(props: { sessionID: string; visibleTerminalID?: string }) {
+  const { t } = useI18n()
   const composer = useComposerTab()
   const terminals = useSessionTerminals()
   const theme = useTheme()
   const toast = useToast()
-  const failure = () => toast.show({ variant: "error", message: "Unable to load terminal" })
+  const failure = () => toast.show({ variant: "error", message: t("session.terminalFailed") })
   const [selected, setSelected] = createSignal<number>()
   const session = () => terminals.get(props.sessionID)
   const entries = () => session()?.terminals ?? []
 
   onMount(() => {
-    const cleanup = composer.register({ id: "terminals", label: "Terminals" })
+    const cleanup = composer.register({
+      id: "terminals",
+      get label() {
+        return t("session.terminals")
+      },
+    })
     onCleanup(cleanup)
   })
 
@@ -46,20 +53,20 @@ export function TerminalsTab(props: { sessionID: string; visibleTerminalID?: str
     commands: [
       {
         id: "composer.terminal.up",
-        title: "Previous terminal",
-        group: "Composer",
+        title: t("session.previousTerminal"),
+        group: t("session.composer"),
         run: () => setSelected((index) => ((index ?? 0) + entries().length) % (entries().length + 1)),
       },
       {
         id: "composer.terminal.down",
-        title: "Next terminal",
-        group: "Composer",
+        title: t("session.nextTerminal"),
+        group: t("session.composer"),
         run: () => setSelected((index) => ((index ?? -1) + 1) % (entries().length + 1)),
       },
       {
         id: "composer.terminal.select",
-        title: "Select terminal",
-        group: "Composer",
+        title: t("session.selectTerminal"),
+        group: t("session.composer"),
         run: select,
       },
     ],
@@ -102,7 +109,7 @@ export function TerminalsTab(props: { sessionID: string; visibleTerminalID?: str
                   wrapMode="none"
                   truncate
                 >
-                  {terminal?.foregroundProcess ?? terminal?.title ?? "+ New terminal"}
+                  {terminal?.foregroundProcess ?? terminal?.title ?? t("session.newTerminal")}
                 </text>
               </box>
             )

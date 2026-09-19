@@ -133,7 +133,7 @@ test.each(["entry", "exit"])("%s commits one scrollback snapshot without reflow 
   const writer =
     kind === "entry"
       ? entrySplash({ version: "local", detail: "~/src/wt/oc-mini-v2", theme })
-      : exitSplash({ title: "Review mini layout", session_id: sessionID, theme })
+      : exitSplash({ title: "Review mini layout", session_id: sessionID, theme, locale: "en" })
   const result = await renderSplash(writer, 24)
   const app = await createTestRenderer({
     width: 24,
@@ -172,7 +172,7 @@ test.each(
   ].flatMap((size) => [false, true].map((mono) => ({ ...size, mono }))),
 )("exit retains the complete resume command (%o)", async (input) => {
   const result = await renderSplash(
-    exitSplash({ ...input, title: "Review mini layout", session_id: sessionID, theme }),
+    exitSplash({ ...input, title: "Review mini layout", session_id: sessionID, theme, locale: "en" }),
     input.width,
   )
   const command = `opencode mini -s ${sessionID}`

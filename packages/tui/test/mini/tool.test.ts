@@ -86,10 +86,11 @@ describe("Mini tool presentation", () => {
         "call-skill",
       )
 
-    expect(toolInlineInfo(skill({ name: "effect" })).title).toBe('Skill "effect"')
-    expect(toolInlineInfo(skill({})).title).toBe('Skill "tigerstyle"')
+    expect(toolInlineInfo(skill({ name: "effect" }), undefined, "en").title).toBe('Skill "effect"')
+    expect(toolInlineInfo(skill({}), undefined, "en").title).toBe('Skill "tigerstyle"')
     expect(
       toolScroll("start", {
+        locale: "en",
         directory: "/work/project",
         raw: "",
         name: "skill",
@@ -113,6 +114,8 @@ describe("Mini tool presentation", () => {
           metadata: { count: 3 },
           content: [{ type: "text", text: "" }],
         }),
+        undefined,
+        "en",
       ).description,
     ).toBe("3 matches")
     expect(
@@ -123,6 +126,8 @@ describe("Mini tool presentation", () => {
           metadata: { matches: 1 },
           content: [{ type: "text", text: "" }],
         }),
+        undefined,
+        "en",
       ).description,
     ).toBe("1 match")
   })

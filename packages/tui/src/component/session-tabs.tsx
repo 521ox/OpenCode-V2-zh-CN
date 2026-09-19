@@ -21,6 +21,7 @@ import {
 } from "solid-js"
 import { Portal, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { useConfig } from "../config"
+import { useI18n } from "../context/i18n"
 import { useSessionTabs } from "../context/session-tabs"
 import { useData } from "../context/data"
 import { useTheme } from "../context/theme"
@@ -365,6 +366,7 @@ export function createTabMarquee(animations: () => boolean) {
 }
 
 function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsController; onClose: () => void }) {
+  const { t } = useI18n()
   const dimensions = useTerminalDimensions()
   const theme = useTheme()
   const background = () => theme.background.raised.base
@@ -373,21 +375,23 @@ function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsCo
   onCleanup(Keymap.use().mode.push("menu"))
   Keymap.createLayer(() => ({
     mode: "menu",
-    commands: [{ bind: "escape,ctrl+c", title: "Close tab menu", group: "Tabs", run: props.onClose }],
+    commands: [
+      { bind: "escape,ctrl+c", title: t("main.tabs.closeMenu"), group: t("main.group.tabs"), run: props.onClose },
+    ],
   }))
   const actions = createMemo(() => {
     const sessionID = props.state.sessionID
     const title = props.state.title
     return [
-      ...(props.tabs.add ? [{ title: "New tab", run: () => props.tabs.add?.() }] : []),
+      ...(props.tabs.add ? [{ title: t("main.tabs.new"), run: () => props.tabs.add?.() }] : []),
       ...(sessionID
         ? [
             {
-              title: "Rename",
+              title: t("main.tabs.rename"),
               run: () =>
                 props.tabs.rename ? props.tabs.rename(sessionID) : DialogSessionRename.show(dialog, sessionID, title),
             },
-            { title: "Close", run: () => props.tabs.close(sessionID) },
+            { title: t("main.close"), run: () => props.tabs.close(sessionID) },
           ]
         : []),
     ]
@@ -513,6 +517,7 @@ function VerticalSessionTabs(props: {
   unreadMarker?: TabUnreadMarker
   width?: number
 }) {
+  const { t } = useI18n()
   const tabs: SessionTabsController = props.controller ?? useSessionTabs()
   const data = props.controller ? undefined : useData()
   const dimensions = useTerminalDimensions()
@@ -568,9 +573,7 @@ function VerticalSessionTabs(props: {
     return moveSessionTab(tabs.tabs(), pending.sessionID, pending.index)
   })
   const items = ordered
-  const highlightColor = createMemo(() =>
-    tint(background(), actionHovered(), actionHovered().a),
-  )
+  const highlightColor = createMemo(() => tint(background(), actionHovered(), actionHovered().a))
   const highlighted = (sessionID: string | undefined) =>
     sessionID !== undefined && (activeID() === sessionID || hovered() === sessionID || dragging() === sessionID)
   const addHighlighted = () => newTab() || addHovered()
@@ -715,7 +718,8 @@ function VerticalSessionTabs(props: {
               const restingTitleWidth = () => Math.max(1, width() - prefixWidth() - 1)
               const hoveredTitleWidth = () => Math.max(1, restingTitleWidth() - 1)
               const titleWidth = () => (hovered() === tab.sessionID ? hoveredTitleWidth() : restingTitleWidth())
-              const title = () => (props.controller ? undefined : session()?.title) ?? tab.title ?? "Untitled session"
+              const title = () =>
+                (props.controller ? undefined : session()?.title) ?? tab.title ?? t("main.session.untitled")
               const scrolling = () => marquee.active() === tab.sessionID
               const visibleTitleParts = createMemo(() =>
                 scrolling()
@@ -822,9 +826,7 @@ function VerticalSessionTabs(props: {
               const separatorUpperColor = createMemo(() =>
                 tint(background(), previousGlowHue(), 0.1 * previousGlowLevel()),
               )
-              const separatorLowerColor = createMemo(() =>
-                tint(background(), glowHue(), 0.12 * glowLevel()),
-              )
+              const separatorLowerColor = createMemo(() => tint(background(), glowHue(), 0.12 * glowLevel()))
               const titleColor = (index: number, separator: boolean) => {
                 const level = titleGlow.value().level
                 const color =
@@ -889,9 +891,7 @@ function VerticalSessionTabs(props: {
                         edge="top"
                         width={width()}
                         color={pulseBackground()}
-                        background={
-                          highlighted(items()[index() - 1]?.sessionID) ? highlightColor() : background()
-                        }
+                        background={highlighted(items()[index() - 1]?.sessionID) ? highlightColor() : background()}
                       />
                       <SessionTabHalfRow
                         top={1}
@@ -1175,7 +1175,7 @@ function VerticalSessionTabs(props: {
                   selectable={false}
                   attributes={newTab() ? TextAttributes.BOLD : undefined}
                 >
-                  {NEW_SESSION_TAB_TITLE}
+                  {t("main.command.session.new")}
                 </text>
               </Show>
               <Show when={newTab() && !compact()}>
@@ -1224,7 +1224,7 @@ function VerticalSessionTabs(props: {
                 {Locale.truncateWidth(
                   data?.session.get(sessionID())?.title ??
                     items().find((tab) => tab.sessionID === sessionID())?.title ??
-                    "Untitled session",
+                    t("main.session.untitled"),
                   tooltipWidth() - 2,
                 )}
               </text>
@@ -1256,6 +1256,7 @@ function HorizontalSessionTabs(props: {
   unreadMarker?: TabUnreadMarker
   numbers: boolean
 }) {
+  const { t } = useI18n()
   const tabs = props.controller ?? useSessionTabs()
   const data = props.controller ? undefined : useData()
   const dimensions = useTerminalDimensions()
@@ -1546,7 +1547,10 @@ function HorizontalSessionTabs(props: {
           const glowColor = createMemo(() => tint(background(), feedbackColor() ?? unreadColor(), glowLevel()))
           const glows = () =>
             Boolean(status().attention || (!selected() && !status().busy && status().unread !== undefined))
-          const title = () => data?.session.get(tab.sessionID)?.title ?? tab.title ?? "Untitled session"
+          const title = () =>
+            tab === NEW_SESSION_TAB
+              ? t("main.command.session.new")
+              : (data?.session.get(tab.sessionID)?.title ?? tab.title ?? t("main.session.untitled"))
           const tabNumber = createMemo(() => items().findIndex((item) => item.sessionID === tab.sessionID) + 1)
           const numberWidth = () => Math.max(2, String(items().length).length)
           // Hovering reveals the close mark, so the title's right bound shifts left of it.

@@ -11,7 +11,7 @@ import { RunFooterSubagentBody } from "../../src/mini/footer.subagent"
 import { createFormBodyState } from "../../src/mini/form.shared"
 import { RUN_THEME_FALLBACK, RUN_THEME_MONO } from "../../src/mini/theme"
 import type { FormReply, MiniFormRequest, MiniPermissionRequest, PermissionReply } from "../../src/mini/types"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig } from "./fixture/english"
 
 const permission: MiniPermissionRequest = {
   id: "per_responsive",
@@ -55,6 +55,7 @@ async function renderForm(request: MiniFormRequest, width = 80, height = 20) {
   const app = await testRender(
     () => (
       <RunFormBody
+        locale="en"
         request={request}
         theme={RUN_THEME_FALLBACK.footer}
         onReply={(reply) => {
@@ -201,6 +202,7 @@ test("roomy permission prompts retain their header and padded action bar", async
   const app = await testRender(
     () => (
       <RunPermissionBody
+        locale="en"
         request={permission}
         theme={RUN_THEME_FALLBACK.footer}
         block={RUN_THEME_FALLBACK.block}
@@ -234,6 +236,7 @@ test("roomy rejection keeps the editor and confirmation hints inline", async () 
     () => (
       <Keymap.Provider config={createTuiResolvedConfig()}>
         <RunPermissionBody
+          locale="en"
           request={permission}
           theme={RUN_THEME_FALLBACK.footer}
           block={RUN_THEME_FALLBACK.block}
@@ -269,6 +272,7 @@ test.each([false, true])("picked options budget their full ordinal and selection
     const app = await testRender(
       () => (
         <RunFormBody
+          locale="en"
           request={{
             ...form,
             fields: [
@@ -325,6 +329,7 @@ test.each([
   const app = await testRender(
     () => (
       <RunPermissionBody
+        locale="en"
         request={permission}
         theme={RUN_THEME_FALLBACK.footer}
         block={RUN_THEME_FALLBACK.block}
@@ -475,6 +480,7 @@ test("form review scrolls from the first answer to the last", async () => {
   const app = await testRender(
     () => (
       <RunFormBody
+        locale="en"
         request={request}
         theme={RUN_THEME_FALLBACK.footer}
         state={{ ...createFormBodyState(request), field: 12 }}
@@ -501,6 +507,7 @@ test("long permission paths, diffs and persistent scopes remain keyboard accessi
   const app = await testRender(
     () => (
       <RunPermissionBody
+        locale="en"
         request={{
           ...permission,
           action: "edit",
@@ -589,6 +596,7 @@ test.each([16, 24, 80])("text form keeps its editor, error and controls at %s x 
     () => (
       <Keymap.Provider config={createTuiResolvedConfig()}>
         <RunFormBody
+          locale="en"
           request={{
             ...form,
             fields: [
@@ -634,6 +642,7 @@ test("external form exposes its complete URL and state-specific actions", async 
   const app = await testRender(
     () => (
       <RunFormBody
+        locale="en"
         request={{ ...form, fields: [{ key: "auth", type: "external", title: "Sign in", url }] }}
         theme={RUN_THEME_FALLBACK.footer}
         openExternal={async (value) => {
@@ -667,6 +676,7 @@ test.each([false, true])("wrapped permission characters stay outside the scrollb
   const app = await testRender(
     () => (
       <RunPermissionBody
+        locale="en"
         request={{ ...permission, resources: [alphabet] }}
         theme={theme.footer}
         block={theme.block}
@@ -701,6 +711,7 @@ test.each([
   const app = await testRender(
     () => (
       <RunFooterSubagentBody
+        locale="en"
         active={() => true}
         theme={() => RUN_THEME_FALLBACK}
         tab={() => ({ sessionID: "child", label: "Explore", description: "Inspect authentication", status: "running" })}

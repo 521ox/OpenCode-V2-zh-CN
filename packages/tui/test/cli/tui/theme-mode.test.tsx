@@ -7,6 +7,7 @@ import { getOpenCodeTheme } from "../../../src/theme"
 import opencodeSource from "../../../src/theme/assets/opencode.json" with { type: "json" }
 import type { ThemeV1Json } from "@opencode/theme/tui/v1"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ThemeContextProvider, ThemeProvider, type ThemeError, useTheme, useThemes } from "../../../src/context/theme"
 
 async function wait(fn: () => boolean) {
@@ -47,13 +48,17 @@ test("uses an available mode while retaining the pinned preference", async () =>
 
   const app = await testRender(
     () => (
-      <ConfigProvider config={createTuiResolvedConfig({ theme: { name: "light-only", mode: "dark" } })}>
-        <ThemeProvider
-          mode="dark"
-          source={{ discover: () => Promise.resolve({ "light-only": lightOnly, "dark-only": darkOnly, dual, native }) }}
-        >
-          <Probe />
-        </ThemeProvider>
+      <ConfigProvider config={createTuiResolvedConfig({ locale: "en", theme: { name: "light-only", mode: "dark" } })}>
+        <I18nProvider>
+          <ThemeProvider
+            mode="dark"
+            source={{
+              discover: () => Promise.resolve({ "light-only": lightOnly, "dark-only": darkOnly, dual, native }),
+            }}
+          >
+            <Probe />
+          </ThemeProvider>
+        </I18nProvider>
       </ConfigProvider>
     ),
     { width: 20, height: 2 },
@@ -108,10 +113,12 @@ test.each([
 
   const app = await testRender(
     () => (
-      <ConfigProvider config={createTuiResolvedConfig({ theme: { name: "invalid" } })}>
-        <ThemeProvider mode="dark" source={{ discover: () => discovery.promise }}>
-          <Probe />
-        </ThemeProvider>
+      <ConfigProvider config={createTuiResolvedConfig({ locale: "en", theme: { name: "invalid" } })}>
+        <I18nProvider>
+          <ThemeProvider mode="dark" source={{ discover: () => discovery.promise }}>
+            <Probe />
+          </ThemeProvider>
+        </I18nProvider>
       </ConfigProvider>
     ),
     { width: 20, height: 2 },
@@ -153,10 +160,12 @@ test("dialog surfaces are absolute and can be inherited through the theme contex
 
   const app = await testRender(
     () => (
-      <ConfigProvider config={createTuiResolvedConfig({ theme: { name: "opencode", mode: "dark" } })}>
-        <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
-          <Probe />
-        </ThemeProvider>
+      <ConfigProvider config={createTuiResolvedConfig({ locale: "en", theme: { name: "opencode", mode: "dark" } })}>
+        <I18nProvider>
+          <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
+            <Probe />
+          </ThemeProvider>
+        </I18nProvider>
       </ConfigProvider>
     ),
     { width: 20, height: 2 },

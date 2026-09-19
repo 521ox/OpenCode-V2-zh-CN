@@ -30,6 +30,7 @@ import { batch, createComponent, createSignal, type Accessor, type Setter } from
 import { createStore, reconcile } from "solid-js/store"
 import { Keymap } from "../context/keymap"
 import { Locale } from "../util/locale"
+import { resolveLocale, translate } from "../i18n"
 import { RUN_SUBAGENT_PANEL_ROWS, footerPanelLayout } from "./footer.command"
 import { SUBAGENT_INSPECTOR_ROWS } from "./footer.subagent"
 import { TEXTAREA_MIN_ROWS, footerPromptLayout } from "./footer.prompt"
@@ -129,7 +130,7 @@ function createEmptySubagentState(): FooterSubagentState {
   }
 }
 
-function eventPatch(next: FooterEvent): FooterPatch | undefined {
+function eventPatch(next: FooterEvent, locale?: string): FooterPatch | undefined {
   if (next.type === "first") {
     return { first: next.first }
   }
@@ -141,7 +142,7 @@ function eventPatch(next: FooterEvent): FooterPatch | undefined {
   if (next.type === "turn.send") {
     return {
       phase: "running",
-      status: "sending prompt",
+      status: translate(resolveLocale(locale), "miniCli.sending"),
       interrupt: 0,
       exit: 0,
     }
@@ -232,6 +233,7 @@ export class RunFooter implements FooterApi {
           .finally(() => this.destroyTheme(theme))
       },
       shellOutput: () => this.miniSettings().shell_output === "show",
+      locale: () => this.options.tuiConfig.locale,
       mono: this.miniSettings().mono,
       imagePreview: this.options.tuiConfig.session?.image_preview,
     })
@@ -276,7 +278,9 @@ export class RunFooter implements FooterApi {
       const agent = currentAgent()
       if (agent) return agent.name
       const selected = selectedAgentID()
-      return selected ? Locale.titlecase(selected) : "Default"
+      return selected
+        ? Locale.titlecase(selected)
+        : translate(resolveLocale(options.tuiConfig.locale), "miniCli.default")
     }
     const [currentModel, setCurrentModel] = createSignal<RunInput["model"]>(options.model)
     this.currentModel = currentModel
@@ -512,7 +516,7 @@ export class RunFooter implements FooterApi {
       return
     }
 
-    const patch = eventPatch(next)
+    const patch = eventPatch(next, this.options.tuiConfig.locale)
     if (patch) {
       if (typeof patch.status === "string") {
         this.clearNoticeTimer()
@@ -804,7 +808,7 @@ export class RunFooter implements FooterApi {
     }
 
     if (this.prompts.size === 0) {
-      this.setNotice("input queue unavailable")
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.queueUnavailable"))
       return false
     }
 
@@ -836,12 +840,13 @@ export class RunFooter implements FooterApi {
   private handleCycle = (): void => {
     const result = this.options.onCycleVariant?.()
     if (!result) {
-      this.setNotice("no variants available")
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.noVariants"))
       return
     }
 
     this.applySelectionResult(result)
-    if (result.status === undefined) this.setNotice("variant updated")
+    if (result.status === undefined)
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.variantUpdated"))
   }
 
   private handleModelSelect = (model: NonNullable<RunInput["model"]>): void => {
@@ -876,7 +881,9 @@ export class RunFooter implements FooterApi {
     if (this.isClosed || this.currentAgentID() === agent) return
     this.setCurrentAgentID(agent)
     this.options.onAgentSelect?.(agent)
-    this.setNotice(`agent ${this.currentAgent()}`)
+    this.setNotice(
+      translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.agent", { name: this.currentAgent() }),
+    )
   }
 
   private handleVariantSelect = (variant: string | undefined): void => {
@@ -910,7 +917,7 @@ export class RunFooter implements FooterApi {
 
   private handleMiniSettingChange = async (change: MiniSettingChange): Promise<void> => {
     if (!this.options.miniSettings.update) {
-      this.setNotice("settings are unavailable")
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.settingsUnavailable"))
       return
     }
 
@@ -919,7 +926,7 @@ export class RunFooter implements FooterApi {
       if (this.isClosed) return
       if (settings.mono === this.miniSettings().mono) {
         this.setMiniSettings(settings)
-        this.setNotice("settings updated")
+        this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.settingsUpdated"))
         return
       }
       const theme = await resolveRunTheme(this.renderer, this.options.tuiConfig.theme, settings.mono)
@@ -937,9 +944,9 @@ export class RunFooter implements FooterApi {
         })
       })
       await this.flushing
-      this.setNotice("settings updated")
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.settingsUpdated"))
     } catch (error) {
-      this.setNotice("failed to save settings")
+      this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.settingsFailed"))
       throw error
     }
   }
@@ -1009,7 +1016,7 @@ export class RunFooter implements FooterApi {
 
     this.clearInterruptTimer()
     this.patch({ interrupt: 0 })
-    this.setNotice("interrupting")
+    this.setNotice(translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.interrupting"))
     this.options.onInterrupt?.()
     return true
   }
@@ -1029,7 +1036,7 @@ export class RunFooter implements FooterApi {
     }
 
     this.clearExitTimer()
-    this.patch({ exit: 0, status: "exiting" })
+    this.patch({ exit: 0, status: translate(resolveLocale(this.options.tuiConfig.locale), "miniCli.exiting") })
     this.close()
     return true
   }

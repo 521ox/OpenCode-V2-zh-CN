@@ -3,6 +3,7 @@ import { MouseButton, TextAttributes, type MouseEvent, type ScrollBoxRenderable 
 import { truncateFilePath } from "../../ui/file-path"
 import { stringWidth } from "../../util/string-width"
 import { useTheme } from "../../context/theme"
+import { useI18n } from "../../context/i18n"
 import { tint } from "../../theme/color"
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, type JSX } from "solid-js"
 import { buildFileTree, flattenFileTree, type FileTreeItem, type FileTreeRow } from "./diff-viewer-file-tree-utils"
@@ -27,6 +28,7 @@ export type DiffViewerFileTreeProps = {
 }
 
 export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
+  const i18n = useI18n()
   const theme = useTheme()
   const [sourceHovered, setSourceHovered] = createSignal(false)
   const list = () => props.layout === "list"
@@ -93,7 +95,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
               wrapMode="none"
               selectable={false}
             >
-              {props.source ?? "Files"}
+              {props.source ?? i18n.t("feature.diff.files")}
             </text>
             <Show when={props.sourceDetail}>
               <text fg={theme.text.muted} selectable={false} flexGrow={1} minWidth={0} wrapMode="none" truncate>
@@ -103,7 +105,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
           </box>
           <text id="diff-review-count" fg={theme.text.muted} wrapMode="none" flexShrink={0}>
             {reviewedCount()}/{props.files.length}
-            {props.source ? "" : " reviewed"}
+            {props.source ? "" : ` ${i18n.t("feature.diff.reviewed")}`}
           </text>
         </box>
         <scrollbox
@@ -119,7 +121,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
               <text />
             </Match>
             <Match when={props.files.length === 0}>
-              <text fg={theme.text.muted}>No files</text>
+              <text fg={theme.text.muted}>{i18n.t("feature.diff.noFiles")}</text>
             </Match>
             <Match when={props.files.length > 0}>
               <box flexShrink={0} gap={list() ? 1 : 0}>

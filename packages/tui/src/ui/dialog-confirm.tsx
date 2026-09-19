@@ -4,7 +4,7 @@ import { useTheme } from "../context/theme"
 import { useDialog } from "./dialog"
 import { createStore } from "solid-js/store"
 import { For } from "solid-js"
-import { Locale } from "../util/locale"
+import { useI18n } from "../context/i18n"
 
 export type DialogConfirmProps = {
   title: string
@@ -18,6 +18,7 @@ export type DialogConfirmProps = {
 }
 
 export function DialogConfirm(props: DialogConfirmProps) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
   const [store, setStore] = createStore({
@@ -29,8 +30,8 @@ export function DialogConfirm(props: DialogConfirmProps) {
     commands: [
       {
         bind: "return",
-        title: "Confirm dialog selection",
-        group: "Dialog",
+        title: t("main.dialog.confirm"),
+        group: t("main.group.dialog"),
         run: () => {
           if (store.active === "confirm") props.onConfirm?.()
           if (store.active === "cancel") props.onCancel?.()
@@ -39,16 +40,16 @@ export function DialogConfirm(props: DialogConfirmProps) {
       },
       {
         bind: "left",
-        title: "Previous dialog option",
-        group: "Dialog",
+        title: t("main.dialog.previous"),
+        group: t("main.group.dialog"),
         run: () => {
           setStore("active", store.active === "confirm" ? "cancel" : "confirm")
         },
       },
       {
         bind: "right",
-        title: "Next dialog option",
-        group: "Dialog",
+        title: t("main.dialog.next"),
+        group: t("main.group.dialog"),
         run: () => {
           setStore("active", store.active === "confirm" ? "cancel" : "confirm")
         },
@@ -82,7 +83,7 @@ export function DialogConfirm(props: DialogConfirmProps) {
               }}
             >
               <text fg={key === store.active ? theme.text.action.primary.focused : theme.text.muted}>
-                {Locale.titlecase(props.label?.[key] ?? key)}
+                {props.label?.[key] ?? (key === "confirm" ? t("main.confirm") : t("main.cancel"))}
               </text>
             </box>
           )}

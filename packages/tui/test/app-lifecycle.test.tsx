@@ -29,6 +29,7 @@ test.each([100, 44])("Ctrl-O is immediate, dismissible, and prunes cached deleti
   await using setup = await createAppFixture({
     width,
     state: state.path,
+    config: { locale: "en", animations: false },
     fetch: (url) => {
       if (url.pathname === "/api/session") {
         requests++
@@ -123,7 +124,7 @@ test.each(["dismissed", "refreshing"])(
     const locations: string[] = []
     await using setup = await createAppFixture({
       state: state.path,
-      config: { animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { enabled: false } },
       fetch: (url) => {
         if (url.pathname === "/api/session") {
           if (url.searchParams.has("parentID")) {
@@ -238,7 +239,7 @@ test("SIGHUP clears title and disposes scoped resources once", async () => {
       run({
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
-        config: { get: async () => ({}), update: async () => ({}) },
+        config: { get: async () => ({ locale: "en" }), update: async () => ({ locale: "en" }) },
         packages: { prepare: async () => ({ directory: "" }) },
         terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
         args: {},
@@ -314,7 +315,7 @@ test("session lifecycle updates the terminal title and prints the epilogue after
       run({
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
-        config: { get: async () => ({}), update: async () => ({}) },
+        config: { get: async () => ({ locale: "en" }), update: async () => ({ locale: "en" }) },
         packages: { prepare: async () => ({ directory: "" }) },
         terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
         args: { sessionID: "dummy" },
@@ -388,7 +389,7 @@ test("session title generated while an untitled session is loading remains visib
       run({
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
-        config: { get: async () => ({}), update: async () => ({}) },
+        config: { get: async () => ({ locale: "en" }), update: async () => ({ locale: "en" }) },
         packages: { prepare: async () => ({ directory: "" }) },
         terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
         args: { sessionID: "dummy" },
@@ -446,6 +447,7 @@ test("vertical session tabs switch to horizontal below readable content width", 
     width: 120,
     state: state.path,
     config: {
+      locale: "en",
       animations: false,
       tabs: { enabled: true, layout: "vertical", indicators: "status" },
       session: { sidebar: "hide" },
@@ -484,6 +486,7 @@ test("narrow vertical session tabs collapse to a compact rail with the terminal"
     width: 80,
     state: state.path,
     config: {
+      locale: "en",
       animations: false,
       tabs: { enabled: true, layout: "vertical", indicators: "status" },
       session: { sidebar: "hide" },
@@ -526,7 +529,7 @@ test("automatic rename refreshes the displayed title before settling, even witho
     width: 110,
     height: 20,
     state: state.path,
-    config: { tabs: { enabled: true, layout: "vertical" }, session: { sidebar: "hide" } },
+    config: { locale: "en", tabs: { enabled: true, layout: "vertical" }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: async (url, request) => {
       if (url.pathname === "/api/location") return json(location)
@@ -585,7 +588,7 @@ test.each([80, 120])("completes custom Markdown and ordinary fences in a session
     width,
     height: 55,
     state: state.path,
-    config: { animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
+    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -690,7 +693,7 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
     width: 100,
     height: 40,
     state: state.path,
-    config: { animations: false, tabs: { enabled: false }, session: { sidebar: "hide", tps: true } },
+    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide", tps: true } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -850,7 +853,7 @@ test("session startup prompt is submitted exactly once", async () => {
       run({
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
-        config: { get: async () => ({}), update: async () => ({}) },
+        config: { get: async () => ({ locale: "en" }), update: async () => ({ locale: "en" }) },
         packages: { prepare: async () => ({ directory: "" }) },
         terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
         args: { sessionID: "dummy", prompt: "RESUME_READY" },
@@ -886,7 +889,7 @@ test.each([false, true])("uses the resolved launch directory for new prompts (fa
   let session: unknown
   await using setup = await createAppFixture({
     state: state.path,
-    config: { animations: false, tabs: { enabled: false }, keybinds: { "session.new": "f6" } },
+    config: { locale: "en", animations: false, tabs: { enabled: false }, keybinds: { "session.new": "f6" } },
     fetch: async (url, request) => {
       requests.push(url)
       if (url.searchParams.has("location[directory]") && url.searchParams.get("location[directory]") !== target)
@@ -956,7 +959,7 @@ test("error investigations repeatedly seed editable home drafts without creating
   const location = { directory: cwd, project: { id: "project", directory: cwd } }
   let created = 0
   await using setup = await createAppFixture({
-    config: { animations: false, keybinds: { "mcp.list": "f6" } },
+    config: { locale: "en", animations: false, keybinds: { "mcp.list": "f6" } },
     fetch: (url, request) => {
       if (url.pathname === "/api/location") return json(location)
       if (url.pathname === "/api/mcp")
@@ -1024,7 +1027,7 @@ test("completed user shell output replaces a partial live read when the final re
   let failedReads = 0
   await using setup = await createAppFixture({
     state: state.path,
-    config: { animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
+    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
@@ -1116,6 +1119,7 @@ test("new session inherits the active session model", async () => {
   await using setup = await createAppFixture({
     width: 80,
     height: 24,
+    config: { locale: "en", animations: false },
     args: { sessionID: "dummy" },
     fetch: (url) => {
       if (url.pathname === "/api/fs/list") return json({ location, data: [] })
@@ -1157,6 +1161,7 @@ test("keeps the prompt display stable while a new location catalog loads", async
   const locationRequested = Promise.withResolvers<void>()
   const modelRequested = Promise.withResolvers<void>()
   await using setup = await createAppFixture({
+    config: { locale: "en", animations: false },
     fetch: async (url) => {
       const requestedDirectory = url.searchParams.get("location[directory]") ?? source
       const location = {
@@ -1257,7 +1262,7 @@ test("keeps the prompt display stable while a new location catalog loads", async
 
 test("configured app binding opens settings", async () => {
   await using setup = await createAppFixture({
-    config: { animations: false, keybinds: { "opencode.settings": "f6" } },
+    config: { locale: "en", animations: false, keybinds: { "opencode.settings": "f6" } },
   })
   await setup.ready
   await setup.waitForFrame((frame) => frame.includes("commands"))
@@ -1269,7 +1274,7 @@ test("configured app binding opens settings", async () => {
 })
 
 test("ctrl+c dismisses autocomplete and shell mode before exiting", async () => {
-  await using setup = await createAppFixture()
+  await using setup = await createAppFixture({ config: { locale: "en", animations: false } })
   await setup.ready
   await setup.waitForFrame((frame) => frame.includes("commands"))
   await setup.mockInput.typeText("/theme")
@@ -1362,10 +1367,11 @@ test.skipIf(process.platform === "win32").each(["manual", "select"] as const)(
           server: { endpoint: { url: server.url.toString() } },
           config: {
             get: async () => ({
+              locale: "en",
               animations: false,
               terminal: { copy },
             }),
-            update: async () => ({}),
+            update: async () => ({ locale: "en" }),
           },
           packages: { prepare: async () => ({ directory: "" }) },
           args: { sessionID: session.id },
@@ -1456,7 +1462,7 @@ test.each([100, 44])(
       width,
       state: state.path,
       args: { sessionID: session.id },
-      config: { animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { enabled: false } },
       fetch: (url) => {
         if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
         if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -1516,6 +1522,7 @@ test.each([
   await using setup = await createAppFixture({
     width,
     state: state.path,
+    config: { locale: "en", animations: false },
     fetch: (url) => {
       if (url.pathname !== "/api/plugin") return undefined
       requests++
@@ -1575,6 +1582,7 @@ test("server plugin failures share one notice and use source names before an ID 
   await using state = await tmpdir()
   await using setup = await createAppFixture({
     state: state.path,
+    config: { locale: "en", animations: false },
     fetch: (url) =>
       url.pathname === "/api/plugin"
         ? json({
@@ -1620,7 +1628,7 @@ test.each([44, 100])(
       width,
       state: state.path,
       args: { sessionID: session.id },
-      config: { animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { enabled: false } },
       fetch: (url) => {
         if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
         if (url.pathname === `/api/session/${session.id}`) return json({ data: session })

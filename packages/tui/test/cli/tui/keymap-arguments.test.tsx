@@ -2,6 +2,7 @@
 import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { Keymap } from "../../../src/context/keymap"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 
@@ -28,10 +29,12 @@ test("dispatch passes slash input through the registered command", async () => {
   }
 
   const app = await testRender(() => (
-    <ConfigProvider config={createTuiResolvedConfig()}>
-      <Keymap.Provider>
-        <Commands />
-      </Keymap.Provider>
+    <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+      <I18nProvider>
+        <Keymap.Provider>
+          <Commands />
+        </Keymap.Provider>
+      </I18nProvider>
     </ConfigProvider>
   ))
   try {

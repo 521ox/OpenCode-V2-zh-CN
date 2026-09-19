@@ -1,4 +1,5 @@
 import { createMemo } from "solid-js"
+import { useI18n } from "../../context/i18n"
 import { useData } from "../../context/data"
 import { DialogSelect } from "../../ui/dialog-select"
 import { useClipboard } from "../../context/clipboard"
@@ -14,6 +15,7 @@ export function DialogMessage(props: {
   sessionID: string
   setPrompt?: (prompt: PromptInfo) => void
 }) {
+  const { t } = useI18n()
   const data = useData()
   const clipboard = useClipboard()
   const toast = useToast()
@@ -22,18 +24,18 @@ export function DialogMessage(props: {
 
   return (
     <DialogSelect
-      title="Message Actions"
+      title={t("session.messageActions")}
       options={[
         {
-          title: "Jump to",
+          title: t("session.jumpTo"),
           value: "message.jump",
-          description: "view message in session",
+          description: t("session.viewMessage"),
           onSelect: (dialog) => dialog.clear(),
         },
         {
-          title: "Revert",
+          title: t("session.revert"),
           value: "session.revert",
-          description: "undo messages and file changes",
+          description: t("session.revertDescription"),
           onSelect: (dialog) => {
             const value = message()
             if (value?.type === "user") {
@@ -49,9 +51,9 @@ export function DialogMessage(props: {
           },
         },
         {
-          title: "Copy",
+          title: t("session.copy"),
           value: "message.copy",
-          description: "message text to clipboard",
+          description: t("session.copyDescription"),
           onSelect: async (dialog) => {
             const value = message()
             if (!value) return
@@ -75,9 +77,9 @@ export function DialogMessage(props: {
           },
         },
         {
-          title: "Fork",
+          title: t("session.fork"),
           value: "session.fork",
-          description: "create a new session",
+          description: t("session.forkDescription"),
           onSelect: (dialog) => {
             const value = message()
             if (!value || value.type !== "user") return

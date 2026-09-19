@@ -4,6 +4,7 @@ import { MouseButton } from "@opentui/core"
 import { expect, test } from "bun:test"
 import { batch, createSignal } from "solid-js"
 import { ConfigProvider, useConfig, type Info } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import {
   EMPTY_SESSION_TAB_STATUS,
   SessionTabs,
@@ -33,7 +34,7 @@ for (const orientation of ["horizontal", "vertical"] as const) {
     const [status, setStatus] = createSignal<SessionTabsStatus>(EMPTY_SESSION_TAB_STATUS)
     const [active, setActive] = createSignal("second")
     const [newTab, setNewTab] = createSignal(false)
-    const settings: Info = { tabs: { enabled: true } }
+    const settings: Info = { locale: "en", tabs: { enabled: true } }
     let config!: ReturnType<typeof useConfig>
     let theme!: ReturnType<typeof useTheme>
     function Colors() {
@@ -74,28 +75,34 @@ for (const orientation of ["horizontal", "vertical"] as const) {
                   },
                 }}
               >
-                <RouteProvider initialRoute={{ type: "home" }}>
-                  <ClientProvider api={createApi(createFetch(undefined, createEventStream()).fetch)}>
-                    <DataProvider directory={temporary.path}>
-                      <LocationProvider>
-                        <SessionTabsProvider>
-                          <ThemeProvider mode="dark" source={emptyThemeSource}>
-                            <Colors />
-                            <Keymap.Provider>
-                              <ToastProvider>
-                                <DialogProvider>
-                                  <box width="100%" height="100%">
-                                    <SessionTabs controller={controller} orientation={orientation} animations={false} />
-                                  </box>
-                                </DialogProvider>
-                              </ToastProvider>
-                            </Keymap.Provider>
-                          </ThemeProvider>
-                        </SessionTabsProvider>
-                      </LocationProvider>
-                    </DataProvider>
-                  </ClientProvider>
-                </RouteProvider>
+                <I18nProvider>
+                  <RouteProvider initialRoute={{ type: "home" }}>
+                    <ClientProvider api={createApi(createFetch(undefined, createEventStream()).fetch)}>
+                      <DataProvider directory={temporary.path}>
+                        <LocationProvider>
+                          <SessionTabsProvider>
+                            <ThemeProvider mode="dark" source={emptyThemeSource}>
+                              <Colors />
+                              <Keymap.Provider>
+                                <ToastProvider>
+                                  <DialogProvider>
+                                    <box width="100%" height="100%">
+                                      <SessionTabs
+                                        controller={controller}
+                                        orientation={orientation}
+                                        animations={false}
+                                      />
+                                    </box>
+                                  </DialogProvider>
+                                </ToastProvider>
+                              </Keymap.Provider>
+                            </ThemeProvider>
+                          </SessionTabsProvider>
+                        </LocationProvider>
+                      </DataProvider>
+                    </ClientProvider>
+                  </RouteProvider>
+                </I18nProvider>
               </ConfigProvider>
             </StorageProvider>
           </TuiAppProvider>

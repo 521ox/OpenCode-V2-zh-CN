@@ -56,6 +56,8 @@ type AutocompleteResults = {
   resolved: boolean
 }
 
+import { useI18n } from "../../context/i18n"
+
 export function Autocomplete(props: {
   value: string
   sessionID?: string
@@ -72,6 +74,7 @@ export function Autocomplete(props: {
   hasSkill: (id: string) => boolean
   promptPartTypeId: () => number
 }) {
+  const { t } = useI18n()
   const editor = useEditorContext()
   const client = useClient()
   const data = useData()
@@ -699,48 +702,48 @@ export function Autocomplete(props: {
     commands: [
       {
         id: "prompt.autocomplete.prev",
-        title: "Previous autocomplete item",
-        group: "Autocomplete",
+        title: t("main.autocomplete.previous"),
+        group: t("main.autocomplete"),
         run() {
           move(-1)
         },
       },
       {
         id: "prompt.autocomplete.next",
-        title: "Next autocomplete item",
-        group: "Autocomplete",
+        title: t("main.autocomplete.next"),
+        group: t("main.autocomplete"),
         run() {
           move(1)
         },
       },
       {
         id: "prompt.autocomplete.hide",
-        title: "Hide autocomplete",
-        group: "Autocomplete",
+        title: t("main.autocomplete.hide"),
+        group: t("main.autocomplete"),
         run() {
           hide()
         },
       },
       {
         id: "prompt.clear",
-        title: "Dismiss autocomplete",
-        group: "Autocomplete",
+        title: t("main.autocomplete.dismiss"),
+        group: t("main.autocomplete"),
         run() {
           hide(true)
         },
       },
       {
         id: "prompt.autocomplete.select",
-        title: "Select autocomplete item",
-        group: "Autocomplete",
+        title: t("main.autocomplete.select"),
+        group: t("main.autocomplete"),
         run() {
           select()
         },
       },
       {
         id: "prompt.autocomplete.complete",
-        title: "Complete autocomplete item",
-        group: "Autocomplete",
+        title: t("main.autocomplete.complete"),
+        group: t("main.autocomplete"),
         run() {
           const selected = options()[store.selected]
           if (selected?.isDirectory) {
@@ -753,8 +756,8 @@ export function Autocomplete(props: {
       },
       {
         id: "prompt.autocomplete.destructive",
-        title: "Confirm autocomplete action",
-        group: "Autocomplete",
+        title: t("main.autocomplete.confirm"),
+        group: t("main.autocomplete"),
         bind: "ctrl+d",
         run: triggerDestructive,
       },
@@ -858,15 +861,15 @@ export function Autocomplete(props: {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
   const emptyMessage = createMemo(() => {
     const fileSearch = visibleFiles()
-    if (store.visible === "command") return "No matching commands"
+    if (store.visible === "command") return t("main.autocomplete.noCommands")
     if (store.visible === "directory") {
-      if (files.loading) return "Searching…"
-      if (fileSearch.failed) return "Could not search directories. Keep typing to try again."
-      return "No matching directories"
+      if (files.loading) return t("main.autocomplete.searching")
+      if (fileSearch.failed) return t("main.autocomplete.directoryFailed")
+      return t("main.autocomplete.noDirectories")
     }
-    if (files.loading) return "Searching…"
-    if (fileSearch.failed) return "Could not search files. Keep typing to try again."
-    return "No matching files, agents, or references"
+    if (files.loading) return t("main.autocomplete.searching")
+    if (fileSearch.failed) return t("main.autocomplete.fileFailed")
+    return t("main.autocomplete.noReferences")
   })
   const emptyError = createMemo(() => store.visible === "reference" && !files.loading && visibleFiles().failed)
 

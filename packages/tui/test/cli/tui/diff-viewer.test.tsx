@@ -28,6 +28,7 @@ import { emptyThemeSource, tmpdir } from "../../fixture/fixture"
 import { StorageProvider, useStorage } from "../../../src/context/storage"
 import { TuiAppProvider } from "../../../src/context/runtime"
 import { ConfigProvider, type Info } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import type { TuiKeybind } from "../../../src/config/keybind"
 import { Keymap } from "../../../src/context/keymap"
 import diffViewerPlugin from "../../../src/feature-plugins/system/diff-viewer"
@@ -1821,7 +1822,7 @@ async function renderDiffViewer(
   let imageReadInput: unknown
   let shortcut: (command: string) => string | undefined = () => undefined
   const stored: { info: Info } = {
-    info: { keybinds: options.keybinds, diffs: { source: options.source, single: options.single } },
+    info: { locale: "en", keybinds: options.keybinds, diffs: { source: options.source, single: options.single } },
   }
   const writes: Info[] = []
   const baseRequests: URL[] = []
@@ -1968,15 +1969,17 @@ async function renderDiffViewer(
                 },
               }}
             >
-              <Keymap.Provider>
-                <ToastProvider>
-                  <ThemeProvider mode={options.mode ?? "dark"} source={emptyThemeSource}>
-                    <DialogProvider>
-                      <Content />
-                    </DialogProvider>
-                  </ThemeProvider>
-                </ToastProvider>
-              </Keymap.Provider>
+              <I18nProvider>
+                <Keymap.Provider>
+                  <ToastProvider>
+                    <ThemeProvider mode={options.mode ?? "dark"} source={emptyThemeSource}>
+                      <DialogProvider>
+                        <Content />
+                      </DialogProvider>
+                    </ThemeProvider>
+                  </ToastProvider>
+                </Keymap.Provider>
+              </I18nProvider>
             </ConfigProvider>
           </StorageProvider>
         </TuiAppProvider>

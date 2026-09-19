@@ -11,6 +11,7 @@ import { usePlugin } from "../../plugin/context"
 import { useDialog } from "../../ui/dialog"
 import { useToast } from "../../ui/toast"
 import { getScrollAcceleration } from "../../util/scroll"
+import { useI18n } from "../../context/i18n"
 
 // session.generate exposes the session's tools but runs no tool loop, so a
 // tool call would surface as an empty answer.
@@ -42,6 +43,7 @@ export default Plugin.define({
     context.ui.slot({
       append: "app",
       render() {
+        const i18n = useI18n()
         const toast = useToast()
         // Dialogs render beside PluginProvider, so Answer cannot call usePlugin().
         const plugins = usePlugin()
@@ -50,19 +52,20 @@ export default Plugin.define({
           commands: [
             {
               id: "session.aside",
-              title: "Ask a side question",
-              description: "One-shot answer from the session's context without adding to the conversation",
-              group: "Session",
+              title: i18n.t("feature.btw.title"),
+              description: i18n.t("feature.btw.description"),
+              group: i18n.t("feature.group.session"),
               palette: true,
               slash: { name: "btw", arguments: true },
               async run(input) {
                 const route = context.ui.router.current()
                 if (route.type !== "session") {
-                  toast.show({ message: "Open a session first", variant: "warning" })
+                  toast.show({ message: i18n.t("feature.btw.openSession"), variant: "warning" })
                   return
                 }
                 const question =
-                  input?.trim() || (await context.ui.dialog.prompt({ title: "/btw", placeholder: "Ask anything" }))
+                  input?.trim() ||
+                  (await context.ui.dialog.prompt({ title: "/btw", placeholder: i18n.t("feature.btw.placeholder") }))
                 if (!question) return
                 setPending((count) => count + 1)
                 await context.client.session
@@ -90,6 +93,7 @@ export function Answer(props: {
   answer: string
   markdown: ReturnType<typeof usePlugin>["markdown"]
 }) {
+  const i18n = useI18n()
   const dialog = useDialog()
   const toast = useToast()
   const clipboard = useClipboard()
@@ -109,7 +113,9 @@ export function Answer(props: {
 
   Keymap.createLayer(() => ({
     mode: "modal",
-    commands: [{ bind: "c", title: "Copy answer", group: "Dialog", run: copy }],
+    commands: [
+      { bind: "c", title: i18n.t("feature.btw.copyAnswer"), group: i18n.t("feature.group.dialog"), run: copy },
+    ],
   }))
 
   useKeyboard((event) => {
@@ -162,11 +168,11 @@ export function Answer(props: {
       <box flexDirection="row" gap={3} paddingLeft={2} paddingRight={2} paddingBottom={1}>
         <text onMouseUp={copy}>
           <span style={{ fg: copied() ? theme.text.feedback.success.base : theme.text.base }}>
-            <b>{copied() ? "✓ copied" : "c"}</b>
+            <b>{copied() ? `✓ ${i18n.t("feature.btw.copied")}` : "c"}</b>
           </span>
-          <span style={{ fg: theme.text.muted }}>{copied() ? "" : " copy"}</span>
+          <span style={{ fg: theme.text.muted }}>{copied() ? "" : ` ${i18n.t("feature.btw.copy")}`}</span>
         </text>
-        <text fg={theme.text.muted}>↑/↓ scroll</text>
+        <text fg={theme.text.muted}>↑/↓ {i18n.t("feature.btw.scroll")}</text>
       </box>
     </box>
   )

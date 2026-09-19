@@ -4,6 +4,7 @@ import { testRender } from "@opentui/solid"
 import { onMount } from "solid-js"
 import { DialogSessionList } from "../../../src/component/dialog-session-list"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ArgsProvider } from "../../../src/context/args"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData } from "../../../src/context/data"
@@ -84,30 +85,32 @@ test("scopes sessions to the active session location", async () => {
         <TuiAppProvider value={{ name: "test", version: "test", channel: "test" }}>
           <StorageProvider>
             <ArgsProvider>
-              <ConfigProvider config={createTuiResolvedConfig()}>
-                <Keymap.Provider>
-                  <ToastProvider>
-                    <RouteProvider>
-                      <ClientProvider api={createApi(calls.fetch)}>
-                        <PermissionProvider>
-                          <DataProvider directory={process.cwd()}>
-                            <LocationProvider>
-                              <SessionTabsProvider>
-                                <ThemeProvider mode="dark" source={emptyThemeSource}>
-                                  <LocalProvider>
-                                    <DialogProvider>
-                                      <Probe />
-                                    </DialogProvider>
-                                  </LocalProvider>
-                                </ThemeProvider>
-                              </SessionTabsProvider>
-                            </LocationProvider>
-                          </DataProvider>
-                        </PermissionProvider>
-                      </ClientProvider>
-                    </RouteProvider>
-                  </ToastProvider>
-                </Keymap.Provider>
+              <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+                <I18nProvider>
+                  <Keymap.Provider>
+                    <ToastProvider>
+                      <RouteProvider>
+                        <ClientProvider api={createApi(calls.fetch)}>
+                          <PermissionProvider>
+                            <DataProvider directory={process.cwd()}>
+                              <LocationProvider>
+                                <SessionTabsProvider>
+                                  <ThemeProvider mode="dark" source={emptyThemeSource}>
+                                    <LocalProvider>
+                                      <DialogProvider>
+                                        <Probe />
+                                      </DialogProvider>
+                                    </LocalProvider>
+                                  </ThemeProvider>
+                                </SessionTabsProvider>
+                              </LocationProvider>
+                            </DataProvider>
+                          </PermissionProvider>
+                        </ClientProvider>
+                      </RouteProvider>
+                    </ToastProvider>
+                  </Keymap.Provider>
+                </I18nProvider>
               </ConfigProvider>
             </ArgsProvider>
           </StorageProvider>

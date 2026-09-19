@@ -6,6 +6,10 @@ import type { UpdateState } from "../context/update-notification"
 import { useDialog } from "../ui/dialog"
 import { errorMessage } from "../util/error"
 import { Spinner } from "./spinner"
+import { useI18n } from "../context/i18n"
+import type { Key } from "../i18n"
+
+type UpdateButton = { label: Key; run: () => void }
 
 export function DialogUpdate(props: {
   check?: (signal: AbortSignal) => Promise<string | undefined>
@@ -14,6 +18,7 @@ export function DialogUpdate(props: {
   install: () => Promise<void>
   restart: () => void
 }) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
   const [error, setError] = createSignal<string>()
@@ -41,18 +46,18 @@ export function DialogUpdate(props: {
     if (unavailable) return { type: "unavailable" as const, message: unavailable }
     return current ?? { type: "current" as const }
   })
-  const buttons = createMemo(() => {
+  const buttons = createMemo<UpdateButton[]>(() => {
     const type = state().type
     if (type === "installing") return []
-    const confirm =
+    const confirm: UpdateButton | undefined =
       type === "available"
-        ? { label: "Update", run: props.install }
+        ? { label: "main.update", run: props.install }
         : type === "installed"
-          ? { label: "Restart", run: props.restart }
+          ? { label: "main.restart", run: props.restart }
           : undefined
     return [
       {
-        label: "Skip",
+        label: "main.skip",
         run: () => {
           props.skip()
           dialog.clear()
@@ -69,14 +74,14 @@ export function DialogUpdate(props: {
     commands: [
       {
         bind: "return",
-        title: "Confirm update action",
-        group: "Dialog",
+        title: t("main.update.confirm"),
+        group: t("main.group.dialog"),
         run: () => void buttons()[active()]?.run(),
       },
       ...["left", "right", "tab", "shift+tab"].map((bind) => ({
         bind,
-        title: bind === "left" || bind === "shift+tab" ? "Previous update action" : "Next update action",
-        group: "Dialog",
+        title: bind === "left" || bind === "shift+tab" ? t("main.update.previous") : t("main.update.next"),
+        group: t("main.group.dialog"),
         run: () => {
           const count = buttons().length
           if (count) setActive((value) => (value + 1) % count)
@@ -90,10 +95,10 @@ export function DialogUpdate(props: {
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
           {state().type === "installing"
-            ? "Updating OpenCode"
+            ? t("main.update.updating")
             : state().type === "available" || state().type === "failed"
-              ? "Update available"
-              : "Update"}
+              ? t("main.update.available")
+              : t("main.update")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
           esc
@@ -104,25 +109,23 @@ export function DialogUpdate(props: {
           {(current) => (
             <Switch>
               <Match when={current.type === "checking"}>
-                <Spinner shimmer={theme.text.base}>Checking for updates…</Spinner>
+                <Spinner shimmer={theme.text.base}>{t("main.update.checking")}</Spinner>
               </Match>
               <Match when={current.type === "available"}>
-                <text fg={theme.text.muted}>
-                  An update is available. After installing, you'll be prompted to restart OpenCode.
-                </text>
+                <text fg={theme.text.muted}>{t("main.update.hint")}</text>
               </Match>
               <Match when={current.type === "installing"}>
                 <Spinner shimmer={theme.text.base}>
-                  {current.type === "installing" ? `Installing OpenCode ${current.version}…` : ""}
+                  {current.type === "installing" ? t("main.update.installing", { version: current.version }) : ""}
                 </Spinner>
               </Match>
               <Match when={current.type === "installed"}>
                 <text fg={theme.text.muted} wrapMode="word">
-                  Update successful! A restart is required. Any active sessions will be resumed automatically.
+                  {t("main.update.success")}
                 </text>
               </Match>
               <Match when={current.type === "current"}>
-                <text fg={theme.text.muted}>OpenCode is already up to date.</text>
+                <text fg={theme.text.muted}>{t("main.update.current")}</text>
               </Match>
               <Match when={current.type === "unavailable"}>
                 <text fg={theme.text.muted} wrapMode="word">
@@ -149,7 +152,7 @@ export function DialogUpdate(props: {
                 onMouseUp={() => void button.run()}
               >
                 <text fg={active() === index() ? theme.text.action.primary.focused : theme.text.muted}>
-                  {button.label}
+                  {t(button.label)}
                 </text>
               </box>
             )}

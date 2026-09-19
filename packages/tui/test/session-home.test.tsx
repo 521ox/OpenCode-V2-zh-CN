@@ -92,6 +92,7 @@ test.each([
       server: { endpoint: { url: server.url.toString() } },
       config: {
         get: async () => ({
+          locale: "en",
           animations: false,
           tabs: { enabled: false },
           keybinds: {
@@ -101,7 +102,7 @@ test.each([
             "session.message.previous": "f9",
           },
         }),
-        update: async () => ({}),
+        update: async () => ({ locale: "en" }),
       },
       packages: { prepare: async () => ({ directory: "" }) },
       terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),

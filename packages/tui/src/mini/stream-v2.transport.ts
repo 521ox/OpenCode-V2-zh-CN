@@ -10,6 +10,7 @@ import type {
   SessionInboxInfo,
 } from "@opencode/client/promise"
 import { Event } from "@opencode/schema/event"
+import { resolveLocale, translate, type Locale, type Key, type Params } from "../i18n"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { blockerStatus, pickBlockerView } from "./session-data"
 import { writeSessionOutput } from "./stream"
@@ -40,6 +41,7 @@ type Trace = {
 }
 
 type StreamInput = {
+  locale?: Locale
   sdk: OpenCodeClient
   reconnect?: (signal: AbortSignal) => Promise<OpenCodeClient>
   onClient?: (sdk: OpenCodeClient) => void
@@ -164,7 +166,7 @@ type State = {
   activeCompaction?: string
 }
 
-export function formatUnknownError(error: unknown): string {
+export function formatUnknownError(error: unknown, locale: Locale = "en"): string {
   if (typeof error === "string") return error
   if (error instanceof Error) return error.message || error.name
   if (error && typeof error === "object") {
@@ -173,7 +175,7 @@ export function formatUnknownError(error: unknown): string {
     const tag = "_tag" in error ? error._tag : undefined
     if (typeof tag === "string" && tag.trim()) return tag
   }
-  return "unknown error"
+  return translate(locale, "miniCli.unknownError")
 }
 
 function sessionID(event: RunV2Event) {
@@ -189,8 +191,8 @@ function globalForm(form: FormInfo, location: LocationRef): MiniFormRequest {
   return { ...form, location: { directory: location.directory } }
 }
 
-function errorMessage(error: { message?: string; _tag?: string }) {
-  return error.message || error._tag || "Session execution failed"
+function errorMessage(error: { message?: string; _tag?: string }, locale?: Locale) {
+  return error.message || error._tag || translate(resolveLocale(locale), "miniCli.executionFailed")
 }
 
 function pendingPrompt(item: SessionInboxInfo): PendingPrompt | undefined {
@@ -218,12 +220,13 @@ function wait(delay: number, signal: AbortSignal) {
   })
 }
 
-function nextEvent(stream: AsyncIterator<RunV2Event>, signal: AbortSignal) {
-  if (signal.aborted) return Promise.reject(signal.reason ?? new Error("Event stream aborted"))
+function nextEvent(stream: AsyncIterator<RunV2Event>, signal: AbortSignal, locale?: Locale) {
+  if (signal.aborted)
+    return Promise.reject(signal.reason ?? new Error(translate(resolveLocale(locale), "miniCli.streamAborted")))
   return new Promise<IteratorResult<RunV2Event>>((resolve, reject) => {
     const abort = () => {
       signal.removeEventListener("abort", abort)
-      reject(signal.reason ?? new Error("Event stream aborted"))
+      reject(signal.reason ?? new Error(translate(resolveLocale(locale), "miniCli.streamAborted")))
     }
     signal.addEventListener("abort", abort, { once: true })
     void stream.next().then(
@@ -239,11 +242,12 @@ function nextEvent(stream: AsyncIterator<RunV2Event>, signal: AbortSignal) {
   })
 }
 
-async function prepareInitialFile(file: RunFilePart, readTextFile?: StreamInput["readTextFile"]) {
+async function prepareInitialFile(file: RunFilePart, readTextFile?: StreamInput["readTextFile"], locale?: Locale) {
   if (file.mime !== "text/plain") return { type: "file" as const, file: { uri: file.url, name: file.filename } }
   const content = file.url.startsWith("data:")
     ? Buffer.from(file.url.slice(file.url.indexOf(",") + 1), "base64").toString("utf8")
-    : await (readTextFile?.(file.url) ?? Promise.reject(new Error("Local text file acquisition is unavailable")))
+    : await (readTextFile?.(file.url) ??
+        Promise.reject(new Error(translate(resolveLocale(locale), "miniCli.localFileUnavailable"))))
   return { type: "text" as const, text: `<file name="${file.filename}">\n${content}\n</file>` }
 }
 
@@ -275,6 +279,7 @@ async function prepareAttachments(
   next: SessionTurnInput,
   mode: "command" | "prompt",
   readTextFile?: StreamInput["readTextFile"],
+  locale?: Locale,
 ) {
   const initial = next.includeFiles ? next.files : []
   if (mode === "command") {
@@ -283,7 +288,7 @@ async function prepareAttachments(
       files: [...initial.map((file) => ({ uri: file.url, name: file.filename })), ...promptFiles(next)],
     }
   }
-  const prepared = await Promise.all(initial.map((file) => prepareInitialFile(file, readTextFile)))
+  const prepared = await Promise.all(initial.map((file) => prepareInitialFile(file, readTextFile, locale)))
   return {
     text: prepared.flatMap((file) => (file.type === "text" ? [file.text] : [])),
     files: [...prepared.flatMap((file) => (file.type === "file" ? [file.file] : [])), ...promptFiles(next)],
@@ -356,15 +361,16 @@ function shellTerminal(
   command: string,
   shell: { status: string; exit?: number | string },
   output: { output: string; cursor: number; size: number; truncated: boolean },
+  locale?: Locale,
 ) {
   const incomplete = output.truncated || output.cursor < output.size
-  const text = `${output.output}${incomplete ? `${output.output.endsWith("\n") || !output.output ? "" : "\n"}[output truncated]` : ""}`
+  const text = `${output.output}${incomplete ? `${output.output.endsWith("\n") || !output.output ? "" : "\n"}${translate(resolveLocale(locale), "miniCli.outputTruncated")}` : ""}`
   const error =
     shell.status === "exited" && shell.exit === 0
       ? undefined
       : shell.status === "exited"
-        ? `Shell exited with code ${shell.exit ?? "unknown"}`
-        : `Shell ${shell.status}`
+        ? translate(resolveLocale(locale), "miniCli.shellExited", { code: shell.exit ?? "unknown" })
+        : translate(resolveLocale(locale), "miniCli.shellStatus", { status: shell.status })
   if (!error) return [shellCommit(id, command, { text, phase: "progress", toolState: "completed" })]
   return [
     ...(text ? [shellCommit(id, command, { text, phase: "progress", toolState: "running" })] : []),
@@ -396,30 +402,30 @@ const catalogEvents = new Set([
 // briefly so the output commit renders inside it.
 const SHELL_OUTPUT_GRACE_MS = 1500
 
-function skillCommit(messageID: string, name: string, skillID = messageID): StreamCommit {
+function skillCommit(messageID: string, name: string, skillID = messageID, locale?: Locale): StreamCommit {
   return {
     kind: "system",
     source: "system",
     messageID,
     partID: `skill:${skillID}`,
-    text: `→ Skill "${name}"`,
+    text: `→ ${translate(resolveLocale(locale), "miniCli.tool.skill", { name })}`,
     phase: "start",
   }
 }
 
-function skillCommits(messageID: string, skills: FooterQueuedPrompt["skills"] = []) {
+function skillCommits(messageID: string, skills: FooterQueuedPrompt["skills"] = [], locale?: Locale) {
   return Array.from(new Map(skills.map((skill) => [skill.id, skill])).values(), (skill) =>
-    skillCommit(messageID, skill.name, skill.id),
+    skillCommit(messageID, skill.name, skill.id, locale),
   )
 }
 
-function compactionCommit(messageID: string): StreamCommit {
+function compactionCommit(messageID: string, locale?: Locale): StreamCommit {
   return {
     kind: "system",
     source: "system",
     messageID,
     partID: "compaction:header",
-    text: "Compaction",
+    text: translate(resolveLocale(locale), "miniCli.compaction"),
     phase: "start",
     compaction: true,
   }
@@ -477,6 +483,7 @@ async function resolveSelectedModel(
 }
 
 export async function createSessionTransport(input: StreamInput): Promise<SessionTransport> {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(input.locale), key, params)
   const controller = new AbortController()
   let sdk = input.sdk
   let generation = 0
@@ -517,14 +524,14 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     readyResolve = resolve
     readyReject = reject
   })
-  const abortReady = () => readyReject(new Error("Mini closed before the event stream connected"))
+  const abortReady = () => readyReject(new Error(t("miniCli.streamClosed")))
   controller.signal.addEventListener("abort", abortReady, { once: true })
   const offFooterClose = input.footer.onClose(() => controller.abort())
   const waitUntilConnected = async (signal?: AbortSignal) => {
     const abort = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal
     while (!state.connected) {
       if (state.closed || controller.signal.aborted || input.footer.isClosed || signal?.aborted)
-        throw new Error("Event stream aborted")
+        throw new Error(t("miniCli.streamAborted"))
       await wait(25, abort)
     }
   }
@@ -536,6 +543,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     attempt.client === sdk
 
   const subagents = createSubagentTracker({
+    locale: input.locale,
     sessionID: input.sessionID,
     thinking: input.thinking,
     directory: input.location?.directory,
@@ -609,7 +617,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     const images = freshImages(userImageCommits(messageID, files), render)
     if (!render) return
     write([
-      ...(!visible && showTools() ? skillCommits(messageID, skills) : []),
+      ...(!visible && showTools() ? skillCommits(messageID, skills, input.locale) : []),
       ...(!visible && text.trim()
         ? [{ kind: "user", source: "system", text, phase: "start", messageID } as const]
         : []),
@@ -658,8 +666,8 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
             type: "stream.patch",
             patch:
               next.type === "prompt"
-                ? { phase: state.rootActive ? "running" : "idle", status: blockerStatus(next) }
-                : { status: blockerStatus(next) },
+                ? { phase: state.rootActive ? "running" : "idle", status: blockerStatus(next, input.locale) }
+                : { status: blockerStatus(next, input.locale) },
           },
           { type: "stream.view", view: next },
         ],
@@ -742,16 +750,17 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       const started = current?.started === true
       const ready = part.name !== "websearch" || typeof part.state.metadata.provider === "string"
       if (render && !started && ready)
-        write([toolCommit(part, messageID, "start", undefined, input.location?.directory, version)], {
+        write([toolCommit(part, messageID, "start", undefined, input.location?.directory, version, input.locale)], {
           phase: "running",
-          status: `running ${part.name}`,
+          status: t("miniCli.runningTool", { tool: part.name }),
         })
-      if (render && delta) write([toolCommit(part, messageID, "progress", delta, input.location?.directory, version)])
+      if (render && delta)
+        write([toolCommit(part, messageID, "progress", delta, input.location?.directory, version, input.locale)])
       state.tools.set(key, { part, output, version, started: started || (render && ready) })
       return
     }
     if (render && !current?.started)
-      write([toolCommit(part, messageID, "start", undefined, input.location?.directory, version)])
+      write([toolCommit(part, messageID, "start", undefined, input.location?.directory, version, input.locale)])
     state.finishedTools.add(key)
     state.tools.delete(key)
     if (!sourcePending(key)) state.toolSources.delete(key)
@@ -759,9 +768,17 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     if (!render) return
     const phase = toolFinalPhase(part)
     if (part.state.status === "error" && delta)
-      write([toolCommit(part, messageID, "progress", delta, input.location?.directory, version)])
+      write([toolCommit(part, messageID, "progress", delta, input.location?.directory, version, input.locale)])
     write([
-      toolCommit(part, messageID, phase, phase === "progress" ? delta : undefined, input.location?.directory, version),
+      toolCommit(
+        part,
+        messageID,
+        phase,
+        phase === "progress" ? delta : undefined,
+        input.location?.directory,
+        version,
+        input.locale,
+      ),
       ...images,
     ])
   }
@@ -784,7 +801,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         return
       }
       state.skillMessages.add(message.id)
-      write([skillCommit(message.id, message.name)])
+      write([skillCommit(message.id, message.name, message.id, input.locale)])
       return
     }
     if (message.type === "shell") {
@@ -805,7 +822,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         state.shellStarted.add(message.shellID)
         write([
           shellCommit(message.shellID, message.command, {
-            text: "running shell",
+            text: t("miniCli.runningShell"),
             phase: "start",
             toolState: "running",
           }),
@@ -813,7 +830,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       }
       if (completed && message.output && !state.shellEnded.has(message.shellID)) {
         state.shellEnded.add(message.shellID)
-        write(shellTerminal(message.shellID, message.command, message, message.output))
+        write(shellTerminal(message.shellID, message.command, message, message.output, input.locale))
       }
       if (completed && state.shellWait?.id === message.shellID) state.shellWait.resolve()
       return
@@ -826,7 +843,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       if (visible) return
       if (message.status === "failed") {
         if (render && message.error.type !== "aborted")
-          write([compactionCommit(message.id), compactionError(message.id, message.error.message)])
+          write([compactionCommit(message.id, input.locale), compactionError(message.id, message.error.message)])
         return
       }
       const fragment = { messageID: message.id, partID: "compaction:summary" }
@@ -834,7 +851,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       state.fragments.project(fragment, message.summary, show)
       if (!show) return
       write([
-        compactionCommit(message.id),
+        compactionCommit(message.id, input.locale),
         ...(message.summary ? [compactionSummary(message.id, message.summary, "progress")] : []),
         ...(message.status === "completed" ? [compactionSummary(message.id, "", "final")] : []),
       ])
@@ -890,7 +907,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         {
           kind: "error",
           source: "system",
-          text: errorMessage(message.error),
+          text: errorMessage(message.error, input.locale),
           phase: "start",
           messageID: message.id,
         },
@@ -909,7 +926,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
   const settleSession = async (client: OpenCodeClient) => {
     await client.session.wait({ sessionID: input.sessionID }, { signal: controller.signal })
     for (const message of await projectedMessages(client, controller.signal)) renderMessage(message, true)
-    paintIdle(blockerStatus(state.view))
+    paintIdle(blockerStatus(state.view, input.locale))
     await input.footer.idle()
   }
 
@@ -997,7 +1014,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     if (!current(attempt)) return
     write([], {
       phase: state.rootActive ? "running" : "idle",
-      status: state.rootActive ? "assistant responding" : blockerStatus(state.view),
+      status: state.rootActive ? t("miniCli.responding") : blockerStatus(state.view, input.locale),
     })
     if (!state.rootActive && !next.reconnect) await input.footer.idle()
     if (!current(attempt)) return
@@ -1007,8 +1024,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     if (!current(attempt)) return
     const client = attempt.client
     if (catalogEvents.has(event.type)) {
-      if (input.location && event.location && event.location.directory !== input.location.directory)
-        return
+      if (input.location && event.location && event.location.directory !== input.location.directory) return
       void refreshCatalog(attempt)
       return
     }
@@ -1055,7 +1071,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       state.pending.delete(event.data.inboxID)
       syncPending()
       if (pending) renderUser(pending.messageID, pending.prompt.text, pending.files, pending.skills)
-      write([], { phase: "running", status: "waiting for assistant" })
+      write([], { phase: "running", status: t("miniCli.waitAssistant") })
       return
     }
     if (event.type === "session.inbox.delivery.changed") {
@@ -1072,7 +1088,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     }
     if (event.type === "session.step.started") {
       state.stepModel = { providerID: event.data.model.providerID, modelID: event.data.model.id }
-      write([], { phase: "running", status: "assistant responding" })
+      write([], { phase: "running", status: t("miniCli.responding") })
       return
     }
     if (event.type === "session.skill.activated") {
@@ -1080,7 +1096,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       if (state.wait?.messageID === messageID) promoteWait(state.wait, true)
       if (state.skillMessages.has(messageID)) return
       state.skillMessages.add(messageID)
-      if (showTools()) write([skillCommit(messageID, event.data.name)])
+      if (showTools()) write([skillCommit(messageID, event.data.name, messageID, input.locale)])
       return
     }
     if (event.type === "session.compaction.started") {
@@ -1088,7 +1104,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       state.activeCompaction = messageID
       if (state.messageIDs.has(messageID)) return
       state.messageIDs.add(messageID)
-      write([compactionCommit(messageID)], { phase: "running", status: "compacting session" })
+      write([compactionCommit(messageID, input.locale)], { phase: "running", status: t("miniCli.compacting") })
       return
     }
     if (event.type === "session.compaction.delta") {
@@ -1131,14 +1147,14 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       write(
         [
           shellCommit(event.data.shell.id, event.data.shell.command, {
-            text: "running shell",
+            text: t("miniCli.runningShell"),
             phase: "start",
             toolState: "running",
           }),
         ],
         {
           phase: "running",
-          status: "running shell",
+          status: t("miniCli.runningShell"),
         },
       )
       return
@@ -1150,12 +1166,16 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         state.shellStarted.add(event.data.shell.id)
         if (command)
           commits.push(
-            shellCommit(event.data.shell.id, command, { text: "running shell", phase: "start", toolState: "running" }),
+            shellCommit(event.data.shell.id, command, {
+              text: t("miniCli.runningShell"),
+              phase: "start",
+              toolState: "running",
+            }),
           )
       }
       if (!state.shellEnded.has(event.data.shell.id)) {
         state.shellEnded.add(event.data.shell.id)
-        commits.push(...shellTerminal(event.data.shell.id, command, event.data.shell, event.data.output))
+        commits.push(...shellTerminal(event.data.shell.id, command, event.data.shell, event.data.output, input.locale))
       }
       const wait = state.shellWait
       const owned = wait?.id === event.data.shell.id
@@ -1391,7 +1411,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         {
           kind: "error",
           source: "system",
-          text: errorMessage(event.data.error),
+          text: errorMessage(event.data.error, input.locale),
           phase: "start",
           messageID: event.data.assistantMessageID,
         },
@@ -1418,11 +1438,11 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         return
       }
       if (event.type === "session.execution.failed") {
-        if (!current.failureRendered) current.terminalError = new Error(errorMessage(event.data.error))
+        if (!current.failureRendered) current.terminalError = new Error(errorMessage(event.data.error, input.locale))
         return
       }
       if (event.type === "session.execution.interrupted") {
-        current.terminalError = new Error(`Session interrupted: ${event.data.reason}`)
+        current.terminalError = new Error(t("miniCli.interrupted", { reason: event.data.reason }))
       }
     }
   }
@@ -1486,14 +1506,14 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         const stream = client.event.subscribe({ signal: connection.signal })[Symbol.asyncIterator]()
         activeAttempt = attempt
         try {
-          const first = await nextEvent(stream, connection.signal)
-          if (first.done || first.value.type !== "server.connected") throw new Error("Event stream disconnected")
+          const first = await nextEvent(stream, connection.signal, input.locale)
+          if (first.done || first.value.type !== "server.connected") throw new Error(t("miniCli.streamDisconnected"))
           const buffered: RunV2Event[] = []
           let booting = true
           const consume = (async () => {
             while (true) {
-              const next = await nextEvent(stream, connection.signal)
-              if (next.done) throw new Error("Event stream disconnected")
+              const next = await nextEvent(stream, connection.signal, input.locale)
+              if (next.done) throw new Error(t("miniCli.streamDisconnected"))
               if (booting) buffered.push(next.value)
               else receive(attempt, next.value)
             }
@@ -1507,10 +1527,10 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
             ),
             consume,
           ])
-          if (!current(attempt)) throw new Error("Event stream disconnected")
+          if (!current(attempt)) throw new Error(t("miniCli.streamDisconnected"))
           state.initial = false
           for (const event of buffered.splice(0)) apply(attempt, event)
-          if (!current(attempt)) throw new Error("Event stream disconnected")
+          if (!current(attempt)) throw new Error(t("miniCli.streamDisconnected"))
           booting = false
           state.connected = true
           readyResolve()
@@ -1528,7 +1548,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       state.connected = false
       if (controller.signal.aborted || input.footer.isClosed) return
       input.trace?.write("recv.reconnect", { error: formatUnknownError(error) })
-      write([], { phase: "running", status: "reconnecting" })
+      write([], { phase: "running", status: t("miniCli.reconnecting") })
       if (input.reconnect) {
         try {
           const next = await input.reconnect(controller.signal)
@@ -1559,7 +1579,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
   }
 
   const runShellTurn = async (next: SessionTurnInput) => {
-    if (state.wait || state.shellWait) throw new Error("prompt already running")
+    if (state.wait || state.shellWait) throw new Error(t("miniCli.promptRunning"))
     await waitUntilConnected(next.signal)
     const client = sdk
     const abort = new AbortController()
@@ -1579,7 +1599,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     }
     state.shellWait = active
     input.trace?.write("send.shell", { sessionID: input.sessionID, id: messageID, command: next.prompt.text })
-    write([], { phase: "running", status: "running shell" })
+    write([], { phase: "running", status: t("miniCli.runningShell") })
     try {
       await client.session.shell(
         { sessionID: input.sessionID, id: messageID, command: next.prompt.text },
@@ -1729,9 +1749,9 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
 
   const admitPrompt = async (next: SessionTurnInput, client: OpenCodeClient, delivery: RunDelivery) => {
     const messageID = next.prompt.messageID
-    if (!messageID) throw new Error("Prompt message ID is required")
+    if (!messageID) throw new Error(t("miniCli.promptIDRequired"))
     const command = next.prompt.command
-    const attachments = await prepareAttachments(next, command ? "command" : "prompt", input.readTextFile)
+    const attachments = await prepareAttachments(next, command ? "command" : "prompt", input.readTextFile, input.locale)
     const agents = promptAgents(next)
     const skills = promptSkills(next)
     if (!command) {
@@ -1792,14 +1812,14 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
 
   return {
     async admitPromptTurn(next, delivery) {
-      if (next.prompt.mode === "shell") throw new Error("This prompt cannot be queued")
+      if (next.prompt.mode === "shell") throw new Error(t("miniCli.cannotQueue"))
       await waitUntilConnected(next.signal)
       const client = sdk
       if (!next.prompt.command && next.agent)
         await client.session.switchAgent({ sessionID: input.sessionID, agent: next.agent }, { signal: next.signal })
       if (!next.prompt.command) {
         const selected = await resolveSelectedModel(input, client, next)
-        if (next.variant && !selected) throw new Error("Cannot select a variant before selecting a model")
+        if (next.variant && !selected) throw new Error(t("miniCli.variantModel"))
         if (selected)
           await client.session.switchModel({ sessionID: input.sessionID, model: selected }, { signal: next.signal })
       }
@@ -1817,11 +1837,11 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         await runShellTurn(next)
         return
       }
-      if (state.wait || state.shellWait) throw new Error("prompt already running")
+      if (state.wait || state.shellWait) throw new Error(t("miniCli.promptRunning"))
       await waitUntilConnected(next.signal)
       const client = sdk
       const messageID = next.prompt.messageID
-      if (!messageID) throw new Error("Prompt message ID is required")
+      if (!messageID) throw new Error(t("miniCli.promptIDRequired"))
 
       const command = next.prompt.command
       if (command) {
@@ -1834,7 +1854,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
         await client.session.switchAgent({ sessionID: input.sessionID, agent: next.agent }, { signal: next.signal })
       }
       const selected = await resolveSelectedModel(input, client, next)
-      if (next.variant && !selected) throw new Error("Cannot select a variant before selecting a model")
+      if (next.variant && !selected) throw new Error(t("miniCli.variantModel"))
       if (selected)
         await client.session.switchModel({ sessionID: input.sessionID, model: selected }, { signal: next.signal })
 
@@ -1863,7 +1883,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       const epoch = state.executionEpoch
       await sdk.session.interrupt({ sessionID: input.sessionID, resume: true }).then(
         () => {
-          if (state.executionEpoch === epoch) paintIdle(blockerStatus(state.view))
+          if (state.executionEpoch === epoch) paintIdle(blockerStatus(state.view, input.locale))
         },
         () => {},
       )

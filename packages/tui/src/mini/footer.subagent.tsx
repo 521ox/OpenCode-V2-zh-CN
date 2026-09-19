@@ -5,10 +5,11 @@ import { registerOpencodeSpinner } from "../component/register-spinner"
 import { Show, createMemo, createSignal, indexArray } from "solid-js"
 import { SPINNER_FRAMES } from "../component/spinner-frames"
 import { RunEntryContent, separatorRows } from "./scrollback.writer"
-import type { FooterSubagentDetail, FooterSubagentTab } from "./types"
+import type { FooterSubagentDetail, FooterSubagentTab, RunTuiConfig } from "./types"
 import type { RunFooterTheme, RunTheme } from "./theme"
 import { stringWidth } from "../util/string-width"
 import { footerMenuText } from "./footer.menu"
+import { resolveLocale, translate, type Key, type Params } from "../i18n"
 
 registerOpencodeSpinner()
 
@@ -47,6 +48,7 @@ function statusIcon(status: FooterSubagentTab["status"], mono: boolean) {
 }
 
 export function RunFooterSubagentBody(props: {
+  locale?: RunTuiConfig["locale"]
   active: () => boolean
   theme: () => RunTheme
   tab: () => FooterSubagentTab | undefined
@@ -61,6 +63,7 @@ export function RunFooterSubagentBody(props: {
   shellOutput?: () => boolean
   mono?: boolean
 }) {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
   const dims = useTerminalDimensions()
   const [size, setSize] = createSignal(dims())
   const width = () => size().width
@@ -98,7 +101,7 @@ export function RunFooterSubagentBody(props: {
       <RunEntryContent
         commit={commit()}
         theme={theme()}
-        opts={{ shellOutput: props.shellOutput?.() ?? true, mono: props.mono }}
+        opts={{ shellOutput: props.shellOutput?.() ?? true, mono: props.mono, locale: props.locale }}
       />
     </box>
   ))
@@ -108,9 +111,13 @@ export function RunFooterSubagentBody(props: {
     if (tab()?.status !== "running") return undefined
     return props.interrupt?.()
   })
-  const count = () => (props.total() > 1 && props.index() > 0 ? `${props.index()} of ${props.total()}` : "")
+  const count = () =>
+    props.total() > 1 && props.index() > 0
+      ? t("miniCli.childCount", { index: props.index(), total: props.total() })
+      : ""
   const headerControlsWidth = () =>
-    (interruptHint() ? stringWidth(`${interruptHint()} interrupt`) + 1 : 0) + (count() ? stringWidth(count()) + 1 : 0)
+    (interruptHint() ? stringWidth(`${interruptHint()} ${t("miniCli.interrupt")}`) + 1 : 0) +
+    (count() ? stringWidth(count()) + 1 : 0)
   const headerControls = () => !compact() && stringWidth(title()) + 2 + headerControlsWidth() <= width() - 4
   const titleWidth = () => Math.max(1, width() - (compact() ? 2 : 6) - (headerControls() ? headerControlsWidth() : 0))
 
@@ -197,7 +204,7 @@ export function RunFooterSubagentBody(props: {
               <Show when={interruptHint()}>
                 {(hint) => (
                   <text fg={footer().muted} wrapMode="none" flexShrink={0}>
-                    {hint()} interrupt
+                    {hint()} {t("miniCli.interrupt")}
                   </text>
                 )}
               </Show>
@@ -229,7 +236,7 @@ export function RunFooterSubagentBody(props: {
             rows()
           ) : (
             <text width="100%" fg={footer().muted} wrapMode="word" flexShrink={0}>
-              No subagent activity yet
+              {t("miniCli.noChildActivity")}
             </text>
           )}
         </box>
@@ -237,18 +244,23 @@ export function RunFooterSubagentBody(props: {
       <Show when={!headerControls()}>
         <box width="100%" flexDirection="row" flexWrap="wrap" columnGap={1} flexShrink={0}>
           <text height={1} fg={footer().actionSecondaryText} wrapMode="none" flexShrink={0} onMouseUp={props.onClose}>
-            esc back
+            esc {t("miniCli.back")}
           </text>
           <Show when={interruptHint()}>
             {(hint) => (
               <text maxWidth="100%" fg={footer().actionSecondaryText} wrapMode="word" flexShrink={0}>
-                {hint()} {width() >= stringWidth(hint()) + 10 ? "interrupt" : "stop"}
+                {hint()}{" "}
+                {t(
+                  width() >= stringWidth(hint()) + stringWidth(t("miniCli.interrupt")) + 1
+                    ? "miniCli.interrupt"
+                    : "miniCli.stop",
+                )}
               </text>
             )}
           </Show>
           <Show when={width() >= 56}>
             <text height={1} fg={footer().muted} wrapMode="none" flexShrink={0}>
-              pgup/pgdn scroll
+              pgup/pgdn {t("miniCli.scroll")}
             </text>
             <Show when={props.total() > 1 && props.index() > 0}>
               <text
@@ -258,7 +270,7 @@ export function RunFooterSubagentBody(props: {
                 flexShrink={0}
                 onMouseUp={() => props.onCycle(1)}
               >
-                tab next {props.index()}/{props.total()}
+                tab {t("miniCli.form.next")} {props.index()}/{props.total()}
               </text>
             </Show>
           </Show>

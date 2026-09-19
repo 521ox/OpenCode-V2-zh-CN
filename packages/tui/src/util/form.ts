@@ -1,4 +1,5 @@
 import type { FormField, FormValue } from "@opencode/client"
+import { translate, type Key, type Translator } from "../i18n"
 
 export type FormAnswerField = Exclude<FormField, { type: "external" }>
 
@@ -44,12 +45,15 @@ export function formCustom(field: FormField | undefined) {
   return field.type === "multiselect" && field.custom === true
 }
 
-export function formRows(field: FormField | undefined): FormRow[] {
+export function formRows(
+  field: FormField | undefined,
+  t: Translator<Key> = (key, params) => translate("en", key, params),
+): FormRow[] {
   if (!field) return []
   if (field.type === "boolean")
     return [
-      { value: true, label: "Yes" },
-      { value: false, label: "No" },
+      { value: true, label: t("main.yes") },
+      { value: false, label: t("main.no") },
     ]
   const options = field.type === "multiselect" ? field.options : field.type === "string" ? field.options : undefined
   if (!options) return []
@@ -69,50 +73,63 @@ export function formSelected(field: FormField | undefined, value: FormValue | un
   return 0
 }
 
-export function formValidateValue(field: FormAnswerField, value: FormValue | undefined): string | undefined {
-  if (value === undefined) return field.required ? "Answer required" : undefined
+export function formValidateValue(
+  field: FormAnswerField,
+  value: FormValue | undefined,
+  t: Translator<Key> = (key, params) => translate("en", key, params),
+): string | undefined {
+  if (value === undefined) return field.required ? t("main.validation.required") : undefined
   if (field.required && (value === "" || (Array.isArray(value) && value.length === 0)))
-    return field.type === "multiselect" ? "Select at least one option" : "Answer required"
+    return field.type === "multiselect" ? t("main.validation.one") : t("main.validation.required")
   if (field.type === "string") {
-    if (typeof value !== "string") return "Expected text"
+    if (typeof value !== "string") return t("main.validation.text")
     if (field.minLength !== undefined && value.length < field.minLength)
-      return `Must be at least ${field.minLength} characters`
+      return t("main.validation.minLength", { count: field.minLength })
     if (field.maxLength !== undefined && value.length > field.maxLength)
-      return `Must be at most ${field.maxLength} characters`
+      return t("main.validation.maxLength", { count: field.maxLength })
     if (field.pattern !== undefined) {
       try {
-        if (!new RegExp(field.pattern).test(value)) return `Must match pattern: ${field.pattern}`
+        if (!new RegExp(field.pattern).test(value)) return t("main.validation.pattern", { pattern: field.pattern })
       } catch {
-        return `Invalid pattern: ${field.pattern}`
+        return t("main.validation.invalidPattern", { pattern: field.pattern })
       }
     }
-    if (field.format === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Expected an email address"
-    if (field.format === "uri" && !validURL(value)) return "Expected a URL"
-    if (field.format === "date" && !validDate(value)) return "Expected a date (YYYY-MM-DD)"
-    if (field.format === "date-time" && Number.isNaN(new Date(value).getTime())) return "Expected a date and time"
+    if (field.format === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t("main.validation.email")
+    if (field.format === "uri" && !validURL(value)) return t("main.validation.url")
+    if (field.format === "date" && !validDate(value)) return t("main.validation.date")
+    if (field.format === "date-time" && Number.isNaN(new Date(value).getTime())) return t("main.validation.datetime")
     if (field.options && !field.custom && !field.options.some((option) => option.value === value))
-      return "Select an available option"
+      return t("main.validation.option")
     return
   }
   if (field.type === "number" || field.type === "integer") {
-    if (typeof value !== "number" || !Number.isFinite(value)) return "Expected a number"
-    if (field.type === "integer" && !Number.isInteger(value)) return "Expected an integer"
-    if (typeof field.minimum === "number" && value < field.minimum) return `Must be at least ${field.minimum}`
-    if (typeof field.maximum === "number" && value > field.maximum) return `Must be at most ${field.maximum}`
+    if (typeof value !== "number" || !Number.isFinite(value)) return t("main.validation.number")
+    if (field.type === "integer" && !Number.isInteger(value)) return t("main.validation.integer")
+    if (typeof field.minimum === "number" && value < field.minimum)
+      return t("main.validation.minimum", { count: field.minimum })
+    if (typeof field.maximum === "number" && value > field.maximum)
+      return t("main.validation.maximum", { count: field.maximum })
     return
   }
-  if (field.type === "boolean") return typeof value === "boolean" ? undefined : "Expected yes or no"
-  if (!Array.isArray(value)) return "Expected selections"
-  if (field.minItems !== undefined && value.length < field.minItems) return `Select at least ${field.minItems}`
-  if (field.maxItems !== undefined && value.length > field.maxItems) return `Select at most ${field.maxItems}`
+  if (field.type === "boolean") return typeof value === "boolean" ? undefined : t("main.validation.boolean")
+  if (!Array.isArray(value)) return t("main.validation.selections")
+  if (field.minItems !== undefined && value.length < field.minItems)
+    return t("main.validation.minItems", { count: field.minItems })
+  if (field.maxItems !== undefined && value.length > field.maxItems)
+    return t("main.validation.maxItems", { count: field.maxItems })
   if (!field.custom && value.some((item) => !field.options.some((option) => option.value === item)))
-    return "Select only available options"
+    return t("main.validation.options")
 }
 
-export function formDisplayValue(field: FormAnswerField, value: FormValue | undefined, emptyMultiselect: string) {
+export function formDisplayValue(
+  field: FormAnswerField,
+  value: FormValue | undefined,
+  emptyMultiselect: string,
+  t: Translator<Key> = (key, params) => translate("en", key, params),
+) {
   if (value === undefined) return ""
   const label = (item: string | number | boolean) =>
-    formRows(field).find((row) => row.value === item)?.label ?? String(item)
+    formRows(field, t).find((row) => row.value === item)?.label ?? String(item)
   if (Array.isArray(value)) return value.length === 0 ? emptyMultiselect : value.map(label).join(", ")
   return label(value)
 }

@@ -33,6 +33,7 @@ import { toolFiletype } from "./tool"
 import { transparent, type RunBlockTheme, type RunFooterTheme } from "./theme"
 import type { MiniPermissionRequest, PermissionReply } from "./types"
 import { PatchDiff } from "../component/patch-diff"
+import { resolveLocale, translate, type Locale, type Key, type Params } from "../i18n"
 
 function buttons(
   list: PermissionOption[],
@@ -42,13 +43,14 @@ function buttons(
   onHover: (option: PermissionOption) => void,
   onSelect: (option: PermissionOption) => void,
   mono: boolean,
+  locale: Locale,
 ) {
   return (
     <box width="100%" flexDirection="row" flexWrap="wrap" columnGap={1} flexShrink={0}>
       <For each={list}>
         {(option) => (
           <box
-            width={stringWidth(permissionLabel(option)) + 2}
+            width={stringWidth(permissionLabel(option, locale)) + 2}
             height={1}
             flexShrink={0}
             paddingLeft={1}
@@ -66,7 +68,7 @@ function buttons(
               fg={option === selected ? theme.actionFocusedText : theme.actionSecondaryText}
               attributes={option === selected && mono ? TextAttributes.INVERSE : undefined}
             >
-              {permissionLabel(option)}
+              {permissionLabel(option, locale)}
             </text>
           </box>
         )}
@@ -77,6 +79,7 @@ function buttons(
 
 /** @internal Exported to test managed textarea submission without permission navigation. */
 export function RejectField(props: {
+  locale?: Locale
   theme: RunFooterTheme
   text: string
   disabled: boolean
@@ -110,7 +113,7 @@ export function RejectField(props: {
       minHeight={1}
       maxHeight={3}
       wrapMode="word"
-      placeholder="Tell OpenCode what to do differently"
+      placeholder={translate(resolveLocale(props.locale), "miniCli.permission.feedback")}
       placeholderColor={props.theme.muted}
       textColor={props.theme.formfieldText}
       focusedTextColor={props.theme.formfieldFocusedText}
@@ -140,6 +143,7 @@ export function RejectField(props: {
 }
 
 export function RunPermissionBody(props: {
+  locale?: Locale
   request: MiniPermissionRequest
   directory?: () => string
   theme: RunFooterTheme
@@ -147,13 +151,16 @@ export function RunPermissionBody(props: {
   onReply: (input: PermissionReply) => void | Promise<void>
   mono?: boolean
 }) {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
   const dims = useTerminalDimensions()
   const [size, setSize] = createSignal(dims())
   const width = () => size().width
   const compact = () => width() < 56 || size().height < 12
   const [state, setState] = createSignal(createPermissionBodyState(props.request))
   const stage = createMemo(() => state().stage)
-  const info = createMemo(() => permissionInfo(props.request, props.directory?.(), props.mono))
+  const info = createMemo(() =>
+    permissionInfo(props.request, props.directory?.(), props.mono, resolveLocale(props.locale)),
+  )
   const ft = createMemo(() => toolFiletype(info().file))
   let scroll: ScrollBoxRenderable | undefined
   const scrollbar = createMemo(() => ({
@@ -167,22 +174,26 @@ export function RunPermissionBody(props: {
     permissionOptions(stage()).filter((option) => option !== "always" || (props.request.save?.length ?? 0) > 0),
   )
   const busy = createMemo(() => state().submitting)
-  const controlsWidth = () => opts().reduce((total, option) => total + stringWidth(permissionLabel(option)) + 3, -1)
+  const controlsWidth = () =>
+    opts().reduce((total, option) => total + stringWidth(permissionLabel(option, resolveLocale(props.locale))) + 3, -1)
   const hint = () =>
     compact() && width() < 56
-      ? "pgup/pgdn scroll"
-      : `${props.mono ? "left/right" : "⇆"} select  enter confirm  esc ${stage() === "always" ? "cancel" : "reject"}`
+      ? `pgup/pgdn ${t("miniCli.scroll")}`
+      : t("miniCli.permission.hint", {
+          arrows: props.mono ? "left/right" : "⇆",
+          action: t(stage() === "always" ? "miniCli.cancel" : "miniCli.reject"),
+        })
   const inlineControls = () => controlsWidth() + stringWidth(hint()) + 1 <= width() - (compact() ? 0 : 5)
   const title = createMemo(() => {
     if (stage() === "always") {
-      return "Always allow"
+      return t("miniCli.permission.always")
     }
 
     if (stage() === "reject") {
-      return width() < 24 ? "Reject" : "Reject permission"
+      return t(width() < 24 ? "miniCli.permission.reject" : "miniCli.permission.rejectTitle")
     }
 
-    return width() < 24 ? "Permission" : "Permission required"
+    return t(width() < 24 ? "miniCli.permission.short" : "miniCli.permission.title")
   })
 
   createEffect(() => {
@@ -322,7 +333,7 @@ export function RunPermissionBody(props: {
           {title()}
         </text>
         <Show when={!compact() && stage() === "reject"}>
-          <text fg={props.theme.muted}>Tell OpenCode what to do differently</text>
+          <text fg={props.theme.muted}>{t("miniCli.permission.feedback")}</text>
         </Show>
       </box>
 
@@ -344,6 +355,7 @@ export function RunPermissionBody(props: {
             >
               <box width={width() >= 80 ? undefined : "100%"} flexGrow={1} flexShrink={1} minWidth={0}>
                 <RejectField
+                  locale={props.locale}
                   theme={props.theme}
                   text={state().message}
                   disabled={busy()}
@@ -361,16 +373,18 @@ export function RunPermissionBody(props: {
                 when={!busy()}
                 fallback={
                   <text fg={props.theme.running} height={1} wrapMode="none" truncate flexShrink={0}>
-                    {compact() ? "Waiting…" : "Waiting for permission event…"}
+                    {t(compact() ? "miniCli.wait" : "miniCli.permission.wait")}
                   </text>
                 }
               >
                 <box flexDirection="row" flexWrap="wrap" columnGap={compact() ? 1 : 2} flexShrink={0}>
                   <text fg={props.theme.text} height={1} wrapMode="none" flexShrink={0}>
-                    enter <span style={{ fg: props.theme.muted }}>{compact() ? "reject" : "confirm"}</span>
+                    enter{" "}
+                    <span style={{ fg: props.theme.muted }}>{t(compact() ? "miniCli.reject" : "miniCli.confirm")}</span>
                   </text>
                   <text fg={props.theme.text} height={1} wrapMode="none" flexShrink={0}>
-                    esc <span style={{ fg: props.theme.muted }}>{compact() ? "back" : "cancel"}</span>
+                    esc{" "}
+                    <span style={{ fg: props.theme.muted }}>{t(compact() ? "miniCli.back" : "miniCli.cancel")}</span>
                   </text>
                 </box>
               </Show>
@@ -485,14 +499,14 @@ export function RunPermissionBody(props: {
                   </Show>
                   <Show when={!info().diff && !info().patch && info().lines.length === 0}>
                     <text width="100%" fg={props.theme.muted} flexShrink={0}>
-                      No diff provided
+                      {t("miniCli.noDiff")}
                     </text>
                   </Show>
                 </box>
               </Match>
               <Match when={true}>
                 <box width="100%" flexDirection="column" flexShrink={0} gap={compact() ? 0 : 1}>
-                  <For each={permissionAlwaysLines(props.request)}>
+                  <For each={permissionAlwaysLines(props.request, t)}>
                     {(line) => (
                       <text width="100%" fg={props.theme.text} wrapMode="word" flexShrink={0}>
                         {line}
@@ -528,13 +542,14 @@ export function RunPermissionBody(props: {
               },
               run,
               props.mono ?? false,
+              resolveLocale(props.locale),
             )}
           </box>
           <Show
             when={!busy()}
             fallback={
               <text fg={props.theme.running} height={1} wrapMode="none" truncate flexShrink={0}>
-                {compact() ? "Waiting…" : "Waiting for permission event…"}
+                {t(compact() ? "miniCli.wait" : "miniCli.permission.wait")}
               </text>
             }
           >
@@ -544,13 +559,17 @@ export function RunPermissionBody(props: {
                 fallback={
                   <>
                     {props.mono ? "left/right" : "⇆"}
-                    <span style={{ fg: props.theme.muted }}>{" select  "}</span>
-                    enter<span style={{ fg: props.theme.muted }}>{" confirm  "}</span>
-                    esc<span style={{ fg: props.theme.muted }}> {stage() === "always" ? "cancel" : "reject"}</span>
+                    <span style={{ fg: props.theme.muted }}>{` ${t("miniCli.select")}  `}</span>
+                    enter<span style={{ fg: props.theme.muted }}>{` ${t("miniCli.confirm")}  `}</span>
+                    esc
+                    <span style={{ fg: props.theme.muted }}>
+                      {" "}
+                      {t(stage() === "always" ? "miniCli.cancel" : "miniCli.reject")}
+                    </span>
                   </>
                 }
               >
-                pgup/pgdn<span style={{ fg: props.theme.muted }}> scroll</span>
+                pgup/pgdn<span style={{ fg: props.theme.muted }}> {t("miniCli.scroll")}</span>
               </Show>
             </text>
           </Show>

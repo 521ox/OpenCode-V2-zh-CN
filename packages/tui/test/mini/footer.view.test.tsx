@@ -43,7 +43,7 @@ import type {
 } from "../../src/mini/types"
 import { selectedCommand } from "../../src/mini/footer.prompt"
 import { RejectField } from "../../src/mini/footer.permission"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig } from "./fixture/english"
 import { tmpdir } from "../fixture/fixture"
 import { diffImageFixture } from "../fixture/diff-image"
 
@@ -687,7 +687,7 @@ test("run entry content updates when live commit text changes", async () => {
   const app = await testRender(
     () => (
       <box width={80} height={4}>
-        <RunEntryContent commit={commit()} theme={RUN_THEME_FALLBACK} />
+        <RunEntryContent commit={commit()} theme={RUN_THEME_FALLBACK} opts={{ locale: "en" }} />
       </box>
     ),
     {
@@ -729,7 +729,7 @@ test("run entry content preserves monochrome markdown grammar", async () => {
   const app = await testRender(
     () => (
       <box width={60} height={8}>
-        <RunEntryContent commit={commit()} theme={RUN_THEME_FALLBACK} opts={{ mono: true }} />
+        <RunEntryContent commit={commit()} theme={RUN_THEME_FALLBACK} opts={{ mono: true, locale: "en" }} />
       </box>
     ),
     { width: 60, height: 8 },
@@ -781,7 +781,7 @@ test("run entry content toggles unchanged live markdown between color and monoch
   const app = await testRender(
     () => (
       <box width={60} height={4}>
-        <RunEntryContent commit={commit} theme={RUN_THEME_FALLBACK} opts={{ mono: mono() }} />
+        <RunEntryContent commit={commit} theme={RUN_THEME_FALLBACK} opts={{ mono: mono(), locale: "en" }} />
       </box>
     ),
     { width: 60, height: 4 },
@@ -844,6 +844,7 @@ test("direct command panel renders grouped actions without catalog commands", as
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS}>
         <RunCommandMenuBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           commands={commands}
           subagents={subagents}
@@ -927,6 +928,7 @@ test.each([false, true])("settings change preferences and preview the work spinn
     () => (
       <box width="100%" height="100%">
         <RunSettingsBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           settings={settings}
           onClose={() => {}}
@@ -1057,6 +1059,7 @@ test("direct command panel shows subagent entry when available", async () => {
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS}>
         <RunCommandMenuBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           commands={commands}
           subagents={subagents}
@@ -1107,6 +1110,7 @@ test("direct command panel keeps completed subagents available", async () => {
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS}>
         <RunCommandMenuBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           commands={commands}
           subagents={subagents}
@@ -1158,6 +1162,7 @@ test("direct subagent panel toggles between active and inactive subagents", asyn
     () => (
       <box width={100} height={RUN_SUBAGENT_PANEL_ROWS}>
         <RunSubagentSelectBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           tabs={tabs}
           current={current}
@@ -1215,6 +1220,7 @@ test("direct subagent panel closes when moving up from the first item", async ()
     () => (
       <box width={100} height={RUN_SUBAGENT_PANEL_ROWS}>
         <RunSubagentSelectBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           tabs={tabs}
           current={current}
@@ -2204,6 +2210,7 @@ test("direct model panel keeps native V2 light search and options readable on a 
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS} backgroundColor={background}>
         <RunModelSelectBody
+          locale="en"
           theme={() => theme.footer}
           providers={providers}
           current={current}
@@ -2308,6 +2315,7 @@ test("direct agent panel shows eligible agents and marks the current agent", asy
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS}>
         <RunAgentSelectBody
+          locale="en"
           theme={() => theme.footer}
           agents={agents}
           current={current}
@@ -2358,6 +2366,7 @@ test("direct variant panel renders current variant selector", async () => {
     () => (
       <box width={100} height={RUN_COMMAND_PANEL_ROWS}>
         <RunVariantSelectBody
+          locale="en"
           theme={() => RUN_THEME_FALLBACK.footer}
           variants={variants}
           current={current}

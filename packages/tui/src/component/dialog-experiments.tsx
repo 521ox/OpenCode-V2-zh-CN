@@ -3,6 +3,7 @@ import { useConfig } from "../config"
 import { DialogSelect } from "../ui/dialog-select"
 import { useTheme } from "../context/theme"
 import { useToast } from "../ui/toast"
+import { useI18n } from "../context/i18n"
 
 type Experiment = {
   id: string
@@ -16,6 +17,7 @@ type Experiment = {
 export const experiments: Experiment[] = []
 
 export function DialogExperiments() {
+  const { t } = useI18n()
   const config = useConfig()
   const theme = useTheme()
   const toast = useToast()
@@ -28,7 +30,7 @@ export function DialogExperiments() {
     experiments.map((experiment) => ({
       title: experiment.title,
       searchText: experiment.description,
-      footer: enabled(experiment) ? "on" : "off",
+      footer: enabled(experiment) ? t("main.value.on") : t("main.value.off"),
       value: experiment,
     })),
   )
@@ -50,30 +52,30 @@ export function DialogExperiments() {
 
   return (
     <DialogSelect
-      title="Experiments"
+      title={t("main.experiments")}
       options={options()}
       renderFilter={experiments.length > 0}
       onMove={(option) => setSelected(option.value)}
       onSelect={(option) => void change(option.value)}
       emptyView={
         <box paddingLeft={4} paddingRight={4}>
-          <text fg={theme.text.muted}>No experiments available</text>
+          <text fg={theme.text.muted}>{t("main.experiments.empty")}</text>
         </box>
       }
-      footerHints={experiments.length > 0 ? [{ title: "←/→", label: "change" }] : []}
+      footerHints={experiments.length > 0 ? [{ title: "←/→", label: t("main.change") }] : []}
       bindings={
         experiments.length > 0
           ? [
               {
                 bind: "left",
-                title: "Previous value",
-                group: "Experiments",
+                title: t("main.value.previous"),
+                group: t("main.experiments"),
                 run: () => void change(),
               },
               {
                 bind: "right",
-                title: "Next value",
-                group: "Experiments",
+                title: t("main.value.next"),
+                group: t("main.experiments"),
                 run: () => void change(),
               },
             ]

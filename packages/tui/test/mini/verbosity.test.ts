@@ -29,7 +29,7 @@ test("verbosity presets leave splash, spinner, and mono alone", () => {
 test("individual knobs mark verbosity custom until a preset matches again", () => {
   const louder = applyMiniSettingChange(resolveMiniSettings(), { key: "tools", value: "show" })
   expect(matchMiniVerbosity(louder)).toBe("custom")
-  expect(verbosityLabel("custom")).toBe("Custom")
+  expect(verbosityLabel("custom", "en")).toBe("Custom")
   expect(matchMiniVerbosity(applyMiniSettingChange(louder, { key: "verbosity", value: "quiet" }))).toBe("quiet")
 })
 
@@ -41,8 +41,8 @@ test("verbosity cycles like a clamped slider", () => {
   expect(cycleMiniVerbosity({ ...settings, ...verbosityPreset("everything") }, 1)).toBe("everything")
   expect(verbosityChange({ ...settings, ...verbosityPreset("quiet") }, -1)).toBeUndefined()
   expect(verbosityChange(settings, 1)).toEqual({ key: "verbosity", value: "everything" })
-  expect(verbosityLabel("quiet")).toBe("Quiet")
-  expect(verbosityLabel("everything")).toBe("Everything")
+  expect(verbosityLabel("quiet", "en")).toBe("Quiet")
+  expect(verbosityLabel("everything", "en")).toBe("Everything")
 })
 
 test("custom verbosity moves toward the nearest preset", () => {

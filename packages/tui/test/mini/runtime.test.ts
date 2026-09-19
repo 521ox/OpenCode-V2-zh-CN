@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { OpenCode } from "@opencode/client/promise"
-import { runInteractiveDeferredMode } from "../../src/mini/runtime"
+import { runInteractiveDeferredMode } from "./fixture/english"
 import type { LifecycleInput } from "../../src/mini/runtime.lifecycle"
 import type { FooterEvent, MiniHost } from "../../src/mini/types"
 import { catalogModel, catalogProvider, stubCatalogLists } from "./fixture/catalog"
 import { createFooterApiFixture } from "./fixture/footer-api"
-import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+import { createTuiResolvedConfig } from "./fixture/english"
 
 function defer<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void

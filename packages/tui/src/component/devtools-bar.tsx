@@ -17,6 +17,7 @@ import { useDialog } from "../ui/dialog"
 import { DialogExperiments } from "./dialog-experiments"
 import { usePlugin } from "../plugin/context"
 import { errorMessage } from "../util/error"
+import { useI18n } from "../context/i18n"
 
 const graphWidth = 23
 const sampleIntervalMilliseconds = 2_000
@@ -27,6 +28,7 @@ type ProcessSample = Readonly<{ cpu: number; memory: number; delay: number; time
 export type RuntimeStatus = "normal" | "medium" | "high"
 
 export function DevToolsBar() {
+  const { t } = useI18n()
   const client = useClient()
   const config = useConfig()
   const dialog = useDialog()
@@ -147,11 +149,7 @@ export function DevToolsBar() {
     const routeData = route.data
     const sessionID = routeData.type === "session" ? routeData.sessionID : undefined
     const info = sessionID ? data.session.get(sessionID) : undefined
-    const sessionLocation =
-      info?.location ??
-      (location.current
-        ? { directory: location.current.directory }
-        : undefined)
+    const sessionLocation = info?.location ?? (location.current ? { directory: location.current.directory } : undefined)
     const details = server()
     const backend = {
       connected: connected(),
@@ -266,27 +264,38 @@ export function DevToolsBar() {
           }
         >
           {" "}
-          Server
+          {t("main.dev.server")}
         </text>
         <Show when={panel() === "server"}>
           <PanelBox>
-            <PanelTitle>Server</PanelTitle>
-            <Row label="Status" value={connected() ? "Connected" : client.connection.status()} />
+            <PanelTitle>{t("main.dev.server")}</PanelTitle>
+            <Row
+              label={t("main.status")}
+              value={
+                connected()
+                  ? t("main.mcp.connected")
+                  : client.connection.status() === "reconnecting"
+                    ? t("main.connection.reconnecting")
+                    : t("main.mcp.connecting")
+              }
+            />
             <Show when={client.connection.attempt() > 0}>
-              <Row label="Reconnect" value={String(client.connection.attempt())} />
+              <Row label={t("main.dev.reconnect")} value={String(client.connection.attempt())} />
             </Show>
-            <Show when={client.connection.error()}>{(error) => <Row label="Last error" value={error()} />}</Show>
+            <Show when={client.connection.error()}>
+              {(error) => <Row label={t("main.dev.lastError")} value={error()} />}
+            </Show>
             <Show when={server()}>
               {(value) => (
                 <>
-                  <Row label="Version" value={value().health.version} />
+                  <Row label={t("main.debug.version")} value={value().health.version} />
                   <Row label="PID" value={String(value().health.pid)} />
-                  <Row label="Address" value={value().address} />
+                  <Row label={t("main.dev.address")} value={value().address} />
                 </>
               )}
             </Show>
             <Show when={server.error}>
-              <text fg={elevatedTheme.text.feedback.error.base}>Server details unavailable</text>
+              <text fg={elevatedTheme.text.feedback.error.base}>{t("main.dev.serverUnavailable")}</text>
             </Show>
           </PanelBox>
         </Show>
@@ -318,49 +327,62 @@ export function DevToolsBar() {
         <Show when={panel() === "ui"}>
           <PanelBox>
             <PanelTitle>UI</PanelTitle>
-            <Row label="Status" value={runtime()} />
+            <Row
+              label={t("main.status")}
+              value={
+                runtime() === "normal"
+                  ? t("main.dev.normal")
+                  : runtime() === "medium"
+                    ? t("main.dev.medium")
+                    : t("main.dev.high")
+              }
+            />
             <ProcessStat
-              label="Loop"
+              label={t("main.dev.loop")}
               values={frontendSamples().map((sample) => sample.delay)}
               unit=" ms"
               decimals={1}
             />
             <ProcessStat label="CPU" values={frontendSamples().map((sample) => sample.cpu)} unit="%" />
             <ProcessStat
-              label="Memory"
+              label={t("main.dev.memory")}
               values={frontendSamples().map((sample) => sample.memory / 1024 / 1024)}
               unit=" MB"
               decimals={0}
             />
             <Action onClick={() => renderer.toggleDebugOverlay()} hoverBackground>
-              {debugOverlay() ? "[x]" : "[ ]"} Debug overlay
+              {debugOverlay() ? "[x]" : "[ ]"} {t("main.dev.overlay")}
             </Action>
           </PanelBox>
         </Show>
       </BarItem>
       <BarItem active={panel() === "theme"} onClick={() => toggle("theme")}>
-        <text fg={panel() === "theme" ? theme.text.action.primary.focused : theme.text.muted}>Theme</text>
+        <text fg={panel() === "theme" ? theme.text.action.primary.focused : theme.text.muted}>
+          {t("main.setting.theme")}
+        </text>
         <Show when={panel() === "theme"}>
           <PanelBox>
-            <PanelTitle>Theme</PanelTitle>
-            <Row label="Name" value={themes.selected} />
-            <Row label="Mode" value={mode()} />
+            <PanelTitle>{t("main.setting.theme")}</PanelTitle>
+            <Row label={t("main.dev.name")} value={themes.selected} />
+            <Row label={t("main.dev.mode")} value={mode() === "dark" ? t("main.value.dark") : t("main.value.light")} />
             <For each={themePerformance()}>{(entry) => <Row label={entry.key} value={String(entry.value)} />}</For>
             <Show when={canSwitchMode()}>
               <Action onClick={() => setMode(nextMode())} hoverBackground>
-                Switch to {nextMode()}
+                {nextMode() === "dark" ? t("main.theme.dark") : t("main.theme.light")}
               </Action>
             </Show>
           </PanelBox>
         </Show>
       </BarItem>
       <BarItem active={panel() === "tools"} onClick={() => toggle("tools")}>
-        <text fg={panel() === "tools" ? theme.text.action.primary.focused : theme.text.muted}>Tools</text>
+        <text fg={panel() === "tools" ? theme.text.action.primary.focused : theme.text.muted}>
+          {t("main.dev.tools")}
+        </text>
         <Show when={panel() === "tools"}>
           <PanelBox>
-            <PanelTitle>Tools</PanelTitle>
+            <PanelTitle>{t("main.dev.tools")}</PanelTitle>
             <Action onClick={() => void dump()} disabled={dumping()} hoverBackground>
-              {dumping() ? "Writing debug snapshot…" : "Write debug snapshot"}
+              {dumping() ? t("main.dev.writing") : t("main.dev.write")}
             </Action>
             <Show when={dumpPath()}>
               {(file) => (
@@ -378,7 +400,7 @@ export function DevToolsBar() {
             </Show>
             <box marginTop={1}>
               <text fg={elevatedTheme.text.base} attributes={TextAttributes.BOLD}>
-                Render
+                {t("main.dev.render")}
               </text>
               <Action
                 onClick={() =>
@@ -388,7 +410,7 @@ export function DevToolsBar() {
                 }
                 hoverBackground
               >
-                {timing() ? "[x]" : "[ ]"} Time to first draw
+                {timing() ? "[x]" : "[ ]"} {t("main.dev.firstDraw")}
               </Action>
               <Action
                 onClick={() =>
@@ -398,7 +420,7 @@ export function DevToolsBar() {
                 }
                 hoverBackground
               >
-                {turnTokens() ? "[x]" : "[ ]"} Turn token usage
+                {turnTokens() ? "[x]" : "[ ]"} {t("main.dev.turnTokens")}
               </Action>
               <Show when={Boolean(turnTokens())}>
                 <Action
@@ -409,7 +431,7 @@ export function DevToolsBar() {
                   }
                   hoverBackground
                 >
-                  {verboseTurnTokens() ? "[x]" : "[ ]"} Turn token usage (verbose)
+                  {verboseTurnTokens() ? "[x]" : "[ ]"} {t("main.dev.turnTokensVerbose")}
                 </Action>
               </Show>
             </box>
@@ -433,10 +455,10 @@ export function DevToolsBar() {
           dialog.replace(() => <DialogExperiments />)
         }}
       >
-        <text fg={theme.text.muted}>Experiments</text>
+        <text fg={theme.text.muted}>{t("main.experiments")}</text>
       </BarItem>
       <box flexGrow={1} minWidth={0}>
-        <TimeToFirstDraw visible={timing()} width="100%" fg={theme.text.muted} label="Time to first draw" />
+        <TimeToFirstDraw visible={timing()} width="100%" fg={theme.text.muted} label={t("main.dev.firstDraw")} />
       </box>
     </box>
   )
@@ -524,9 +546,7 @@ function Action(props: ParentProps<{ onClick: () => void; disabled?: boolean; ho
   const [hovered, setHovered] = createSignal(false)
   return (
     <box
-      backgroundColor={
-        props.hoverBackground && hovered() && !props.disabled ? theme.background.raised.high : undefined
-      }
+      backgroundColor={props.hoverBackground && hovered() && !props.disabled ? theme.background.raised.high : undefined}
       onMouseOver={() => setHovered(true)}
       onMouseOut={() => setHovered(false)}
       onMouseUp={(event) => {

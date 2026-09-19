@@ -17,6 +17,7 @@ import stripAnsi from "strip-ansi"
 import type { SessionMessageAssistantTool } from "@opencode/client/promise"
 import { LANGUAGE_EXTENSIONS } from "../util/filetype"
 import { Locale } from "../util/locale"
+import { resolveLocale, translate } from "../i18n"
 import {
   canonicalToolName,
   finiteNumber,
@@ -80,6 +81,7 @@ type ToolMetadata = ToolDict & {
 }
 
 type ToolFrame = {
+  locale?: string
   directory?: string
   raw: string
   name: string
@@ -274,10 +276,10 @@ function span(frame: ToolFrame): string {
 function fail(ctx: ToolFrame): string {
   const error = toolError(ctx)
   if (error) {
-    return `✖ ${ctx.name} failed: ${error}`
+    return `✖ ${translate(resolveLocale(ctx.locale), "miniCli.failed", { title: ctx.name })}: ${error}`
   }
 
-  return `✖ ${ctx.name} failed`
+  return `✖ ${translate(resolveLocale(ctx.locale), "miniCli.failed", { title: ctx.name })}`
 }
 
 function toolError(ctx: ToolFrame): string {
@@ -313,10 +315,10 @@ function fallbackFinal(ctx: ToolFrame): string {
 
   const time = span(ctx)
   if (!time) {
-    return `${ctx.name} completed`
+    return translate(resolveLocale(ctx.locale), "miniCli.tool.completed", { name: ctx.name })
   }
 
-  return `${ctx.name} completed · ${time}`
+  return `${translate(resolveLocale(ctx.locale), "miniCli.tool.completed", { name: ctx.name })} · ${time}`
 }
 
 export function toolPath(input?: string, opts: { home?: boolean; directory?: string } = {}): string {
@@ -332,7 +334,10 @@ function displayPath(p: ToolProps, input?: string, opts: { home?: boolean } = {}
 }
 
 function fallbackInline(ctx: ToolFrame): ToolInline {
-  const title = Object.keys(ctx.input).length > 0 ? JSON.stringify(ctx.input) : "Unknown"
+  const title =
+    Object.keys(ctx.input).length > 0
+      ? JSON.stringify(ctx.input)
+      : translate(resolveLocale(ctx.locale), "miniCli.tool.unknown")
 
   return {
     icon: "⚙",
@@ -340,16 +345,17 @@ function fallbackInline(ctx: ToolFrame): ToolInline {
   }
 }
 
-function count(n: number, label: string): string {
-  return `${n} ${label}${n === 1 ? "" : "es"}`
+function count(n: number, locale?: string): string {
+  return translate(resolveLocale(locale), n === 1 ? "miniCli.tool.match" : "miniCli.tool.matches", { count: n })
 }
 
 function runGlob(p: ToolProps): ToolInline {
   const root = p.input.path ?? ""
   const title = `Glob "${p.input.pattern ?? ""}"`
-  const suffix = root ? `in ${displayPath(p, root)}` : ""
+  const suffix = root ? translate(resolveLocale(p.frame.locale), "miniCli.tool.in", { path: displayPath(p, root) }) : ""
   const matches = p.metadata.count
-  const description = matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, "match")}`
+  const description =
+    matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, p.frame.locale)}`
   return {
     icon: "✱",
     title,
@@ -360,9 +366,10 @@ function runGlob(p: ToolProps): ToolInline {
 function runGrep(p: ToolProps): ToolInline {
   const root = p.input.path ?? ""
   const title = `Grep "${p.input.pattern ?? ""}"`
-  const suffix = root ? `in ${displayPath(p, root)}` : ""
+  const suffix = root ? translate(resolveLocale(p.frame.locale), "miniCli.tool.in", { path: displayPath(p, root) }) : ""
   const matches = p.metadata.matches
-  const description = matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, "match")}`
+  const description =
+    matches === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${count(matches, p.frame.locale)}`
   return {
     icon: "✱",
     title,
@@ -374,7 +381,7 @@ function runList(p: ToolProps): ToolInline {
   const dir = text(dict(p.input).path)
   return {
     icon: "→",
-    title: dir ? `List ${displayPath(p, dir)}` : "List",
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.list") + (dir ? ` ${displayPath(p, dir)}` : ""),
   }
 }
 
@@ -383,7 +390,7 @@ function runRead(p: ToolProps): ToolInline {
   const description = primitiveInputSummary(p.frame.input, ["path"]) || undefined
   return {
     icon: "→",
-    title: `Read ${file}`,
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.read", { path: file }),
     ...(description && { description }),
   }
 }
@@ -391,7 +398,7 @@ function runRead(p: ToolProps): ToolInline {
 function runWrite(p: ToolProps): ToolInline {
   return {
     icon: "←",
-    title: `Write ${displayPath(p, p.input.path)}`,
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.write", { path: displayPath(p, p.input.path) }),
     mode: "block",
     body: p.frame.status === "completed" ? p.frame.output : undefined,
   }
@@ -409,7 +416,7 @@ function runEdit(p: ToolProps): ToolInline {
   const file = list<PatchFile>(p.metadata.files)[0]
   return {
     icon: "←",
-    title: `Edit ${displayPath(p, p.input.path)}`,
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.edit", { path: displayPath(p, p.input.path) }),
     mode: "block",
     body: file?.patch ?? p.metadata.diff,
   }
@@ -429,8 +436,8 @@ function runTask(p: ToolProps): ToolInline {
   const icon = p.frame.status === "error" ? "✗" : p.frame.status === "running" ? "•" : "✓"
   return {
     icon,
-    title: desc || `${kind} Subagent`,
-    description: desc ? `${kind} Agent` : undefined,
+    title: desc || translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind }),
+    description: desc ? translate(resolveLocale(p.frame.locale), "miniCli.tool.agent", { name: kind }) : undefined,
   }
 }
 
@@ -438,7 +445,7 @@ function runSkill(p: ToolProps): ToolInline {
   const name = p.metadata.name ?? p.input.id ?? ""
   return {
     icon: "→",
-    title: `Skill "${name}"`,
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.skill", { name }),
   }
 }
 
@@ -447,13 +454,15 @@ function runPatch(p: ToolProps): ToolInline {
   if (files === 0) {
     return {
       icon: "%",
-      title: "Patch",
+      title: translate(resolveLocale(p.frame.locale), "miniCli.tool.patch"),
     }
   }
 
   return {
     icon: "%",
-    title: `Patch ${files} file${files === 1 ? "" : "s"}`,
+    title: translate(resolveLocale(p.frame.locale), files === 1 ? "miniCli.tool.patchOne" : "miniCli.tool.patchMany", {
+      count: files,
+    }),
   }
 }
 
@@ -461,14 +470,18 @@ function runQuestion(p: ToolProps): ToolInline {
   const total = list(p.frame.input.questions).length
   return {
     icon: "→",
-    title: `Asked ${total} question${total === 1 ? "" : "s"}`,
+    title: translate(
+      resolveLocale(p.frame.locale),
+      total === 1 ? "miniCli.tool.questionOne" : "miniCli.tool.questionMany",
+      { count: total },
+    ),
   }
 }
 
 function runInvalid(p: ToolProps): ToolInline {
   return {
     icon: "✗",
-    title: "Invalid Tool",
+    title: translate(resolveLocale(p.frame.locale), "miniCli.tool.invalid"),
     mode: "block",
     body: p.frame.status === "completed" ? p.frame.output : undefined,
   }
@@ -478,7 +491,12 @@ function runBatch(p: ToolProps): ToolInline {
   const calls = list(dict(p.input).tool_calls).length
   return {
     icon: "#",
-    title: calls > 0 ? `Batch ${calls} tool${calls === 1 ? "" : "s"}` : "Batch",
+    title:
+      calls > 0
+        ? translate(resolveLocale(p.frame.locale), calls === 1 ? "miniCli.tool.batchOne" : "miniCli.tool.batchMany", {
+            count: calls,
+          })
+        : translate(resolveLocale(p.frame.locale), "miniCli.tool.batch"),
     mode: "block",
     body: p.frame.status === "completed" ? p.frame.output : undefined,
   }
@@ -605,7 +623,7 @@ function snapTask(p: ToolProps): ToolSnapshot {
 
   return {
     kind: "task",
-    title: `# ${kind} Subagent`,
+    title: `# ${translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind })}`,
     rows,
     tail: "",
   }
@@ -616,8 +634,8 @@ function snapQuestion(p: ToolProps): ToolSnapshot {
   const items = list<{ question?: string }>(p.frame.input.questions).map((item, i) => {
     const answer = list<string>(answers[i]).filter((entry) => typeof entry === "string")
     return {
-      question: item.question || `Question ${i + 1}`,
-      answer: answer.length > 0 ? answer.join(", ") : "(no answer)",
+      question: item.question || translate(resolveLocale(p.frame.locale), "miniCli.tool.question", { count: i + 1 }),
+      answer: answer.length > 0 ? answer.join(", ") : translate(resolveLocale(p.frame.locale), "miniCli.tool.noAnswer"),
     }
   })
 
@@ -686,20 +704,20 @@ function scrollShellFinal(p: ToolProps): string {
   const time = span(p.frame)
   if (code === undefined) {
     if (!time) {
-      return "shell completed"
+      return translate(resolveLocale(p.frame.locale), "miniCli.tool.completed", { name: "shell" })
     }
 
-    return `shell completed · ${time}`
+    return `${translate(resolveLocale(p.frame.locale), "miniCli.tool.completed", { name: "shell" })} · ${time}`
   }
 
-  return `shell completed (exit ${code})${time ? ` · ${time}` : ""}`
+  return translate(resolveLocale(p.frame.locale), "miniCli.tool.shellExit", { code }) + (time ? ` · ${time}` : "")
 }
 
 function scrollReadStart(p: ToolProps): string {
   const file = displayPath(p, p.input.path)
   const extra = primitiveInputSummary(p.frame.input, ["path"])
   const tail = extra ? ` ${extra}` : ""
-  return `→ Read ${file}${tail}`.trim()
+  return `→ ${translate(resolveLocale(p.frame.locale), "miniCli.tool.read", { path: file })}${tail}`.trim()
 }
 
 function scrollWriteStart(_: ToolProps): string {
@@ -714,19 +732,19 @@ function scrollPatchStart(_: ToolProps): string {
   return ""
 }
 
-function patchLine(file: PatchFile, directory?: string): string {
+function patchLine(file: PatchFile, directory?: string, locale?: string): string {
   if (file.status === "added") {
-    return `+ Created ${toolPath(file.file, { directory })}`
+    return `+ ${translate(resolveLocale(locale), "miniCli.tool.created", { path: toolPath(file.file, { directory }) })}`
   }
 
   if (file.status === "deleted") {
-    return `- Deleted ${toolPath(file.file, { directory })}`
+    return `- ${translate(resolveLocale(locale), "miniCli.tool.deleted", { path: toolPath(file.file, { directory }) })}`
   }
   if (file.status === "moved") {
-    return `→ Moved ${toolPath(file.from, { directory })} → ${toolPath(file.file, { directory })}`
+    return `→ ${translate(resolveLocale(locale), "miniCli.tool.moved", { from: toolPath(file.from, { directory }), path: toolPath(file.file, { directory }) })}`
   }
 
-  return `~ Patched ${toolPath(file.file, { directory })}`
+  return `~ ${translate(resolveLocale(locale), "miniCli.tool.patched", { path: toolPath(file.file, { directory }) })}`
 }
 
 function scrollPatchFinal(p: ToolProps): string {
@@ -746,16 +764,16 @@ function scrollPatchFinal(p: ToolProps): string {
 
   const showModified = !files.some((file) => file?.status && file.status !== "modified")
   const shown = files.filter((file) => showModified || file.status !== "modified")
-  const rows = shown.slice(0, 6).map((file) => patchLine(file, p.frame.directory))
+  const rows = shown.slice(0, 6).map((file) => patchLine(file, p.frame.directory, p.frame.locale))
   if (shown.length > 6) {
-    rows.push(`… and ${shown.length - 6} more`)
+    rows.push(translate(resolveLocale(p.frame.locale), "miniCli.tool.more", { count: shown.length - 6 }))
   }
 
   if (rows.length > 0) {
     return rows.join("\n")
   }
 
-  return patchLine(files[0]!, p.frame.directory)
+  return patchLine(files[0]!, p.frame.directory, p.frame.locale)
 }
 
 function scrollTaskStart(_: ToolProps): string {
@@ -788,10 +806,10 @@ function scrollTaskFinal(p: ToolProps): string {
   const kind = Locale.titlecase(p.input.agent || "general")
   const row = p.input.description
   if (!row) {
-    return `# ${kind} Subagent`
+    return `# ${translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind })}`
   }
 
-  return `# ${kind} Subagent\n${row}`
+  return `# ${translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind })}\n${row}`
 }
 
 function scrollQuestionStart(_: ToolProps): string {
@@ -804,22 +822,24 @@ function scrollQuestionFinal(p: ToolProps): string {
   const time = span(p.frame)
   if (q.length === 0) {
     if (!time) {
-      return "0 questions"
+      return translate(resolveLocale(p.frame.locale), "miniCli.tool.noQuestions")
     }
 
-    return `0 questions · ${time}`
+    return `${translate(resolveLocale(p.frame.locale), "miniCli.tool.noQuestions")} · ${time}`
   }
 
   const rows: string[] = []
   for (const [i, item] of q.slice(0, 4).entries()) {
     const prompt = item.question
     const reply = a[i] ?? []
-    rows.push(`? ${prompt || `Question ${i + 1}`}`)
-    rows.push(`  ${reply.length > 0 ? reply.join(", ") : "(no answer)"}`)
+    rows.push(`? ${prompt || translate(resolveLocale(p.frame.locale), "miniCli.tool.question", { count: i + 1 })}`)
+    rows.push(
+      `  ${reply.length > 0 ? reply.join(", ") : translate(resolveLocale(p.frame.locale), "miniCli.tool.noAnswer")}`,
+    )
   }
 
   if (q.length > 4) {
-    rows.push(`… and ${q.length - 4} more`)
+    rows.push(translate(resolveLocale(p.frame.locale), "miniCli.tool.more", { count: q.length - 4 }))
   }
 
   return rows.join("\n")
@@ -830,7 +850,7 @@ function scrollLspStart(p: ToolProps): string {
 }
 
 function scrollSkillStart(p: ToolProps): string {
-  return `→ Skill "${p.metadata.name ?? p.input.id ?? ""}"`
+  return `→ ${translate(resolveLocale(p.frame.locale), "miniCli.tool.skill", { name: p.metadata.name ?? p.input.id ?? "" })}`
 }
 
 function scrollGlobStart(p: ToolProps): string {
@@ -841,7 +861,7 @@ function scrollGlobStart(p: ToolProps): string {
     return head
   }
 
-  return `${head} in ${displayPath(p, dir)}`
+  return `${head} ${translate(resolveLocale(p.frame.locale), "miniCli.tool.in", { path: displayPath(p, dir) })}`
 }
 
 function scrollGlobFinal(p: ToolProps): string {
@@ -856,16 +876,16 @@ function scrollGrepStart(p: ToolProps): string {
     return head
   }
 
-  return `${head} in ${displayPath(p, dir)}`
+  return `${head} ${translate(resolveLocale(p.frame.locale), "miniCli.tool.in", { path: displayPath(p, dir) })}`
 }
 
 function scrollListStart(p: ToolProps): string {
   const dir = text(dict(p.input).path)
   if (!dir) {
-    return "→ List"
+    return `→ ${translate(resolveLocale(p.frame.locale), "miniCli.tool.list")}`
   }
 
-  return `→ List ${displayPath(p, dir)}`
+  return `→ ${translate(resolveLocale(p.frame.locale), "miniCli.tool.list")} ${displayPath(p, dir)}`
 }
 
 function scrollWebfetchStart(p: ToolProps): string {
@@ -1078,11 +1098,12 @@ function rule(name?: string): AnyToolRule | undefined {
   return TOOL_RULES[name]
 }
 
-function frame(part: SessionMessageAssistantTool, directory?: string): ToolFrame {
+function frame(part: SessionMessageAssistantTool, directory?: string, locale?: string): ToolFrame {
   const tool = normalizeTool(part)
   if (tool.state.status === "streaming")
     return {
       directory,
+      locale,
       raw: tool.state.input,
       name: tool.name,
       input: {},
@@ -1096,6 +1117,7 @@ function frame(part: SessionMessageAssistantTool, directory?: string): ToolFrame
   const output = toolOutputText(tool.name, toolDisplayContent(tool.state))
   return {
     directory,
+    locale,
     raw: output,
     name: tool.name,
     input: normalizeInput(tool.name, tool.state.input),
@@ -1111,10 +1133,11 @@ function frame(part: SessionMessageAssistantTool, directory?: string): ToolFrame
   }
 }
 
-function toolFrame(commit: StreamCommit, raw: string): ToolFrame {
+function toolFrame(commit: StreamCommit, raw: string, locale?: string): ToolFrame {
   const current = commit.part ? frame(commit.part, commit.directory) : undefined
   return {
     directory: commit.directory,
+    locale,
     raw,
     name: canonicalToolName(commit.tool || current?.name || "tool"),
     input: current?.input ?? {},
@@ -1155,8 +1178,8 @@ export function toolStructuredFinal(commit: StreamCommit): boolean {
   )
 }
 
-export function toolInlineInfo(part: SessionMessageAssistantTool, directory?: string): ToolInline {
-  const ctx = frame(part, directory)
+export function toolInlineInfo(part: SessionMessageAssistantTool, directory?: string, locale?: string): ToolInline {
+  const ctx = frame(part, directory, locale)
   const draw = rule(ctx.name)?.run
   try {
     if (draw) {
@@ -1196,8 +1219,8 @@ export function toolScroll(phase: ToolPhase, ctx: ToolFrame): string {
   return fallbackFinal(ctx)
 }
 
-function toolSnapshot(commit: StreamCommit, raw: string): ToolSnapshot | undefined {
-  const ctx = toolFrame(commit, raw)
+function toolSnapshot(commit: StreamCommit, raw: string, locale?: string): ToolSnapshot | undefined {
+  const ctx = toolFrame(commit, raw, locale)
   const draw = rule(ctx.name)?.snap
   if (!draw) {
     return undefined
@@ -1232,8 +1255,8 @@ function markdownBody(content: string): RunEntryBody | undefined {
   }
 }
 
-function structuredBody(commit: StreamCommit, raw: string): RunEntryBody | undefined {
-  const snap = toolSnapshot(commit, raw)
+function structuredBody(commit: StreamCommit, raw: string, locale?: string): RunEntryBody | undefined {
+  const snap = toolSnapshot(commit, raw, locale)
   if (!snap) {
     return undefined
   }
@@ -1277,7 +1300,7 @@ function shellOutput(command: string, raw: string): string | undefined {
 export function toolEntryBody(
   commit: StreamCommit,
   raw: string,
-  options?: { shellOutput?: boolean },
+  options?: { shellOutput?: boolean; locale?: string },
 ): RunEntryBody | undefined {
   if (commit.shell) {
     if (commit.phase === "start") {
@@ -1289,14 +1312,14 @@ export function toolEntryBody(
     }
 
     if (commit.toolState === "error") {
-      const ctx = toolFrame(commit, raw)
+      const ctx = toolFrame(commit, raw, options?.locale)
       return textBody(toolScroll("final", ctx))
     }
 
     return undefined
   }
 
-  const ctx = toolFrame(commit, raw)
+  const ctx = toolFrame(commit, raw, options?.locale)
   const view = toolView(ctx.name)
 
   if (ctx.name === "shell" && commit.phase === "progress" && options?.shellOutput === false) return undefined
@@ -1332,7 +1355,7 @@ export function toolEntryBody(
     }
 
     if (toolStructuredFinal(commit)) {
-      return structuredBody(commit, raw) ?? textBody(toolScroll("final", ctx))
+      return structuredBody(commit, raw, options?.locale) ?? textBody(toolScroll("final", ctx))
     }
 
     if (!rule(ctx.name) && !ctx.output.trim()) {

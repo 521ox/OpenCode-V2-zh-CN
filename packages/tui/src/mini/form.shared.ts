@@ -13,6 +13,7 @@ import {
 } from "../util/form"
 import type { FormAnswerField } from "../util/form"
 import type { FormReply, MiniFormRequest } from "./types"
+import { resolveLocale, translate, type Locale } from "../i18n"
 
 export { formCustom, formLabel, formRows, formTextual, formValidateValue }
 
@@ -47,17 +48,20 @@ export function formSync(state: FormBodyState, form: FormInfo): FormBodyState {
   return state.formID === form.id ? state : createFormBodyState(form)
 }
 
-export function formUnsupported(form: FormInfo): string | undefined {
-  if (!Array.isArray(form.fields) || form.fields.length === 0) return "This form has no supported fields."
+export function formUnsupported(form: FormInfo, locale?: Locale): string | undefined {
+  if (!Array.isArray(form.fields) || form.fields.length === 0)
+    return translate(resolveLocale(locale), "miniCli.form.noFields")
   for (const field of form.fields as ReadonlyArray<FormField | Record<string, unknown>>) {
-    if (!field || typeof field !== "object" || typeof field.type !== "string") return "This form uses an unknown field."
-    if (!("key" in field) || typeof field.key !== "string") return "This form uses an invalid field."
+    if (!field || typeof field !== "object" || typeof field.type !== "string")
+      return translate(resolveLocale(locale), "miniCli.form.unknown")
+    if (!("key" in field) || typeof field.key !== "string")
+      return translate(resolveLocale(locale), "miniCli.form.invalid")
     if ("when" in field && Array.isArray(field.when) && field.when.length > 0)
-      return "Conditional forms are not supported in Mini yet."
+      return translate(resolveLocale(locale), "miniCli.form.conditional")
     if (field.type === "string" && "pattern" in field && field.pattern !== undefined)
-      return "Pattern-constrained forms are not supported in Mini yet."
+      return translate(resolveLocale(locale), "miniCli.form.pattern")
     if (!["string", "number", "integer", "boolean", "multiselect", "external"].includes(field.type))
-      return `Field type ${field.type} is not supported in Mini yet.`
+      return translate(resolveLocale(locale), "miniCli.form.type", { type: field.type })
   }
 }
 
@@ -81,9 +85,9 @@ export function formSingle(form: FormInfo) {
   )
 }
 
-export function formPlaceholder(field: FormField | undefined) {
-  if (field?.type === "string") return field.placeholder ?? "Type your answer"
-  return "Enter a number"
+export function formPlaceholder(field: FormField | undefined, locale?: Locale) {
+  if (field?.type === "string") return field.placeholder ?? translate(resolveLocale(locale), "miniCli.form.answer")
+  return translate(resolveLocale(locale), "miniCli.form.number")
 }
 
 export function formMove(state: FormBodyState, form: FormInfo, direction: -1 | 1): FormBodyState {
@@ -123,15 +127,18 @@ export function formSetDraft(state: FormBodyState, field: FormField | undefined,
   return { ...state, custom: { ...state.custom, [field.key]: value } }
 }
 
-export function formValidate(form: FormInfo, state: FormBodyState): string | undefined {
-  const unsupported = formUnsupported(form)
+export function formValidate(form: FormInfo, state: FormBodyState, locale?: Locale): string | undefined {
+  const unsupported = formUnsupported(form, locale)
   if (unsupported) return unsupported
   for (const field of form.fields) {
     if (field.type === "external") {
-      if (state.answers[field.key] !== true) return `Acknowledge ${formLabel(field)}`
+      if (state.answers[field.key] !== true)
+        return translate(resolveLocale(locale), "miniCli.form.acknowledgeField", { field: formLabel(field) })
       continue
     }
-    const invalid = formValidateValue(field, state.answers[field.key])
+    const invalid = formValidateValue(field, state.answers[field.key], (key, params) =>
+      translate(resolveLocale(locale), key, params),
+    )
     if (invalid) return `${formLabel(field)}: ${invalid}`
   }
 }
@@ -186,14 +193,14 @@ export function formPick(state: FormBodyState, form: FormInfo): FormBodyState {
   return formSetField(next, form, formSingle(form) ? state.field : state.field + 1)
 }
 
-export function formCommitInput(state: FormBodyState, form: FormInfo, text: string): FormBodyState {
+export function formCommitInput(state: FormBodyState, form: FormInfo, text: string, locale?: Locale): FormBodyState {
   const field = formCurrent(form, state)
   if (!field || field.type === "external" || field.type === "boolean") return state
   const input = text.trim()
   const value = !input ? undefined : field.type === "number" || field.type === "integer" ? Number(input) : input
   if (field.type === "multiselect") {
     const values = formSetMultiselectCustom(state.answers[field.key], state.custom[field.key], input)
-    const invalid = formValidateValue(field, values)
+    const invalid = formValidateValue(field, values, (key, params) => translate(resolveLocale(locale), key, params))
     if (invalid) return formSetError(state, invalid)
     return {
       ...state,
@@ -203,7 +210,7 @@ export function formCommitInput(state: FormBodyState, form: FormInfo, text: stri
       error: "",
     }
   }
-  const invalid = formValidateValue(field, value)
+  const invalid = formValidateValue(field, value, (key, params) => translate(resolveLocale(locale), key, params))
   if (invalid) return formSetError(state, invalid)
   return {
     ...state,
@@ -225,11 +232,11 @@ export function formAcknowledge(state: FormBodyState, form: FormInfo): FormBodyS
   return formSetField(next, form, formSingle(form) ? state.field : state.field + 1)
 }
 
-export function formDisplay(field: FormAnswerField, value: FormValue | undefined) {
-  return formDisplayValue(field, value, "")
+export function formDisplay(field: FormAnswerField, value: FormValue | undefined, locale?: Locale) {
+  return formDisplayValue(field, value, "", (key, params) => translate(resolveLocale(locale), key, params))
 }
 
-export function formErrorMessage(error: unknown) {
+export function formErrorMessage(error: unknown, locale?: Locale) {
   if (typeof error === "string" && error.trim()) return error
   if (error && typeof error === "object") {
     const message = "message" in error ? error.message : undefined
@@ -237,5 +244,5 @@ export function formErrorMessage(error: unknown) {
     const tag = "_tag" in error ? error._tag : undefined
     if (typeof tag === "string" && tag.trim()) return tag
   }
-  return "Form request failed"
+  return translate(resolveLocale(locale), "miniCli.form.failed")
 }

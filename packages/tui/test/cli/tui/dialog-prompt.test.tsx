@@ -9,6 +9,7 @@ import { emptyThemeSource, tmpdir } from "../../fixture/fixture"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 import type { TuiKeybind } from "../../../src/config/keybind"
 import { TestTuiContexts } from "../../fixture/tui-environment"
+import { I18nProvider } from "../../../src/context/i18n"
 
 async function wait(fn: () => boolean, timeout = 2000) {
   const start = Date.now()
@@ -38,6 +39,7 @@ async function mountPrompt(input: {
 
   function Harness() {
     const resolvedConfig = createTuiResolvedConfig({
+      locale: "en",
       keybinds: input.keybinds,
       leader: { timeout: 1000 },
     })
@@ -57,15 +59,17 @@ async function mountPrompt(input: {
         }}
       >
         <ConfigProvider config={resolvedConfig}>
-          <Keymap.Provider>
-            <ThemeProvider mode="dark" source={emptyThemeSource}>
-              <ToastProvider>
-                <DialogProvider>
-                  <Prompt />
-                </DialogProvider>
-              </ToastProvider>
-            </ThemeProvider>
-          </Keymap.Provider>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ThemeProvider mode="dark" source={emptyThemeSource}>
+                <ToastProvider>
+                  <DialogProvider>
+                    <Prompt />
+                  </DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     )

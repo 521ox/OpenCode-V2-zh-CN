@@ -35,6 +35,7 @@ async function renderSubagent(interrupt: "ctrl+i" | "none") {
   })
   const config = resolve(
     {
+      locale: "en",
       keybinds: {
         "prompt.editor": "none",
         "session.queued_prompts": "none",

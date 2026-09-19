@@ -1,6 +1,7 @@
 import { createContext, createSignal, onCleanup, useContext, type ParentProps, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTheme } from "../context/theme"
+import { useI18n } from "../context/i18n"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "./border"
 import { TextAttributes } from "@opentui/core"
@@ -118,6 +119,7 @@ export function Toast() {
 }
 
 function init() {
+  const { t } = useI18n()
   const [store, setStore] = createStore({
     currentToast: null as ToastOptions | null,
     queue: [] as ToastOptions[],
@@ -172,7 +174,7 @@ function init() {
         })
       toast.show({
         variant: "error",
-        message: "An unknown error has occurred",
+        message: t("main.error.unknown"),
       })
     },
     pause() {

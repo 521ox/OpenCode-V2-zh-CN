@@ -6,6 +6,8 @@ import { useClient } from "../context/client"
 import { Keymap } from "../context/keymap"
 import { useTheme, useThemes } from "../context/theme"
 import { errorMessage } from "../util/error"
+import { useI18n } from "../context/i18n"
+import { type Key } from "../i18n"
 
 declare module "@opentui/solid" {
   interface OpenTUIComponents {
@@ -29,13 +31,14 @@ export function TerminalPane(props: {
   onFocusRequest?: (focus: (() => void) | undefined) => void
   onDisconnect?: () => void
 }) {
+  const { t } = useI18n()
   const client = useClient()
   const keymap = Keymap.use()
   const leader = Keymap.useLeaderActive()
   const theme = useTheme()
   const themes = useThemes()
   const renderer = useRenderer()
-  const [failure, setFailure] = createSignal<string>()
+  const [failure, setFailure] = createSignal<string | { key: Key }>()
   const attachmentID = crypto.randomUUID()
   const stream: StreamItem[] = []
   const pendingInput: Uint8Array[] = []
@@ -240,7 +243,7 @@ export function TerminalPane(props: {
       }
       if (message.type !== "attached") return
       if (!("inputProtocol" in message) || message.inputProtocol !== 1) {
-        setFailure("Persistent terminal server is out of date; restart OpenCode")
+        setFailure({ key: "main.terminal.outdated" })
         next.close()
         return
       }
@@ -264,7 +267,7 @@ export function TerminalPane(props: {
       if (disposed) return
       const focused = terminal?.focused
       terminal = undefined
-      setFailure("Terminal connection failed")
+      setFailure({ key: "main.terminal.connectionFailed" })
       if (focused) props.onDisconnect?.()
     })
     next.addEventListener("close", () => {
@@ -272,7 +275,7 @@ export function TerminalPane(props: {
       const focused = terminal?.focused
       terminal = undefined
       // The removal event arrives separately; keep the terminal visible until then.
-      if (!exited) setFailure("Terminal disconnected")
+      if (!exited) setFailure({ key: "main.terminal.disconnected" })
       if (focused) props.onDisconnect?.()
     })
     socket = next
@@ -292,7 +295,17 @@ export function TerminalPane(props: {
       // TODO: Revisit when embedded terminal mouse handlers can compose without replacing its internal focus handler.
       onMouseDown={() => interact()}
     >
-      <Show when={!failure()} fallback={<text fg={theme.text.feedback.error.base}>{failure()}</text>}>
+      <Show
+        when={!failure()}
+        fallback={
+          <text fg={theme.text.feedback.error.base}>
+            {(() => {
+              const value = failure()
+              return typeof value === "string" ? value : value ? t(value.key) : ""
+            })()}
+          </text>
+        }
+      >
         <>
           <embeddedTerminal
             ref={(value) => {

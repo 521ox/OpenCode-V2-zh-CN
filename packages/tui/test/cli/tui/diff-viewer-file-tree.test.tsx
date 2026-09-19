@@ -6,6 +6,7 @@ import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 import { emptyThemeSource } from "../../fixture/fixture"
 import { ThemeProvider } from "../../../src/context/theme"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { DiffViewerFileTree } from "../../../src/feature-plugins/system/diff-viewer-file-tree"
 import { TestTuiContexts } from "../../fixture/tui-environment"
 import {
@@ -232,10 +233,12 @@ async function renderFrame(component: () => JSX.Element, mode: "dark" | "light" 
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <ThemeProvider mode={mode} source={emptyThemeSource}>
-            {component()}
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <ThemeProvider mode={mode} source={emptyThemeSource}>
+              {component()}
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

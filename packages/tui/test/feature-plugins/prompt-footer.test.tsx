@@ -5,6 +5,7 @@ import { testRender } from "@opentui/solid"
 import type { Context } from "@opencode/plugin/tui/context"
 import { createSignal } from "solid-js"
 import { PromptFooter } from "../../src/feature-plugins/prompt/footer"
+import { TestI18n } from "../fixture/i18n"
 
 test("prompt footer separates simultaneous subagent, shell, and usage status", async () => {
   const color = RGBA.fromInts(200, 200, 200)
@@ -40,7 +41,11 @@ test("prompt footer separates simultaneous subagent, shell, and usage status", a
     },
   } as unknown as Context
   const app = await testRender(
-    () => <PromptFooter context={context} sessionID="session" mode="normal" showDetails={true} />,
+    () => (
+      <TestI18n>
+        <PromptFooter context={context} sessionID="session" mode="normal" showDetails={true} />
+      </TestI18n>
+    ),
     {
       width: 80,
       height: 2,
@@ -108,14 +113,11 @@ test("prompt footer can hide details", async () => {
   const [sessionID, setSessionID] = createSignal<string | undefined>("session")
   const app = await testRender(
     () => (
-      <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
-        <PromptFooter
-          context={context}
-          sessionID={sessionID()}
-          mode="normal"
-          showDetails={showDetails()}
-        />
-      </box>
+      <TestI18n>
+        <box width="100%" flexDirection="row" justifyContent="space-between" gap={2}>
+          <PromptFooter context={context} sessionID={sessionID()} mode="normal" showDetails={showDetails()} />
+        </box>
+      </TestI18n>
     ),
     {
       width: 80,

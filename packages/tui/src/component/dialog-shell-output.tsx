@@ -7,10 +7,13 @@ import { useClient } from "../context/client"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
+import { useI18n } from "../context/i18n"
+import { type Key } from "../i18n"
 
 const PAGE_BYTES = 64 * 1024
 
 export function DialogShellOutput(props: { shell: ShellInfo; location: LocationRef }) {
+  const { t } = useI18n()
   const client = useClient()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
@@ -18,7 +21,7 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
   const [info, setInfo] = createSignal(props.shell)
   const [output, setOutput] = createSignal<string>()
   const [omitted, setOmitted] = createSignal(false)
-  const [error, setError] = createSignal("")
+  const [error, setError] = createSignal<Key | "">("")
   const text = createMemo(() => stripAnsi(output() ?? "").replace(/\r\n?/g, "\n"))
   const height = () => Math.max(3, Math.floor(dimensions().height * 0.6) - 6)
   let scroll: ScrollBoxRenderable | undefined
@@ -65,7 +68,7 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
         .catch((cause: unknown) => {
           if (disposed) return
           missing = isShellNotFoundError(cause)
-          setError(missing ? "Shell output is no longer available." : "Unable to read shell output. Retrying…")
+          setError(missing ? "main.shell.missing" : "main.shell.readFailed")
         })
         .then((more) => {
           // Poll only while the viewer is open, including after exit so the final
@@ -81,21 +84,21 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
   })
 
   const status = () => {
-    if (info().status === "running") return "Running"
-    if (info().status === "timeout") return "Timed out"
-    if (info().status === "killed") return "Killed"
-    return info().exit === undefined ? "Exited" : `Exited · code ${info().exit}`
+    if (info().status === "running") return t("main.shell.running")
+    if (info().status === "timeout") return t("main.shell.timeout")
+    if (info().status === "killed") return t("main.shell.killed")
+    return info().exit === undefined ? t("main.shell.exited") : t("main.shell.exitCode", { code: info().exit! })
   }
 
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
-      { bind: "up", title: "Scroll output up", group: "Shell", run: () => scroll?.scrollBy(-1) },
-      { bind: "down", title: "Scroll output down", group: "Shell", run: () => scroll?.scrollBy(1) },
-      { bind: "pageup", title: "Previous output page", group: "Shell", run: () => scroll?.scrollBy(-height()) },
-      { bind: "pagedown", title: "Next output page", group: "Shell", run: () => scroll?.scrollBy(height()) },
-      { bind: "home", title: "First loaded output", group: "Shell", run: () => scroll?.scrollTo(0) },
-      { bind: "end", title: "Follow shell output", group: "Shell", run: () => scroll?.scrollTo(Infinity) },
+      { bind: "up", title: t("main.shell.up"), group: "Shell", run: () => scroll?.scrollBy(-1) },
+      { bind: "down", title: t("main.shell.down"), group: "Shell", run: () => scroll?.scrollBy(1) },
+      { bind: "pageup", title: t("main.shell.previous"), group: "Shell", run: () => scroll?.scrollBy(-height()) },
+      { bind: "pagedown", title: t("main.shell.next"), group: "Shell", run: () => scroll?.scrollBy(height()) },
+      { bind: "home", title: t("main.shell.first"), group: "Shell", run: () => scroll?.scrollTo(0) },
+      { bind: "end", title: t("main.shell.followOutput"), group: "Shell", run: () => scroll?.scrollTo(Infinity) },
     ],
   }))
 
@@ -103,7 +106,7 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
     <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" gap={2}>
         <text fg={theme.text.base} attributes={TextAttributes.BOLD} flexGrow={1}>
-          Shell output
+          {t("main.shell.output")}
         </text>
         <text fg={theme.text.muted}>{status()}</text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
@@ -114,7 +117,7 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
         {props.shell.command}
       </text>
       <Show when={omitted()}>
-        <text fg={theme.text.muted}>Earlier output omitted · showing recent output</text>
+        <text fg={theme.text.muted}>{t("main.shell.omitted")}</text>
       </Show>
       <scrollbox
         id="shell-output-scroll"
@@ -125,19 +128,16 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
         scrollbarOptions={{ visible: false }}
       >
         <text fg={theme.text.base} wrapMode="word">
-          {text() ||
-            (output() === undefined
-              ? "Loading output…"
-              : "No captured output. Output redirected to files is not shown here.")}
+          {text() || (output() === undefined ? t("main.shell.loading") : t("main.shell.empty"))}
         </text>
       </scrollbox>
       <Show when={error()}>
-        <text fg={theme.text.feedback.error.base}>{error()}</text>
+        <text fg={theme.text.feedback.error.base}>{error() ? t(error() as Key) : ""}</text>
       </Show>
       <box flexDirection="row" gap={2} flexWrap="wrap">
-        <text fg={theme.text.muted}>↑/↓ scroll</text>
-        <text fg={theme.text.muted}>end follow</text>
-        <text fg={theme.text.muted}>esc back</text>
+        <text fg={theme.text.muted}>↑/↓ {t("main.scroll")}</text>
+        <text fg={theme.text.muted}>end {t("main.shell.follow")}</text>
+        <text fg={theme.text.muted}>esc {t("main.back")}</text>
       </box>
     </box>
   )

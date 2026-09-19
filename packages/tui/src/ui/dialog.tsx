@@ -7,6 +7,7 @@ import { createStore } from "solid-js/store"
 import { useToast } from "./toast"
 import { useClipboard } from "../context/clipboard"
 import { useConfig } from "../config"
+import { useI18n } from "../context/i18n"
 import { copy, copyOnSelectRelease } from "../util/selection"
 
 export type DialogSize = "medium" | "large" | "xlarge"
@@ -32,48 +33,49 @@ export function Dialog(
   return (
     <ThemeContextProvider context="dialog">
       <box
-      onMouseDown={() => {
-        dismiss = !!renderer.getSelection()
-      }}
-      onMouseUp={() => {
-        if (dismiss) {
-          dismiss = false
-          return
-        }
-        props.onClose?.()
-      }}
-      width={dimensions().width}
-      height={dimensions().height}
-      alignItems="center"
-      justifyContent={props.centered ? "center" : undefined}
-      position="absolute"
-      zIndex={3000}
-      paddingTop={props.centered ? 0 : dimensions().height / 4}
-      left={0}
-      top={0}
-      backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
-    >
-      <box
-        onMouseUp={(e: { stopPropagation(): void }) => {
-          // A selection release must bubble up to the copy-on-select handler in
-          // DialogProvider; the backdrop's dismiss flag keeps it from closing the dialog.
-          if (renderer.getSelection()?.getSelectedText()) return
-          dismiss = false
-          e.stopPropagation()
+        onMouseDown={() => {
+          dismiss = !!renderer.getSelection()
         }}
-        width={dialogWidth(props.size ?? "medium")}
-        maxWidth={dimensions().width - 2}
-        backgroundColor={theme.background.base}
-        paddingTop={1}
+        onMouseUp={() => {
+          if (dismiss) {
+            dismiss = false
+            return
+          }
+          props.onClose?.()
+        }}
+        width={dimensions().width}
+        height={dimensions().height}
+        alignItems="center"
+        justifyContent={props.centered ? "center" : undefined}
+        position="absolute"
+        zIndex={3000}
+        paddingTop={props.centered ? 0 : dimensions().height / 4}
+        left={0}
+        top={0}
+        backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
       >
-        {props.children}
-      </box>
+        <box
+          onMouseUp={(e: { stopPropagation(): void }) => {
+            // A selection release must bubble up to the copy-on-select handler in
+            // DialogProvider; the backdrop's dismiss flag keeps it from closing the dialog.
+            if (renderer.getSelection()?.getSelectedText()) return
+            dismiss = false
+            e.stopPropagation()
+          }}
+          width={dialogWidth(props.size ?? "medium")}
+          maxWidth={dimensions().width - 2}
+          backgroundColor={theme.background.base}
+          paddingTop={1}
+        >
+          {props.children}
+        </box>
       </box>
     </ThemeContextProvider>
   )
 }
 
 function init() {
+  const { t } = useI18n()
   const [store, setStore] = createStore({
     stack: [] as {
       element: JSX.Element
@@ -118,8 +120,8 @@ function init() {
     commands: [
       {
         bind: "escape",
-        title: "Close dialog",
-        group: "Dialog",
+        title: t("main.dialog.close"),
+        group: t("main.group.dialog"),
         run: () => {
           if (renderer.getSelection()) {
             renderer.clearSelection()
@@ -133,8 +135,8 @@ function init() {
       },
       {
         bind: "ctrl+c",
-        title: "Close dialog",
-        group: "Dialog",
+        title: t("main.dialog.close"),
+        group: t("main.group.dialog"),
         run: () => {
           if (renderer.getSelection()) {
             renderer.clearSelection()
@@ -213,6 +215,7 @@ export type DialogContext = ReturnType<typeof init>
 const ctx = createContext<DialogContext>()
 
 export function DialogProvider(props: ParentProps) {
+  const { t } = useI18n()
   const value = init()
   const renderer = useRenderer()
   const toast = useToast()
@@ -231,12 +234,12 @@ export function DialogProvider(props: ParentProps) {
           if (copyOnSelectEnabled()) return
           if (evt.button !== MouseButton.RIGHT) return
 
-          if (!copy(renderer, toast, clipboard)) return
+          if (!copy(renderer, toast, clipboard, t)) return
           evt.preventDefault()
           evt.stopPropagation()
         }}
         onMouseUp={
-          copyOnSelectEnabled() ? (event) => copyOnSelectRelease(event, renderer, toast, clipboard) : undefined
+          copyOnSelectEnabled() ? (event) => copyOnSelectRelease(event, renderer, toast, clipboard, t) : undefined
         }
       >
         <Show when={value.stack.length}>

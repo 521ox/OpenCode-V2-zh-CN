@@ -1,4 +1,5 @@
 import { createMemo, onMount } from "solid-js"
+import { useI18n } from "../../context/i18n"
 import { useData } from "../../context/data"
 import { DialogSelect, type DialogSelectOption } from "../../ui/dialog-select"
 import { Locale } from "../../util/locale"
@@ -11,6 +12,7 @@ export function DialogTimeline(props: {
   onMove: (messageID: string) => void
   setPrompt?: (prompt: PromptInfo) => void
 }) {
+  const { t } = useI18n()
   const data = useData()
   const dialog = useDialog()
 
@@ -38,5 +40,7 @@ export function DialogTimeline(props: {
     return result
   })
 
-  return <DialogSelect onMove={(option) => props.onMove(option.value)} title="Timeline" options={options()} />
+  return (
+    <DialogSelect onMove={(option) => props.onMove(option.value)} title={t("session.timeline")} options={options()} />
+  )
 }

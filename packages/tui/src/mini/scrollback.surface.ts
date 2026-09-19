@@ -19,7 +19,7 @@ import { entryColor, entryLook, entrySyntax } from "./scrollback.shared"
 import { turnSummaryCommit } from "./turn-summary"
 import { entryWriter, sameEntryGroup, separatorRows, spacerWriter, turnSummaryWriter } from "./scrollback.writer"
 import { type RunTheme } from "./theme"
-import type { RunEntryBody, StreamCommit } from "./types"
+import type { RunEntryBody, StreamCommit, RunTuiConfig } from "./types"
 
 type ActiveBody = Exclude<RunEntryBody, { type: "none" | "structured" }>
 
@@ -91,6 +91,7 @@ export class RunScrollbackStream {
   private treeSitterClient: TreeSitterClient | undefined
   private wrote: boolean
   private shellOutput: () => boolean
+  private locale: () => RunTuiConfig["locale"]
   private mono: boolean
   private imagePreview: boolean
   private destroyed = false
@@ -104,6 +105,7 @@ export class RunScrollbackStream {
       treeSitterClient?: TreeSitterClient
       onThemeRelease?: (theme: RunTheme) => void
       shellOutput?: () => boolean
+      locale?: () => RunTuiConfig["locale"]
       mono?: boolean
       imagePreview?: boolean
     } = {},
@@ -111,6 +113,7 @@ export class RunScrollbackStream {
     this.treeSitterClient = options.treeSitterClient
     this.wrote = options.wrote ?? false
     this.shellOutput = options.shellOutput ?? (() => true)
+    this.locale = options.locale ?? (() => undefined)
     this.mono = options.mono ?? false
     this.imagePreview = options.imagePreview ?? false
     this.onThemeRelease = options.onThemeRelease
@@ -454,7 +457,7 @@ export class RunScrollbackStream {
       return
     }
 
-    const body = entryBody(commit, { shellOutput: this.shellOutput(), mono: this.mono })
+    const body = entryBody(commit, { shellOutput: this.shellOutput(), mono: this.mono, locale: this.locale() })
     if (body.type === "none") {
       if (entryDone(commit)) {
         this.markRendered(await this.finishActive(false))
@@ -489,7 +492,7 @@ export class RunScrollbackStream {
         commit,
         body: staticBody(commit, body, spaced),
         theme: this.theme,
-        opts: { mono: this.mono },
+        opts: { mono: this.mono, locale: this.locale() },
       }),
     )
     this.markRendered(commit)

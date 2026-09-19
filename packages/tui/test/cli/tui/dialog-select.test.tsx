@@ -16,6 +16,7 @@ import { stringWidth } from "../../../src/util/string-width"
 import { emptyThemeSource, tmpdir } from "../../fixture/fixture"
 import { TestTuiContexts } from "../../fixture/tui-environment"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
+import { I18nProvider } from "../../../src/context/i18n"
 
 async function renderSelect(
   root: string,
@@ -26,7 +27,7 @@ async function renderSelect(
 ) {
   const state = path.join(root, "state")
   await mkdir(state, { recursive: true })
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig({ locale: "en" })
   const [{ ConfigProvider }, { ThemeProvider }, { Keymap }, { DialogProvider }, { DialogSelect }, { ToastProvider }] =
     await Promise.all([
       import("../../../src/config"),
@@ -65,15 +66,17 @@ async function renderSelect(
     return (
       <TestTuiContexts directory={root} paths={{ home: root, state, worktree: root }}>
         <ConfigProvider config={config}>
-          <Keymap.Provider>
-            <ThemeProvider mode="dark" source={emptyThemeSource}>
-              <ToastProvider>
-                <DialogProvider>
-                  <Select />
-                </DialogProvider>
-              </ToastProvider>
-            </ThemeProvider>
-          </Keymap.Provider>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ThemeProvider mode="dark" source={emptyThemeSource}>
+                <ToastProvider>
+                  <DialogProvider>
+                    <Select />
+                  </DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     )
@@ -95,7 +98,7 @@ async function mountSelect<T>(
 ) {
   const state = path.join(root, "state")
   await mkdir(state, { recursive: true })
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig({ locale: "en" })
   const [
     { ConfigProvider },
     { ThemeProvider },
@@ -144,15 +147,17 @@ async function mountSelect<T>(
     return (
       <TestTuiContexts directory={root} paths={{ home: root, state, worktree: root }}>
         <ConfigProvider config={config}>
-          <Keymap.Provider>
-            <ThemeProvider mode="dark" source={emptyThemeSource}>
-              <ToastProvider>
-                <DialogProvider>
-                  <Fixture />
-                </DialogProvider>
-              </ToastProvider>
-            </ThemeProvider>
-          </Keymap.Provider>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ThemeProvider mode="dark" source={emptyThemeSource}>
+                <ToastProvider>
+                  <DialogProvider>
+                    <Fixture />
+                  </DialogProvider>
+                </ToastProvider>
+              </ThemeProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     )

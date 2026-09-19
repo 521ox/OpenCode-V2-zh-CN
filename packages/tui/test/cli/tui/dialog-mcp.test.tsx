@@ -4,6 +4,7 @@ import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { DialogMcp } from "../../../src/component/dialog-mcp"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData } from "../../../src/context/data"
 import { Keymap } from "../../../src/context/keymap"
@@ -138,24 +139,26 @@ async function renderMcp(options?: { failed?: boolean; location?: { directory: s
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <Keymap.Provider>
-            <ToastProvider>
-              <RouteProvider initialRoute={{ type: "session", sessionID: "ses_existing" }}>
-                <ClientProvider api={createApi(calls.fetch)}>
-                  <DataProvider directory={process.cwd()}>
-                    <LocationProvider>
-                      <ThemeProvider mode="dark" source={emptyThemeSource}>
-                        <DialogProvider>
-                          <Probe />
-                        </DialogProvider>
-                      </ThemeProvider>
-                    </LocationProvider>
-                  </DataProvider>
-                </ClientProvider>
-              </RouteProvider>
-            </ToastProvider>
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ToastProvider>
+                <RouteProvider initialRoute={{ type: "session", sessionID: "ses_existing" }}>
+                  <ClientProvider api={createApi(calls.fetch)}>
+                    <DataProvider directory={process.cwd()}>
+                      <LocationProvider>
+                        <ThemeProvider mode="dark" source={emptyThemeSource}>
+                          <DialogProvider>
+                            <Probe />
+                          </DialogProvider>
+                        </ThemeProvider>
+                      </LocationProvider>
+                    </DataProvider>
+                  </ClientProvider>
+                </RouteProvider>
+              </ToastProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

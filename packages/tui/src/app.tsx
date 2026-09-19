@@ -86,6 +86,7 @@ import { ArgsProvider, useArgs, type Args } from "./context/args"
 import open from "open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { Config, ConfigProvider, useConfig } from "./config"
+import { I18nProvider, useI18n } from "./context/i18n"
 import { newSessionLocation } from "./config/new-session-location"
 import { UpdateNotificationProvider, useUpdateNotification, type UpdateSource } from "./context/update-notification"
 import { PluginProvider, usePlugin, type PackageSource } from "./plugin/context"
@@ -304,7 +305,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                     <ErrorBoundary
                       fallback={(error, reset) => (
                         <ClipboardProvider value={clipboard}>
-                          <ErrorComponent error={error} reset={reset} mode={mode} />
+                          <ErrorComponent error={error} reset={reset} mode={mode} locale={config.locale} />
                         </ClipboardProvider>
                       )}
                     >
@@ -363,76 +364,82 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                       service={input.config}
                                       options={{ terminalSuspend: process.platform !== "win32" }}
                                     >
-                                      <Keymap.Provider>
-                                        <ToastProvider>
-                                          <RouteProvider
-                                            initialRoute={
-                                              input.args.continue
-                                                ? {
-                                                    type: "session",
-                                                    sessionID: "dummy",
-                                                  }
-                                                : undefined
-                                            }
-                                          >
-                                            <ClientProvider api={api} url={input.server.endpoint.url} service={service}>
-                                              <PermissionProvider>
-                                                <DataProvider directory={directory}>
-                                                  <LocationProvider>
-                                                    <SessionTabsProvider>
-                                                      <SessionTerminalsProvider>
-                                                        <ThemeProvider
-                                                          mode={mode}
-                                                          source={createThemeSource(global.config)}
-                                                        >
-                                                          <ThemeErrorToast />
-                                                          <LocalProvider>
-                                                            <PromptStashProvider>
-                                                              <DialogProvider>
-                                                                <FrecencyProvider>
-                                                                  <PromptHistoryProvider>
-                                                                    <PromptRefProvider>
-                                                                      <EditorContextProvider>
-                                                                        <AttentionProvider>
-                                                                          <UpdateNotificationProvider
-                                                                            updater={input.updater}
-                                                                          >
-                                                                            <PanelProvider>
-                                                                              <PluginProvider
-                                                                                packages={input.packages}
-                                                                                directories={pluginDirectories}
-                                                                              >
-                                                                                <App
-                                                                                  pair={
-                                                                                    input.server.endpoint.auth
-                                                                                      ? input.server.endpoint.auth
-                                                                                      : {
-                                                                                          username: "opencode",
-                                                                                          password: "",
-                                                                                        }
-                                                                                  }
-                                                                                />
-                                                                              </PluginProvider>
-                                                                            </PanelProvider>
-                                                                          </UpdateNotificationProvider>
-                                                                        </AttentionProvider>
-                                                                      </EditorContextProvider>
-                                                                    </PromptRefProvider>
-                                                                  </PromptHistoryProvider>
-                                                                </FrecencyProvider>
-                                                              </DialogProvider>
-                                                            </PromptStashProvider>
-                                                          </LocalProvider>
-                                                        </ThemeProvider>
-                                                      </SessionTerminalsProvider>
-                                                    </SessionTabsProvider>
-                                                  </LocationProvider>
-                                                </DataProvider>
-                                              </PermissionProvider>
-                                            </ClientProvider>
-                                          </RouteProvider>
-                                        </ToastProvider>
-                                      </Keymap.Provider>
+                                      <I18nProvider>
+                                        <Keymap.Provider>
+                                          <ToastProvider>
+                                            <RouteProvider
+                                              initialRoute={
+                                                input.args.continue
+                                                  ? {
+                                                      type: "session",
+                                                      sessionID: "dummy",
+                                                    }
+                                                  : undefined
+                                              }
+                                            >
+                                              <ClientProvider
+                                                api={api}
+                                                url={input.server.endpoint.url}
+                                                service={service}
+                                              >
+                                                <PermissionProvider>
+                                                  <DataProvider directory={directory}>
+                                                    <LocationProvider>
+                                                      <SessionTabsProvider>
+                                                        <SessionTerminalsProvider>
+                                                          <ThemeProvider
+                                                            mode={mode}
+                                                            source={createThemeSource(global.config)}
+                                                          >
+                                                            <ThemeErrorToast />
+                                                            <LocalProvider>
+                                                              <PromptStashProvider>
+                                                                <DialogProvider>
+                                                                  <FrecencyProvider>
+                                                                    <PromptHistoryProvider>
+                                                                      <PromptRefProvider>
+                                                                        <EditorContextProvider>
+                                                                          <AttentionProvider>
+                                                                            <UpdateNotificationProvider
+                                                                              updater={input.updater}
+                                                                            >
+                                                                              <PanelProvider>
+                                                                                <PluginProvider
+                                                                                  packages={input.packages}
+                                                                                  directories={pluginDirectories}
+                                                                                >
+                                                                                  <App
+                                                                                    pair={
+                                                                                      input.server.endpoint.auth
+                                                                                        ? input.server.endpoint.auth
+                                                                                        : {
+                                                                                            username: "opencode",
+                                                                                            password: "",
+                                                                                          }
+                                                                                    }
+                                                                                  />
+                                                                                </PluginProvider>
+                                                                              </PanelProvider>
+                                                                            </UpdateNotificationProvider>
+                                                                          </AttentionProvider>
+                                                                        </EditorContextProvider>
+                                                                      </PromptRefProvider>
+                                                                    </PromptHistoryProvider>
+                                                                  </FrecencyProvider>
+                                                                </DialogProvider>
+                                                              </PromptStashProvider>
+                                                            </LocalProvider>
+                                                          </ThemeProvider>
+                                                        </SessionTerminalsProvider>
+                                                      </SessionTabsProvider>
+                                                    </LocationProvider>
+                                                  </DataProvider>
+                                                </PermissionProvider>
+                                              </ClientProvider>
+                                            </RouteProvider>
+                                          </ToastProvider>
+                                        </Keymap.Provider>
+                                      </I18nProvider>
                                     </ConfigProvider>
                                   </ArgsProvider>
                                 </ClipboardProvider>
@@ -465,6 +472,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
 })
 
 function App(props: { pair?: DialogPairCredentials }) {
+  const { t } = useI18n()
   const log = useLog({ component: "app" })
   const app = useTuiApp()
   const startup = useTuiStartup()
@@ -544,16 +552,16 @@ function App(props: { pair?: DialogPairCredentials }) {
       if (status.status === "needs_auth")
         toast.show({
           variant: "warning",
-          title: "MCP server needs authentication",
-          message: `Connect "${server.name}" to use its tools.`,
-          action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
+          title: t("main.mcp.auth"),
+          message: t("main.mcp.connect", { name: server.name }),
+          action: { label: t("main.mcp.open"), run: () => keymap.dispatch("mcp.list") },
         })
       else
         toast.show({
           variant: "error",
-          title: `MCP server failed: ${server.name}`,
-          message: "Run /mcps to view details.",
-          action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
+          title: t("main.mcp.failed", { name: server.name }),
+          message: t("main.mcp.details"),
+          action: { label: t("main.mcp.open"), run: () => keymap.dispatch("mcp.list") },
         })
     }
   })
@@ -565,7 +573,7 @@ function App(props: { pair?: DialogPairCredentials }) {
   const offSelectionKeys = keymap.intercept(
     "key",
     ({ event }) => {
-      Selection.handleSelectionKey(renderer, toast, event, clipboard, copyOnSelectEnabled())
+      Selection.handleSelectionKey(renderer, toast, event, clipboard, copyOnSelectEnabled(), t)
     },
     { priority: 101 },
   )
@@ -579,7 +587,7 @@ function App(props: { pair?: DialogPairCredentials }) {
 
     await clipboard
       .write(text)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+      .then(() => toast.show({ message: t("main.copied"), variant: "info" }))
       .catch(toast.error)
 
     renderer.clearSelection()
@@ -646,7 +654,7 @@ function App(props: { pair?: DialogPairCredentials }) {
         if (!providerID || !modelID)
           return toast.show({
             variant: "warning",
-            message: `Invalid model format: ${args.model}`,
+            message: t("main.model.invalid", { model: args.model }),
             duration: 3000,
           })
         local.model.set({ providerID, modelID }, { recent: true })
@@ -704,8 +712,8 @@ function App(props: { pair?: DialogPairCredentials }) {
     [
       {
         name: COMMAND_PALETTE_COMMAND,
-        title: "Show command palette",
-        category: "System",
+        title: t("main.command.palette"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           dialog.replace(() => <CommandPaletteDialog />)
@@ -713,8 +721,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "session.list",
-        title: "Switch session",
-        category: "Session",
+        title: t("main.command.session.list"),
+        category: t("main.group.session"),
         suggested: data.session.list().length > 0,
         slash: { name: "sessions", aliases: ["resume", "continue"] },
         run: () => {
@@ -723,9 +731,9 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "session.new",
-        title: "New session",
+        title: t("main.command.session.new"),
         suggested: route.data.type === "session",
-        category: "Session",
+        category: t("main.group.session"),
         slash: { name: "new", aliases: ["clear"] },
         run: () => {
           const model = local.model.current()
@@ -750,8 +758,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "open.menu",
-        title: "Open session or project",
-        category: "Session",
+        title: t("main.command.open"),
+        category: t("main.group.session"),
         slash: { name: "open", aliases: ["projects", "project"] },
         run: () => {
           if (dialog.key === DialogOpenKey) return
@@ -763,71 +771,71 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       ...Array.from({ length: 9 }, (_, i) => ({
         name: `session.quick_switch.${i + 1}`,
-        title: `Switch to session in quick slot ${i + 1}`,
-        category: "Session",
+        title: t("main.command.session.slot", { number: i + 1 }),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: () => !sessionTabs.enabled(),
         run: () => local.session.quickSwitch(i + 1),
       })),
       {
         name: "session.tab.next",
-        title: "Next tab",
-        category: "Session",
+        title: t("main.command.tab.next"),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycle(1),
       },
       {
         name: "session.tab.previous",
-        title: "Previous tab",
-        category: "Session",
+        title: t("main.command.tab.previous"),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycle(-1),
       },
       {
         name: "session.tab.next_unread",
-        title: "Next unread tab",
-        category: "Session",
+        title: t("main.command.tab.nextUnread"),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycleUnread(1),
       },
       {
         name: "session.tab.previous_unread",
-        title: "Previous unread tab",
-        category: "Session",
+        title: t("main.command.tab.previousUnread"),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.cycleUnread(-1),
       },
       {
         name: "session.tab.close",
-        title: "Close tab",
-        category: "Session",
+        title: t("main.command.tab.close"),
+        category: t("main.group.session"),
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.close(),
       },
       {
         name: "session.tab.reopen",
-        title: "Reopen closed tab",
-        category: "Session",
+        title: t("main.command.tab.reopen"),
+        category: t("main.group.session"),
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.reopen(),
       },
       ...Array.from({ length: 10 }, (_, i) => ({
         name: `session.tab.select.${i + 1}`,
-        title: `Switch to tab ${i + 1}`,
-        category: "Session",
+        title: t("main.command.tab.select", { number: i + 1 }),
+        category: t("main.group.session"),
         palette: undefined,
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.selectIndex(i),
       })),
       {
         name: "model.list",
-        title: "Switch model",
+        title: t("main.command.model.list"),
         suggested: true,
-        category: "Agent",
+        category: t("main.group.agent"),
         slash: { name: "models" },
         run: () => {
           dialog.replace(() => <DialogModel />)
@@ -835,8 +843,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "model.cycle_recent",
-        title: "Model cycle",
-        category: "Agent",
+        title: t("main.command.model.cycle"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.model.cycle(1)
@@ -844,8 +852,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "model.cycle_recent_reverse",
-        title: "Model cycle reverse",
-        category: "Agent",
+        title: t("main.command.model.reverse"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.model.cycle(-1)
@@ -853,8 +861,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "model.cycle_favorite",
-        title: "Favorite cycle",
-        category: "Agent",
+        title: t("main.command.favorite.cycle"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.model.cycleFavorite(1)
@@ -862,8 +870,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "model.cycle_favorite_reverse",
-        title: "Favorite cycle reverse",
-        category: "Agent",
+        title: t("main.command.favorite.reverse"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.model.cycleFavorite(-1)
@@ -871,8 +879,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "agent.list",
-        title: "Switch agent",
-        category: "Agent",
+        title: t("main.command.agent.list"),
+        category: t("main.group.agent"),
         slash: { name: "agents" },
         run: () => {
           dialog.replace(() => <DialogAgent />)
@@ -880,8 +888,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "mcp.list",
-        title: "MCP servers",
-        category: "Agent",
+        title: t("main.mcp.servers"),
+        category: t("main.group.agent"),
         slash: { name: "mcps" },
         run: () => {
           dialog.replace(() => <DialogMcp />)
@@ -889,8 +897,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "agent.cycle",
-        title: "Agent cycle",
-        category: "Agent",
+        title: t("main.command.agent.cycle"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.agent.move(1)
@@ -898,23 +906,23 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "variant.cycle",
-        title: "Variant cycle",
-        category: "Agent",
+        title: t("main.command.variant.cycle"),
+        category: t("main.group.agent"),
         run: () => {
           local.model.variant.cycle()
         },
       },
       {
         name: "variant.list",
-        title: "Switch model variant",
-        category: "Agent",
+        title: t("main.command.variant.list"),
+        category: t("main.group.agent"),
         palette: local.model.variant.list().length === 0 ? undefined : (true as const),
         slash: { name: "variants", aliases: ["thinking", "effort"] },
         run: () => {
           if (local.model.variant.list().length === 0) {
             return toast.show({
-              title: "No variants available",
-              message: "The current model does not support any variants.",
+              title: t("main.variant.empty"),
+              message: t("main.variant.unsupported"),
               variant: "info",
             })
           }
@@ -923,8 +931,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "agent.cycle.reverse",
-        title: "Agent cycle reverse",
-        category: "Agent",
+        title: t("main.command.agent.reverse"),
+        category: t("main.group.agent"),
         palette: undefined,
         run: () => {
           local.agent.move(-1)
@@ -932,7 +940,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "provider.connect",
-        title: "Connect an integration",
+        title: t("main.command.integration"),
         suggested: !connected(),
         slash: { name: "connect" },
         run: () => {
@@ -942,154 +950,154 @@ function App(props: { pair?: DialogPairCredentials }) {
             />
           ))
         },
-        category: "Integration",
+        category: t("main.group.integration"),
       },
       {
         name: "opencode.settings",
-        title: "Open settings",
+        title: t("main.command.settings"),
         suggested: true,
         slash: { name: "settings" },
         run: () => {
           dialog.replace(() => <DialogConfig />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "opencode.status",
-        title: "View status",
+        title: t("main.command.status"),
         slash: { name: "status" },
         run: () => {
           dialog.replace(() => <DialogStatus />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       ...(updater.open
         ? [
             {
               name: "opencode.update",
-              title: "Update OpenCode",
-              description: "Update OpenCode (upgrade)",
+              title: t("main.command.update"),
+              description: t("main.command.upgrade"),
               slash: { name: "update" },
               run: () => updater.open?.("manual"),
-              category: "System",
+              category: t("main.group.system"),
             },
           ]
         : []),
       {
         name: "server.pair",
-        title: "Pair device",
+        title: t("main.command.pair"),
         slash: { name: "pair", aliases: ["web"] },
         run: () => {
           dialog.replace(() => <DialogPair credentials={props.pair} />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       ...(client.restart
         ? [
             {
               name: "service.restart",
-              title: "Restart service",
+              title: t("main.command.restart"),
               slash: { name: "restart" },
               run: async () => {
                 const restart = client.restart
                 if (!restart) return
                 dialog.clear()
-                toast.show({ variant: "info", message: "Restarting service…", duration: 30000 })
+                toast.show({ variant: "info", message: t("main.service.restarting"), duration: 30000 })
                 // restart resolves once the replacement service is healthy; the
                 // event stream reattaches through the reconnect loop.
                 await restart()
-                  .then(() => toast.show({ variant: "success", message: "Service restarted" }))
+                  .then(() => toast.show({ variant: "success", message: t("main.service.restarted") }))
                   .catch(toast.error)
               },
-              category: "System",
+              category: t("main.group.system"),
             },
           ]
         : []),
       {
         name: "location.reload",
-        title: "Reload configuration",
+        title: t("main.command.reload"),
         slash: { name: "reload" },
         run: async () => {
           dialog.clear()
-          toast.show({ variant: "info", message: "Reloading configuration…", duration: 30000 })
+          toast.show({ variant: "info", message: t("main.config.reloading"), duration: 30000 })
           await client.api.location
             .reload()
             .then(() => {
-              toast.show({ variant: "success", message: "Configuration reloaded" })
+              toast.show({ variant: "success", message: t("main.config.reloaded") })
             })
             .catch(toast.error)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "opencode.debug",
-        title: "View debug info",
+        title: t("main.command.debug"),
         slash: { name: "debug" },
         run: () => {
           dialog.replace(() => <DialogDebug />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "theme.switch",
-        title: "Switch theme",
+        title: t("main.command.theme"),
         slash: { name: "themes" },
         run: () => {
           dialog.replace(() => <DialogThemeList />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "theme.switch_mode",
-        title: mode() === "dark" ? "Switch to light mode" : "Switch to dark mode",
+        title: mode() === "dark" ? t("main.theme.light") : t("main.theme.dark"),
         palette: undefined,
         enabled: () => supports(mode() === "dark" ? "light" : "dark"),
         run: () => {
           setMode(mode() === "dark" ? "light" : "dark")
           dialog.clear()
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "theme.mode.lock",
-        title: locked() ? "Unlock theme mode" : "Lock theme mode",
+        title: locked() ? t("main.theme.unlock") : t("main.theme.lock"),
         palette: undefined,
         run: () => {
           if (locked()) unlock()
           else lock()
           dialog.clear()
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "help.show",
-        title: "Help",
+        title: t("main.help"),
         slash: { name: "help" },
         run: () => {
           dialog.replace(() => <DialogHelp />)
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "docs.open",
-        title: "Open docs",
+        title: t("main.command.docs"),
         run: () => {
           open("https://opencode.ai/docs").catch(() => {})
           dialog.clear()
         },
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "app.exit",
-        title: "Exit the app",
+        title: t("main.command.exit"),
         slash: { name: "exit", aliases: ["quit", "q"] },
         run: () => exit(),
-        category: "System",
+        category: t("main.group.system"),
       },
       {
         name: "app.debug",
-        title: "Toggle debug panel",
-        category: "System",
+        title: t("main.command.debugPanel"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           renderer.toggleDebugOverlay()
@@ -1098,8 +1106,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "app.console",
-        title: "Toggle console",
-        category: "System",
+        title: t("main.command.console"),
+        category: t("main.group.system"),
         run: () => {
           renderer.console.toggle()
           dialog.clear()
@@ -1107,8 +1115,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "terminal.suspend",
-        title: "Suspend terminal",
-        category: "System",
+        title: t("main.command.suspend"),
+        category: t("main.group.system"),
         palette: undefined,
         enabled: process.platform !== "win32",
         run: () => {
@@ -1119,8 +1127,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "terminal.title.toggle",
-        title: terminalTitleEnabled() ? "Disable terminal title" : "Enable terminal title",
-        category: "System",
+        title: terminalTitleEnabled() ? t("main.title.disable") : t("main.title.enable"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           const next = !terminalTitleEnabled()
@@ -1135,8 +1143,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "app.toggle.animations",
-        title: (config.data.animations ?? true) ? "Disable animations" : "Enable animations",
-        category: "System",
+        title: (config.data.animations ?? true) ? t("main.animations.disable") : t("main.animations.enable"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           void config
@@ -1149,8 +1157,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "app.toggle.file_context",
-        title: (config.data.prompt?.editor ?? true) ? "Disable file context" : "Enable file context",
-        category: "System",
+        title: (config.data.prompt?.editor ?? true) ? t("main.editor.disable") : t("main.editor.enable"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           void config
@@ -1163,8 +1171,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "app.toggle.diffwrap",
-        title: (config.data.diffs?.wrap ?? "word") === "word" ? "Disable diff wrapping" : "Enable diff wrapping",
-        category: "System",
+        title: (config.data.diffs?.wrap ?? "word") === "word" ? t("main.diffWrap.disable") : t("main.diffWrap.enable"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           void config
@@ -1180,8 +1188,8 @@ function App(props: { pair?: DialogPairCredentials }) {
       },
       {
         name: "app.toggle.paste_summary",
-        title: pasteSummaryEnabled() ? "Disable paste summary" : "Enable paste summary",
-        category: "System",
+        title: pasteSummaryEnabled() ? t("main.paste.disable") : t("main.paste.enable"),
+        category: t("main.group.system"),
         palette: undefined,
         run: () => {
           void config
@@ -1275,7 +1283,7 @@ function App(props: { pair?: DialogPairCredentials }) {
       route.navigate({ type: "home" })
       toast.show({
         variant: "info",
-        message: title ? `Session "${title}" was deleted` : "The current session was deleted",
+        message: title ? t("main.session.deleted", { title }) : t("main.session.currentDeleted"),
       })
     }
   })
@@ -1316,12 +1324,14 @@ function App(props: { pair?: DialogPairCredentials }) {
         if (copyOnSelectEnabled()) return
         if (evt.button !== MouseButton.RIGHT) return
 
-        if (!Selection.copy(renderer, toast, clipboard)) return
+        if (!Selection.copy(renderer, toast, clipboard, t)) return
         evt.preventDefault()
         evt.stopPropagation()
       }}
       onMouseUp={
-        copyOnSelectEnabled() ? (event) => Selection.copyOnSelectRelease(event, renderer, toast, clipboard) : undefined
+        copyOnSelectEnabled()
+          ? (event) => Selection.copyOnSelectRelease(event, renderer, toast, clipboard, t)
+          : undefined
       }
     >
       <box

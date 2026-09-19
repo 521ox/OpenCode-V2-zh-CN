@@ -11,8 +11,10 @@ import { runNonInteractivePrompt } from "./noninteractive"
 import { UI } from "./ui"
 import { Env } from "../env"
 import { errorMessage } from "../util/error"
+import { DEFAULT_LOCALE, translate, type Locale } from "@opencode/tui/i18n"
 
 export type RunCommandInput = {
+  locale?: Locale
   server: ServerConnection.Resolved
   message: string[]
   continue?: boolean
@@ -69,18 +71,20 @@ export function runNonInteractiveWithOptions(input: RunCommandInput, options: Ex
 }
 
 async function run(input: RunCommandInput, options: ExecutionOptions) {
-  if (input.fork && !input.continue && !input.session) fail("--fork requires --continue or --session")
+  const locale = input.format === "json" ? "en" : (input.locale ?? DEFAULT_LOCALE)
+  if (input.fork && !input.continue && !input.session) fail(translate(locale, "miniCli.forkRequired"))
   const root = options.root ?? process.env.PWD ?? process.cwd()
-  const local = localDirectory(root)
+  const local = localDirectory(root, locale)
   const directory = options.useServerDirectory ? undefined : (options.directory ?? local)
   const message = mergeInput(formatMessage(input.message), process.stdin.isTTY ? undefined : await readStdin())
-  if (!message?.trim()) fail("You must provide a message")
-  const files = await Promise.all(input.file.map((file) => prepareFile(file, root, options)))
+  if (!message?.trim()) fail(translate(locale, "miniCli.messageRequired"))
+  const files = await Promise.all(input.file.map((file) => prepareFile(file, root, options, locale)))
   const prepared = { directory, message, files }
   return execute(input, prepared, input.server.endpoint, options)
 }
 
 async function execute(input: RunCommandInput, prepared: Prepared, endpoint: Endpoint, options: ExecutionOptions) {
+  const locale = input.locale ?? DEFAULT_LOCALE
   const client = OpenCode.make({
     baseUrl: endpoint.url,
     headers: Service.headers(endpoint),
@@ -116,7 +120,10 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
           }
         : undefined
       if ((options.variant ?? explicit?.variant) && !model)
-        throw new RunTargetError("Cannot select a variant before selecting a model", next.session?.id)
+        throw new RunTargetError(
+          translate(input.format === "json" ? "en" : locale, "miniCli.variantModel"),
+          next.session?.id,
+        )
       return { model, agent: next.agent }
     },
   }).catch((error) => {
@@ -135,6 +142,7 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
   }
 
   await runNonInteractivePrompt({
+    locale,
     client,
     sessionID: target.session.id,
     location: target.location,
@@ -148,8 +156,8 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
     auto: input.auto ?? false,
     attached: options.attached ?? true,
     compatibility: options.compatibility,
-    renderTool: (part) => renderTool(part, target.location.directory),
-    renderToolError: (part) => renderToolError(part, target.location.directory),
+    renderTool: (part) => renderTool(part, target.location.directory, locale),
+    renderToolError: (part) => renderToolError(part, target.location.directory, locale),
   }).catch((error) => reportRunError(input, errorMessage(error), target.session.id))
 }
 
@@ -164,12 +172,12 @@ function formatMessage(message: string[]) {
   return value || undefined
 }
 
-function localDirectory(root: string) {
+function localDirectory(root: string, locale: Locale) {
   try {
     process.chdir(root)
     return process.cwd()
   } catch {
-    fail(`Failed to change directory to ${root}`)
+    fail(translate(locale, "miniCli.directoryFailed", { path: root }))
   }
 }
 
@@ -182,15 +190,20 @@ export function parseRunModel(value?: string) {
   }
 }
 
-async function prepareFile(input: string, directory: string, options: ExecutionOptions): Promise<FilePart> {
+async function prepareFile(
+  input: string,
+  directory: string,
+  options: ExecutionOptions,
+  locale: Locale,
+): Promise<FilePart> {
   const file = path.resolve(directory, input)
-  const handle = await open(file, "r").catch(() => fail(`File not found: ${input}`))
+  const handle = await open(file, "r").catch(() => fail(translate(locale, "miniCli.fileMissing", { path: input })))
   try {
     const stat = await handle.stat()
     if (options.compatibility === "v1" && options.attached && stat.isDirectory())
-      fail(`Cannot attach local directory without a shared filesystem: ${input}`)
+      fail(translate(locale, "miniCli.sharedFilesystem", { path: input }))
     if (!stat.isFile() || stat.size > ATTACH_FILE_MAX_BYTES)
-      fail(`Cannot attach a directory, special file, or file larger than 10 MiB: ${input}`)
+      fail(translate(locale, "miniCli.fileTooLarge", { path: input }))
     const content = Buffer.alloc(Number(stat.size))
     let offset = 0
     while (offset < content.length) {
@@ -223,8 +236,8 @@ function isBinaryContent(bytes: Uint8Array) {
   return bytes.reduce((count, byte) => count + Number(byte < 9 || (byte > 13 && byte < 32)), 0) / bytes.length > 0.3
 }
 
-async function renderTool(part: SessionMessageAssistantTool, directory: string) {
-  const info = toolInlineInfo(part, directory)
+async function renderTool(part: SessionMessageAssistantTool, directory: string, locale: Locale) {
+  const info = toolInlineInfo(part, directory, locale)
   if (info.mode === "block") {
     UI.empty()
     UI.println(UI.Style.TEXT_NORMAL + info.icon, UI.Style.TEXT_NORMAL + info.title)
@@ -239,13 +252,16 @@ async function renderTool(part: SessionMessageAssistantTool, directory: string) 
   )
 }
 
-async function renderToolError(part: SessionMessageAssistantTool, directory: string) {
-  const info = toolInlineInfo(part, directory)
-  UI.println(UI.Style.TEXT_NORMAL + "✗", UI.Style.TEXT_NORMAL + `${info.title} failed`)
+async function renderToolError(part: SessionMessageAssistantTool, directory: string, locale: Locale) {
+  const info = toolInlineInfo(part, directory, locale)
+  UI.println(
+    UI.Style.TEXT_NORMAL + "✗",
+    UI.Style.TEXT_NORMAL + translate(locale, "miniCli.failed", { title: info.title }),
+  )
 }
 
 /** @internal Used by the V1 command boundary before a Session exists. */
-export function reportRunError(input: Pick<RunCommandInput, "format">, message: string, sessionID?: string) {
+export function reportRunError(input: Pick<RunCommandInput, "format" | "locale">, message: string, sessionID?: string) {
   process.exitCode = 1
   if (input.format === "json") {
     process.stdout.write(
@@ -258,7 +274,7 @@ export function reportRunError(input: Pick<RunCommandInput, "format">, message: 
     )
     return
   }
-  UI.error(message)
+  UI.error(message, input.locale)
 }
 
 function fail(message: string): never {

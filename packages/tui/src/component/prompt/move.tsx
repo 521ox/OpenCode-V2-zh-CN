@@ -8,8 +8,11 @@ import { DialogWorkspaces, type WorkspaceSelection } from "../dialog-workspaces"
 import { useData } from "../../context/data"
 import { useLocation } from "../../context/location"
 import { useRoute } from "../../context/route"
+import { useI18n } from "../../context/i18n"
+import { type Key } from "../../i18n"
 
 export function usePromptMove(input: { projectID: () => string | undefined; sessionID: () => string | undefined }) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const client = useClient()
   const toast = useToast()
@@ -19,7 +22,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
   const paths = useTuiPaths()
   const [creating, setCreating] = createSignal(false)
   const [creatingDots, setCreatingDots] = createSignal(3)
-  const [progress, setProgress] = createSignal<string>()
+  const [progress, setProgress] = createSignal<Key>()
   const [destination, setDestination] = createSignal<WorkspaceSelection>()
 
   function homeLocation() {
@@ -29,34 +32,34 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
 
   async function create(name: string) {
     setCreating(true)
-    setProgress("Creating worktree")
+    setProgress("main.workspace.creating")
     try {
       const sessionID = input.sessionID()
       const session = sessionID ? await resolveSession(sessionID) : undefined
-      if (sessionID && !session) throw new Error("Unable to determine current session location")
+      if (sessionID && !session) throw new Error(t("main.workspace.noLocation"))
       const location = session?.location ?? homeLocation()
       if (!data.location.info(location)) await data.location.syncInfo(location)
       const project = data.location.info(location)?.project
-      if (!project) throw new Error("Unable to determine current project")
+      if (!project) throw new Error(t("main.workspace.noProject"))
       const result = await client.api.worktree.create({
         projectID: project.id,
         name,
       })
       const directory = result.directory
-      if (!directory) throw new Error("No worktree directory returned")
+      if (!directory) throw new Error(t("main.workspace.noDirectory"))
 
       // Seed the location store before optimistic session creation mounts the
       // destination. A raw read initializes the server location but leaves the
       // optimistic session without its project until the create request echoes.
       await data.location.syncInfo({ directory })
 
-      setProgress("Creating session")
+      setProgress("main.workspace.creatingSession")
       return directory
     } catch (err) {
       setDestination(undefined)
       setProgress(undefined)
       setCreating(false)
-      toast.show({ title: "Creating workspace failed", message: errorMessage(err), variant: "error" })
+      toast.show({ title: t("main.workspace.createFailed"), message: errorMessage(err), variant: "error" })
       return
     }
   }
@@ -64,7 +67,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
   async function open() {
     const projectID = await resolveProjectID()
     if (!projectID) {
-      toast.show({ message: "Unable to determine current project", variant: "error" })
+      toast.show({ message: t("main.workspace.noProject"), variant: "error" })
       return
     }
     const sessionID = input.sessionID()
@@ -144,7 +147,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
   }
 
   function startSubmit() {
-    if (progress()) setProgress("Submitting prompt")
+    if (progress()) setProgress("main.workspace.submitting")
   }
 
   function finishSubmit() {
@@ -174,7 +177,10 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
     open,
     pending,
     pendingNew,
-    progress,
+    progress: () => {
+      const key = progress()
+      return key ? t(key) : undefined
+    },
     setDirectory,
     startSubmit,
   }

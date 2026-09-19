@@ -6,6 +6,7 @@ import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { DialogIntegration } from "../../../src/component/dialog-integration"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData } from "../../../src/context/data"
 import { Keymap } from "../../../src/context/keymap"
@@ -359,22 +360,24 @@ async function renderIntegration(activeLocation?: LocationRef, form?: FormFields
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <Keymap.Provider>
-            <ToastProvider>
-              <ClientProvider api={createApi(calls.fetch)}>
-                <DataProvider directory={process.cwd()}>
-                  <LocationProvider>
-                    <ThemeProvider mode="dark" source={emptyThemeSource}>
-                      <DialogProvider>
-                        <Probe />
-                      </DialogProvider>
-                    </ThemeProvider>
-                  </LocationProvider>
-                </DataProvider>
-              </ClientProvider>
-            </ToastProvider>
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ToastProvider>
+                <ClientProvider api={createApi(calls.fetch)}>
+                  <DataProvider directory={process.cwd()}>
+                    <LocationProvider>
+                      <ThemeProvider mode="dark" source={emptyThemeSource}>
+                        <DialogProvider>
+                          <Probe />
+                        </DialogProvider>
+                      </ThemeProvider>
+                    </LocationProvider>
+                  </DataProvider>
+                </ClientProvider>
+              </ToastProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

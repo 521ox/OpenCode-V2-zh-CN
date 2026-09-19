@@ -5,6 +5,7 @@ import { testRender } from "@opentui/solid"
 import { mkdirSync, watch } from "fs"
 import path from "path"
 import { ConfigProvider, useConfig } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { ClientProvider, useClient } from "../../src/context/client"
 import { DataProvider, useData } from "../../src/context/data"
 import { LocationProvider } from "../../src/context/location"
@@ -135,6 +136,7 @@ async function renderSessionTabs(
   let storage!: ReturnType<typeof useStorage>
   let config!: ReturnType<typeof useConfig>
   let configuration = {
+    locale: "en",
     tabs: { enabled: options?.tabsEnabled ?? true },
     experimental: options?.experimental,
     session: { new_location: options?.newLocation ?? "launch" },
@@ -165,19 +167,21 @@ async function renderSessionTabs(
               },
             }}
           >
-            <RouteProvider
-              initialRoute={options?.home ? { type: "home" } : { type: "session", sessionID: initialSessionID }}
-            >
-              <ClientProvider api={createApi(calls.fetch)}>
-                <DataProvider directory={options?.launchDirectory ?? directory}>
-                  <LocationProvider>
-                    <SessionTabsProvider>
-                      <Probe />
-                    </SessionTabsProvider>
-                  </LocationProvider>
-                </DataProvider>
-              </ClientProvider>
-            </RouteProvider>
+            <I18nProvider>
+              <RouteProvider
+                initialRoute={options?.home ? { type: "home" } : { type: "session", sessionID: initialSessionID }}
+              >
+                <ClientProvider api={createApi(calls.fetch)}>
+                  <DataProvider directory={options?.launchDirectory ?? directory}>
+                    <LocationProvider>
+                      <SessionTabsProvider>
+                        <Probe />
+                      </SessionTabsProvider>
+                    </LocationProvider>
+                  </DataProvider>
+                </ClientProvider>
+              </RouteProvider>
+            </I18nProvider>
           </ConfigProvider>
         </StorageProvider>
       </TuiAppProvider>

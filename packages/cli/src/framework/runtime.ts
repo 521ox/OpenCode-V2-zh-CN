@@ -1,11 +1,12 @@
 import { Effect, FileSystem, Scope } from "effect"
-import { Command } from "effect/unstable/cli"
+import { CliOutput, Command } from "effect/unstable/cli"
 import { PrintLogs } from "../commands/commands"
 import { Spec } from "./spec"
 import { Global } from "@opencode/util/global"
 import { Updater } from "../services/updater"
 import { Config } from "../config"
 import { Npm } from "@opencode/util/npm"
+import { cliFormatter } from "./i18n"
 
 export type Input<Value> =
   Value extends Spec.Node<infer _Name, infer Command, infer _Commands>
@@ -67,12 +68,14 @@ export function handlers<const Root extends Spec.Any>(root: Root, handlers: Hand
   function add(node: Spec.Any, value: RuntimeHandlers) {
     if (typeof value === "function") {
       result.push({ spec: node.spec, load: value as () => Promise<{ default: RuntimeHandler }> })
-      for (const alias of node.aliases) result.push({ spec: alias.spec, load: value as () => Promise<{ default: RuntimeHandler }> })
+      for (const alias of node.aliases)
+        result.push({ spec: alias.spec, load: value as () => Promise<{ default: RuntimeHandler }> })
       return
     }
     if (value.$) {
       result.push({ spec: node.spec, load: value.$ as () => Promise<{ default: RuntimeHandler }> })
-      for (const alias of node.aliases) result.push({ spec: alias.spec, load: value.$ as () => Promise<{ default: RuntimeHandler }> })
+      for (const alias of node.aliases)
+        result.push({ spec: alias.spec, load: value.$ as () => Promise<{ default: RuntimeHandler }> })
     }
     for (const [name, child] of Object.entries(node.commands)) add(child, value[name] as RuntimeHandlers)
   }
@@ -82,11 +85,13 @@ export function handlers<const Root extends Spec.Any>(root: Root, handlers: Hand
 }
 
 export function run(commands: Spec.Any, handlers: ReadonlyArray<LazyHandler>, options: { readonly version: string }) {
-  return Command.run(provide(commands, handlers).pipe(Command.withGlobalFlags([PrintLogs])), options) as Effect.Effect<
-    void,
-    unknown,
-    Command.Environment
-  >
+  return Effect.gen(function* () {
+    const config = yield* Config.Service
+    const formatter = yield* CliOutput.Formatter
+    return yield* Command.run(provide(commands, handlers).pipe(Command.withGlobalFlags([PrintLogs])), options).pipe(
+      Effect.provideService(CliOutput.Formatter, cliFormatter(config.locale, formatter)),
+    )
+  }) as Effect.Effect<void, unknown, Command.Environment>
 }
 
 function provide(node: Spec.Any, handlers: ReadonlyArray<LazyHandler>): ProvidedCommand {

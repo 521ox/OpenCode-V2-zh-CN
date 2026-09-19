@@ -6,6 +6,7 @@ import path from "node:path"
 import { TuiPathsProvider } from "../../src/context/runtime"
 import { PromptHistoryProvider, usePromptHistory } from "../../src/prompt/history"
 import { tmpdir } from "../fixture/fixture"
+import { TestI18n } from "../fixture/i18n"
 
 test("down rejects at the newest history item with an empty prompt", async () => {
   await using tmp = await tmpdir()
@@ -63,9 +64,11 @@ async function renderHistory(root: string, persisted?: string) {
 
   const app = await testRender(() => (
     <TuiPathsProvider value={{ cwd: root, home: root, state, worktree: root }}>
-      <PromptHistoryProvider>
-        <Consumer />
-      </PromptHistoryProvider>
+      <TestI18n>
+        <PromptHistoryProvider>
+          <Consumer />
+        </PromptHistoryProvider>
+      </TestI18n>
     </TuiPathsProvider>
   ))
   await app.renderOnce()

@@ -3,8 +3,11 @@ import { Effect } from "effect"
 import path from "node:path"
 import { Standalone } from "../services/standalone"
 import { reportRunError, runNonInteractiveWithOptions, type RunCommandInput } from "./run"
+import { resolveLocale, translate, type Locale } from "@opencode/tui/i18n"
 
 export type V1RunCommandInput = {
+  /** Configured CLI locale supplied by the caller; this bridge does not read configuration. */
+  locale?: Locale
   message: string[]
   continue?: boolean
   session?: string
@@ -25,13 +28,17 @@ export type V1RunCommandInput = {
 }
 
 export function runV1Bridge(input: V1RunCommandInput) {
+  const locale = resolveLocale(input.locale)
   const root = process.env.PWD ?? process.cwd()
   const attached = input.server !== undefined
   const local = !attached && input.directory ? path.resolve(root, input.directory) : root
   try {
     process.chdir(local)
   } catch {
-    reportRunError(input, `Failed to change directory to ${local}`)
+    reportRunError(
+      { ...input, locale },
+      translate(input.format === "json" ? "en" : locale, "miniCli.directoryFailed", { path: local }),
+    )
     return Promise.resolve()
   }
 
@@ -42,7 +49,7 @@ export function runV1Bridge(input: V1RunCommandInput) {
           ? explicitEndpoint(input)
           : yield* Standalone.start({ command: input.standaloneCommand })
         yield* Effect.promise(() =>
-          runNonInteractiveWithOptions(nativeInput(input, endpoint), {
+          runNonInteractiveWithOptions(nativeInput({ ...input, locale }, endpoint), {
             root: local,
             directory: attached ? input.directory : local,
             useServerDirectory: attached && input.directory === undefined,
@@ -58,6 +65,7 @@ export function runV1Bridge(input: V1RunCommandInput) {
 
 function nativeInput(input: V1RunCommandInput, endpoint: Endpoint): RunCommandInput {
   return {
+    locale: input.locale,
     server: { endpoint },
     message: input.message,
     continue: input.continue,

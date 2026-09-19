@@ -4,6 +4,7 @@ import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { DialogErrorDetails } from "../../src/component/dialog-error-details"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { ClientProvider } from "../../src/context/client"
 import { DataProvider } from "../../src/context/data"
 import { Keymap } from "../../src/context/keymap"
@@ -56,24 +57,26 @@ for (const width of [40, 100]) {
           paths={{ state: temporary.path }}
           clipboard={{ read: async () => undefined, write: async (text) => void copied.push(text) }}
         >
-          <ConfigProvider config={createTuiResolvedConfig()}>
-            <RouteProvider initialRoute={{ type: "home" }}>
-              <ClientProvider api={api}>
-                <DataProvider directory={temporary.path}>
-                  <LocationProvider>
-                    <ThemeProvider mode={width === 40 ? "light" : "dark"} source={emptyThemeSource}>
-                      <Keymap.Provider>
-                        <ToastProvider>
-                          <DialogProvider>
-                            <OpenDialog />
-                          </DialogProvider>
-                        </ToastProvider>
-                      </Keymap.Provider>
-                    </ThemeProvider>
-                  </LocationProvider>
-                </DataProvider>
-              </ClientProvider>
-            </RouteProvider>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+            <I18nProvider>
+              <RouteProvider initialRoute={{ type: "home" }}>
+                <ClientProvider api={api}>
+                  <DataProvider directory={temporary.path}>
+                    <LocationProvider>
+                      <ThemeProvider mode={width === 40 ? "light" : "dark"} source={emptyThemeSource}>
+                        <Keymap.Provider>
+                          <ToastProvider>
+                            <DialogProvider>
+                              <OpenDialog />
+                            </DialogProvider>
+                          </ToastProvider>
+                        </Keymap.Provider>
+                      </ThemeProvider>
+                    </LocationProvider>
+                  </DataProvider>
+                </ClientProvider>
+              </RouteProvider>
+            </I18nProvider>
           </ConfigProvider>
         </TestTuiContexts>
       ),

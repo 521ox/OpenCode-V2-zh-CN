@@ -14,6 +14,7 @@ import { SplitBorder } from "../../ui/border"
 import { Locale } from "../../util/locale"
 import { use } from "./render-context"
 import { generateThinkingSyntax } from "./thinking-syntax"
+import { useI18n } from "../../context/i18n"
 
 export const INLINE_TOOL_ICON_WIDTH = 2
 
@@ -102,6 +103,7 @@ function ReasoningHeader(props: {
   title: string | null
   duration?: string
 }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const fg = () =>
     props.open
@@ -117,7 +119,9 @@ function ReasoningHeader(props: {
     <Switch>
       <Match when={!props.done}>
         <box flexDirection="row">
-          <Spinner color={fg()}>{props.title ? "Thinking: " + props.title : "Thinking"}</Spinner>
+          <Spinner color={fg()}>
+            {props.title ? t("session.thinkingTitle", { title: props.title }) : t("session.thinking")}
+          </Spinner>
         </box>
       </Match>
       <Match when={true}>
@@ -125,7 +129,7 @@ function ReasoningHeader(props: {
           <Show when={props.toggleable}>
             <span>{props.open ? "- " : "+ "}</span>
           </Show>
-          <span>Thought</span>
+          <span>{t("session.thought")}</span>
           <Show when={props.title || props.duration}>
             <span>: </span>
           </Show>

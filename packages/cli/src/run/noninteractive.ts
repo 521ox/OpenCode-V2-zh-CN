@@ -12,6 +12,7 @@ import { EOL } from "node:os"
 import { readFile } from "node:fs/promises"
 import { nonEmptyToolContent, toolOutputText, type MiniToolPart } from "@opencode/tui/mini/tool"
 import { UI } from "./ui"
+import { DEFAULT_LOCALE, translate, type Locale } from "@opencode/tui/i18n"
 
 type Model = {
   providerID: string
@@ -25,6 +26,7 @@ type File = {
 }
 
 type Input = {
+  locale?: Locale
   client: OpenCodeClient
   sessionID: string
   location: LocationRef
@@ -68,10 +70,11 @@ type FormRequest = Extract<V2Event, { type: "form.created" }>["data"]["form"]
 const GLOBAL_FORM_SESSION_ID = "global"
 
 export async function runNonInteractivePrompt(input: Input) {
+  const locale = input.locale ?? DEFAULT_LOCALE
   const controller = new AbortController()
   const stream = input.client.event.subscribe({ signal: controller.signal })[Symbol.asyncIterator]()
   const connected = await stream.next()
-  if (connected.done) throw new Error("Event stream disconnected before prompt admission")
+  if (connected.done) throw new Error(translate(input.format === "json" ? "en" : locale, "miniCli.streamAdmission"))
 
   const messageID = SessionMessage.ID.create()
   const starts = new Map<string, StartedPart>()
@@ -114,7 +117,7 @@ export async function runNonInteractivePrompt(input: Input) {
     if (emit("reasoning", timestamp, { part })) return
     const text = part.text.trim()
     if (!text) return
-    const line = `Thinking: ${text}`
+    const line = translate(locale, "miniCli.thinking", { text })
     if (!process.stdout.isTTY) return void process.stdout.write(line + EOL)
     UI.empty()
     UI.println(`${UI.Style.TEXT_DIM}\u001b[3m${line}\u001b[0m${UI.Style.TEXT_NORMAL}`)
@@ -138,7 +141,10 @@ export async function runNonInteractivePrompt(input: Input) {
       UI.println(
         UI.Style.TEXT_WARNING_BOLD + "!",
         UI.Style.TEXT_NORMAL +
-          `permission requested: ${request.action} (${request.resources.join(", ")}); auto-rejecting`,
+          translate(locale, "miniCli.permissionRejected", {
+            action: request.action,
+            resources: request.resources.join(", "),
+          }),
       )
     }
     await input.client.permission
@@ -173,7 +179,7 @@ export async function runNonInteractivePrompt(input: Input) {
       })
       if (next.done) {
         if (emittedError) return
-        throw new Error("Event stream disconnected during prompt execution")
+        throw new Error(translate(input.format === "json" ? "en" : locale, "miniCli.streamExecution"))
       }
       const event = next.value
 
@@ -447,7 +453,7 @@ export async function runNonInteractivePrompt(input: Input) {
               },
             })
           await input.renderToolError(tool)
-          UI.error(error)
+          UI.error(error, locale)
         }
         continue
       }
@@ -477,7 +483,7 @@ export async function runNonInteractivePrompt(input: Input) {
         flushStep()
         emittedError = true
         process.exitCode = 1
-        if (!emit("error", time, { error: event.data.error })) UI.error(event.data.error.message)
+        if (!emit("error", time, { error: event.data.error })) UI.error(event.data.error.message, locale)
         continue
       }
       if (event.type === "session.execution.failed") {
@@ -486,7 +492,7 @@ export async function runNonInteractivePrompt(input: Input) {
         if (!emittedError && !formCancelled) {
           emittedError = true
           process.exitCode = 1
-          if (!emit("error", time, { error: event.data.error })) UI.error(event.data.error.message)
+          if (!emit("error", time, { error: event.data.error })) UI.error(event.data.error.message, locale)
         }
         return
       }
@@ -497,7 +503,8 @@ export async function runNonInteractivePrompt(input: Input) {
           emittedError = true
           process.exitCode = 1
           const error = { type: "aborted" as const, message: `Session interrupted: ${event.data.reason}` }
-          if (!emit("error", time, { error })) UI.error(error.message)
+          if (!emit("error", time, { error }))
+            UI.error(translate(locale, "miniCli.interrupted", { reason: event.data.reason }), locale)
         }
         return
       }
@@ -617,13 +624,13 @@ export async function runNonInteractivePrompt(input: Input) {
           })
         }
         await input.renderToolError(item)
-        UI.error(item.state.error.message)
+        UI.error(item.state.error.message, locale)
       }
 
       if (message.error && !emittedError) {
         emittedError = true
         process.exitCode = 1
-        if (!emit("error", timestamp, { error: message.error })) UI.error(message.error.message)
+        if (!emit("error", timestamp, { error: message.error })) UI.error(message.error.message, locale)
       }
     }
     return {
@@ -659,7 +666,8 @@ export async function runNonInteractivePrompt(input: Input) {
               return fallback ? { providerID: fallback.providerID, id: fallback.id, variant: input.variant } : undefined
             })
         : undefined
-    if (input.variant && !selected) throw new Error("Cannot select a variant before selecting a model")
+    if (input.variant && !selected)
+      throw new Error(translate(input.format === "json" ? "en" : locale, "miniCli.variantModel"))
     if (selected) {
       await input.client.session.switchModel({ sessionID: input.sessionID, model: selected })
     }
@@ -734,7 +742,8 @@ export async function runNonInteractivePrompt(input: Input) {
       const error = prePromotionError ?? { type: "unknown", message: "Prompt was not promoted" }
       emittedError = true
       process.exitCode = 1
-      if (!emit("error", Date.now(), { error })) UI.error(error.message)
+      if (!emit("error", Date.now(), { error }))
+        UI.error(prePromotionError?.message ?? translate(locale, "miniCli.notPromoted"), locale)
     }
   } finally {
     process.off("SIGINT", interrupt)

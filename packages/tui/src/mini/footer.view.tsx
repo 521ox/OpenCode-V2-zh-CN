@@ -39,6 +39,7 @@ import { stringWidth } from "../util/string-width"
 import { formatContextUsage } from "../util/session"
 import { errorMessage } from "../util/error"
 import { createSingleFlight } from "../util/single-flight"
+import { resolveLocale, translate, type Key, type Params } from "../i18n"
 
 import type {
   FooterPromptRoute,
@@ -126,6 +127,7 @@ type RunFooterViewProps = {
 }
 
 export function RunFooterView(props: RunFooterViewProps) {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(props.tuiConfig.locale), key, params)
   const renderer = useRenderer()
   const term = useTerminalDimensions()
   const width = createMemo(() => term().width)
@@ -237,12 +239,15 @@ export function RunFooterView(props: RunFooterViewProps) {
   const footerStatus = createMemo(() => {
     const current = model()?.model ?? props.state().model.trim()
     const variant = props.currentVariant()
-    const details = [busy() ? "running" : "idle", `agent ${props.currentAgent()}`]
+    const details = [t(busy() ? "miniCli.running" : "miniCli.idle"), t("miniCli.agent", { name: props.currentAgent() })]
     if (current) details.push(variant ? `${current} ${variant}` : current)
     if (contextUsage()) details.push(contextUsage())
     if (cost()) details.push(cost())
-    if (queuedPrompts().length > 0) details.push(`${queuedPrompts().length} pending`)
-    if (activeTabs().length > 0) details.push(`${activeTabs().length} subagent${activeTabs().length === 1 ? "" : "s"}`)
+    if (queuedPrompts().length > 0) details.push(t("miniCli.pending", { count: queuedPrompts().length }))
+    if (activeTabs().length > 0)
+      details.push(
+        t(activeTabs().length === 1 ? "miniCli.subagent" : "miniCli.subagents", { count: activeTabs().length }),
+      )
     return details.join(props.mono ? " - " : " · ")
   })
   const permission = createMemo<Extract<FooterView, { type: "permission" }> | undefined>(() => {
@@ -329,7 +334,12 @@ export function RunFooterView(props: RunFooterViewProps) {
         (error) => error,
       )
       if (!error) return true
-      props.onStatus(`failed to ${action === "cancel" ? "delete" : action} pending prompt: ${errorMessage(error)}`)
+      props.onStatus(
+        t("miniCli.pendingFailed", {
+          action: t(action === "cancel" ? "miniCli.delete" : action === "queue" ? "miniCli.queue" : "miniCli.steer"),
+          error: errorMessage(error),
+        }),
+      )
       return false
     })
     return result ?? false
@@ -362,6 +372,7 @@ export function RunFooterView(props: RunFooterViewProps) {
   }
   const [promptRows, setPromptRows] = createSignal(1)
   const composer = createPromptState({
+    locale: () => props.tuiConfig.locale,
     directory: props.directory,
     findFiles: props.findFiles,
     agents: props.agents,
@@ -397,24 +408,24 @@ export function RunFooterView(props: RunFooterViewProps) {
   const statusText = createMemo(() => {
     if (exiting() || (busy() && armed())) {
       const key = exiting() ? clearShortcut() : interruptLabel()
-      const action = exiting() ? "exit" : "stop"
-      if (!key) return exiting() ? "Exit pending" : "Stop pending"
+      const action = t(exiting() ? "miniCli.exit" : "miniCli.stop")
+      if (!key) return t(exiting() ? "miniCli.exitPending" : "miniCli.stopPending")
       const phrases = [
-        `Press ${key} again to ${exiting() ? "exit" : "interrupt"}`,
-        `${key} again to ${exiting() ? "exit" : "interrupt"}`,
-        `${key} again: ${action}`,
+        t("miniCli.pressAgain", { key, action: t(exiting() ? "miniCli.exit" : "miniCli.interrupt") }),
+        t("miniCli.again", { key, action: t(exiting() ? "miniCli.exit" : "miniCli.interrupt") }),
+        t("miniCli.againShort", { key, action }),
         `${key} ${action}`,
       ]
       return phrases.find((text) => stringWidth(text) <= statusWidth()) ?? phrases[phrases.length - 1]!
     }
 
     if (notice()) return notice()
-    if (!footerDetails()) return shell() ? "Shell" : ""
+    if (!footerDetails()) return shell() ? t("miniCli.shell") : ""
     if (busy()) {
-      if (stateStatus() === "reconnecting") return "reconnecting"
-      return interruptLabel() ? `${interruptLabel()} stop` : "Running"
+      if (stateStatus() === t("miniCli.reconnecting")) return stateStatus()
+      return interruptLabel() ? `${interruptLabel()} ${t("miniCli.stop")}` : t("miniCli.runningTitle")
     }
-    return stateStatus() || (shell() ? "Shell" : "")
+    return stateStatus() || (shell() ? t("miniCli.shell") : "")
   })
   const agentStatus = createMemo(() => {
     if (!footerDetails() || !prompt() || shell()) return undefined
@@ -452,25 +463,36 @@ export function RunFooterView(props: RunFooterViewProps) {
     const items: Array<{ id: "queued" | "subagents" | "background"; key: string; label: string; expanded?: string }> =
       []
     if (queuedPrompts().length > 0 && queuedShortcut()) {
-      items.push({ id: "queued", key: queuedShortcut(), label: `${queuedPrompts().length} pending` })
+      items.push({
+        id: "queued",
+        key: queuedShortcut(),
+        label: t("miniCli.pending", { count: queuedPrompts().length }),
+      })
     }
     if (activeTabs().length > 0 && subagentShortcut()) {
       items.push({
         id: "subagents",
         key: subagentShortcut(),
         label: `${activeTabs().length} sub`,
-        expanded: `${activeTabs().length} subagent${activeTabs().length === 1 ? "" : "s"}`,
+        expanded: t(activeTabs().length === 1 ? "miniCli.subagent" : "miniCli.subagents", {
+          count: activeTabs().length,
+        }),
       })
     }
     if (foregroundSubagents() && backgroundShortcut()) {
-      items.push({ id: "background", key: backgroundShortcut(), label: "bg", expanded: "background" })
+      items.push({
+        id: "background",
+        key: backgroundShortcut(),
+        label: t("miniCli.backgroundShort"),
+        expanded: t("miniCli.background"),
+      })
     }
     return items
   })
   const commandHint = createMemo(() => {
     if (!prompt() || takeover() || shell()) return
     if (command()) {
-      return { key: command(), label: "menu" }
+      return { key: command(), label: t("miniCli.menu") }
     }
   })
   const statuslineLayout = createMemo(() => {
@@ -482,7 +504,7 @@ export function RunFooterView(props: RunFooterViewProps) {
         text: statusText(),
         expanded: footerDetails() && busy() && interruptLabel() ? `${interruptLabel()} interrupt` : undefined,
       },
-      escape: shell() && !takeover() ? { key: "esc", label: "normal" } : undefined,
+      escape: shell() && !takeover() ? { key: "esc", label: t("miniCli.normal") } : undefined,
       work: contextHintCandidates(),
       model: info ? { name: info.model, variant: info.variant } : undefined,
       agent: agentStatus(),
@@ -547,8 +569,8 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "app.clear",
-        title: "Clear screen",
-        group: "System",
+        title: t("miniCli.command.clear"),
+        group: t("miniCli.category.system"),
         run: clearScreen,
       },
     ],
@@ -559,14 +581,14 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "command.palette.show",
-        title: "Open command palette",
-        group: "Prompt",
+        title: t("miniCli.command.palette"),
+        group: t("miniCli.group.prompt"),
         run: openCommand,
       },
       {
         id: "variant.cycle",
-        title: "Cycle model variant",
-        group: "Model",
+        title: t("miniCli.command.cycle"),
+        group: t("miniCli.group.model"),
         run: props.onCycle,
       },
     ],
@@ -578,8 +600,8 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "session.background",
-        title: "Background subagents",
-        group: "Session",
+        title: t("miniCli.command.background"),
+        group: t("miniCli.category.session"),
         run: () => props.onBackground?.(),
       },
     ],
@@ -590,8 +612,8 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "session.child.first",
-        title: "View subagents",
-        group: "Session",
+        title: t("miniCli.command.subagents"),
+        group: t("miniCli.category.session"),
         run: openSubagentMenu,
       },
     ],
@@ -602,8 +624,8 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "session.queued_prompts",
-        title: "View pending prompts",
-        group: "Prompt",
+        title: t("miniCli.command.pending"),
+        group: t("miniCli.group.prompt"),
         run: openQueuedMenu,
       },
     ],
@@ -619,8 +641,8 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         id: "composer.subagent.interrupt",
-        title: "Interrupt subagent",
-        group: "Session",
+        title: t("miniCli.command.interruptChild"),
+        group: t("miniCli.category.session"),
         run: () => {
           const current = selectedTab()
           if (current?.status !== "running") {
@@ -757,6 +779,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                       <Switch>
                         <Match when={active().type === "prompt" && route().type === "composer"}>
                           <RunPromptBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             cursorStyle={props.tuiConfig.cursor}
                             background={() => runTheme().background}
@@ -775,6 +798,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={selectingSubagent()}>
                           <RunSubagentSelectBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             tabs={tabs}
                             current={selected}
@@ -786,6 +810,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={selectingQueued()}>
                           <RunQueuedPromptSelectBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             prompts={queuedPrompts}
                             onClose={closePanel}
@@ -804,6 +829,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={commanding()}>
                           <RunCommandMenuBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             commands={props.commands}
                             subagents={tabs}
@@ -848,6 +874,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={agenting()}>
                           <RunAgentSelectBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             agents={props.agents}
                             current={props.currentAgentID}
@@ -861,6 +888,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={modeling()}>
                           <RunModelSelectBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             providers={props.providers}
                             current={props.currentModel}
@@ -874,6 +902,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={varianting()}>
                           <RunVariantSelectBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             variants={props.variants}
                             current={props.currentVariant}
@@ -887,6 +916,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={setting()}>
                           <RunSettingsBody
+                            locale={props.tuiConfig.locale}
                             theme={theme}
                             settings={props.miniSettings}
                             onClose={closePanel}
@@ -897,6 +927,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                         </Match>
                         <Match when={active().type === "permission"}>
                           <RunPermissionBody
+                            locale={props.tuiConfig.locale}
                             request={permission()!.request}
                             directory={props.directory}
                             theme={theme()}
@@ -909,6 +940,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                           <For each={form() ? [form()!] : []}>
                             {(value) => (
                               <RunFormBody
+                                locale={props.tuiConfig.locale}
                                 request={value.request}
                                 theme={theme()}
                                 state={formStates.get(value.request.id) ?? createFormBodyState(value.request)}
@@ -940,6 +972,7 @@ export function RunFooterView(props: RunFooterViewProps) {
 
             <Show when={!panel() && menu()}>
               <RunFooterMenu
+                empty={t("miniCli.noMatching")}
                 theme={theme}
                 items={composer.options}
                 selected={composer.selected}
@@ -1007,6 +1040,7 @@ export function RunFooterView(props: RunFooterViewProps) {
           }}
         >
           <RunFooterSubagentBody
+            locale={props.tuiConfig.locale}
             active={inspecting}
             theme={runTheme}
             tab={selectedTab}

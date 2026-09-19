@@ -1,8 +1,10 @@
 import { onCleanup } from "solid-js"
 import { useThemes } from "../context/theme"
 import { useToast } from "../ui/toast"
+import { useI18n } from "../context/i18n"
 
 export function ThemeErrorToast() {
+  const { t } = useI18n()
   const themes = useThemes()
   const toast = useToast()
 
@@ -10,7 +12,7 @@ export function ThemeErrorToast() {
     themes.onError(({ name, error }) =>
       toast.show({
         variant: "error",
-        title: `Failed to load theme: ${name}`,
+        title: t("main.theme.failed", { name }),
         message: error.message,
       }),
     ),

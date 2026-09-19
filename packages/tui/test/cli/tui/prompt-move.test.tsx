@@ -4,6 +4,7 @@ import { InputRenderable } from "@opentui/core"
 import { testRender } from "@opentui/solid"
 import { usePromptMove } from "../../../src/component/prompt/move"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData } from "../../../src/context/data"
 import { Keymap } from "../../../src/context/keymap"
@@ -45,9 +46,7 @@ test.each([
 
     await fixture.create()
 
-    expect(fixture.requests).toEqual([
-      { payload: { projectID: "proj_test", name: "fresh" }, directory: null },
-    ])
+    expect(fixture.requests).toEqual([{ payload: { projectID: "proj_test", name: "fresh" }, directory: null }])
     expect(fixture.data.location.info({ directory: created })?.project.canonical).toBe(clone)
     expect(fixture.reads.locations.filter((directory) => directory === input.directory)).toHaveLength(
       input.home ? 3 : 1,
@@ -77,9 +76,7 @@ test.each([
     expect(fixture.reads.worktrees).toEqual(["proj_test"])
     expect(frame).toContain(clone)
     expect(frame.indexOf(clone)).toBeLessThan(frame.indexOf(main))
-    expect(fixture.requests).toEqual([
-      { payload: { projectID: "proj_test", name: "fresh" }, directory: null },
-    ])
+    expect(fixture.requests).toEqual([{ payload: { projectID: "proj_test", name: "fresh" }, directory: null }])
     expect(fixture.data.location.info(selected)?.project.canonical).toBe(clone)
     expect(fixture.moves).toEqual([])
   } finally {
@@ -316,24 +313,28 @@ async function renderMove(input: {
   const app = await testRender(
     () => (
       <TestTuiContexts cwd={launch}>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <Keymap.Provider>
-            <ToastProvider>
-              <RouteProvider initialRoute={input.home ? { type: "home" } : { type: "session", sessionID: "ses_clone" }}>
-                <ClientProvider api={createApi(calls.fetch)}>
-                  <DataProvider directory={launch}>
-                    <LocationProvider>
-                      <ThemeProvider mode="dark" source={emptyThemeSource}>
-                        <DialogProvider>
-                          <Probe />
-                        </DialogProvider>
-                      </ThemeProvider>
-                    </LocationProvider>
-                  </DataProvider>
-                </ClientProvider>
-              </RouteProvider>
-            </ToastProvider>
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ToastProvider>
+                <RouteProvider
+                  initialRoute={input.home ? { type: "home" } : { type: "session", sessionID: "ses_clone" }}
+                >
+                  <ClientProvider api={createApi(calls.fetch)}>
+                    <DataProvider directory={launch}>
+                      <LocationProvider>
+                        <ThemeProvider mode="dark" source={emptyThemeSource}>
+                          <DialogProvider>
+                            <Probe />
+                          </DialogProvider>
+                        </ThemeProvider>
+                      </LocationProvider>
+                    </DataProvider>
+                  </ClientProvider>
+                </RouteProvider>
+              </ToastProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

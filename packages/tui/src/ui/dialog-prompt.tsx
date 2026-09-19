@@ -6,6 +6,7 @@ import { Show, createEffect, createSignal, onMount, type JSX } from "solid-js"
 import { Spinner } from "../component/spinner"
 import { useConfig } from "../config"
 import { useRenderer } from "@opentui/solid"
+import { useI18n } from "../context/i18n"
 
 export type DialogPromptProps = {
   title: string
@@ -20,6 +21,7 @@ export type DialogPromptProps = {
 }
 
 export function DialogPrompt(props: DialogPromptProps) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const renderer = useRenderer()
   const theme = useTheme().surface("dialog")
@@ -42,8 +44,8 @@ export function DialogPrompt(props: DialogPromptProps) {
     commands: [
       {
         id: "dialog.prompt.submit",
-        title: "Submit dialog prompt",
-        group: "Dialog",
+        title: t("main.dialog.submit"),
+        group: t("main.group.dialog"),
         run: confirm,
       },
     ],
@@ -56,8 +58,8 @@ export function DialogPrompt(props: DialogPromptProps) {
     commands: [
       {
         bind: "escape",
-        title: "Back",
-        group: "Dialog",
+        title: t("main.back"),
+        group: t("main.group.dialog"),
         run: () => {
           if (renderer.getSelection()) {
             renderer.clearSelection()
@@ -120,7 +122,7 @@ export function DialogPrompt(props: DialogPromptProps) {
             setTextareaTarget(val)
           }}
           initialValue={props.value}
-          placeholder={props.placeholder ?? "Enter text"}
+          placeholder={props.placeholder ?? t("main.enterText")}
           placeholderColor={theme.text.muted}
           textColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}
           focusedTextColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}
@@ -128,14 +130,14 @@ export function DialogPrompt(props: DialogPromptProps) {
           cursorStyle={config.cursor}
         />
         <Show when={props.busy}>
-          <Spinner color={theme.text.muted}>{props.busyText ?? "Working…"}</Spinner>
+          <Spinner color={theme.text.muted}>{props.busyText ?? t("main.working")}</Spinner>
         </Show>
       </box>
       <box paddingBottom={1} gap={1} flexDirection="row">
-        <Show when={!props.busy} fallback={<text fg={theme.text.muted}>processing…</text>}>
+        <Show when={!props.busy} fallback={<text fg={theme.text.muted}>{t("main.processing")}</text>}>
           <Show when={shortcuts.get("dialog.prompt.submit")}>
             <text fg={theme.text.base}>
-              {shortcuts.get("dialog.prompt.submit")} <span style={{ fg: theme.text.muted }}>submit</span>
+              {shortcuts.get("dialog.prompt.submit")} <span style={{ fg: theme.text.muted }}>{t("main.submit")}</span>
             </text>
           </Show>
         </Show>

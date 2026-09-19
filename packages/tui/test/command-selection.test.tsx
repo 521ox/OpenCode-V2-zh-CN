@@ -24,6 +24,7 @@ test("custom commands commit the captured agent, model and variant before execut
   await using setup = await createAppFixture({
     state: state.path,
     config: {
+      locale: "en",
       animations: false,
       keybinds: { "agent.cycle": "f6", "variant.cycle": "f7", "model.list": "f8" },
     },

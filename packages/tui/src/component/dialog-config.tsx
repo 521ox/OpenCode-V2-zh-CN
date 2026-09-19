@@ -3,6 +3,8 @@ import { useConfig } from "../config"
 import { useThemes } from "../context/theme"
 import { DialogSelect } from "../ui/dialog-select"
 import { useToast } from "../ui/toast"
+import { useI18n } from "../context/i18n"
+import { type Key, type Translator } from "../i18n"
 
 type Setting = {
   title: string
@@ -19,6 +21,14 @@ type Setting = {
 }
 
 export const settings: Setting[] = [
+  {
+    title: "Language",
+    category: "Appearance",
+    path: ["locale"],
+    default: "zh",
+    values: ["zh", "en"],
+    keywords: ["language", "locale", "中文", "English"],
+  },
   {
     title: "Theme",
     category: "Appearance",
@@ -314,7 +324,97 @@ export function settingID(setting: Setting) {
   return setting.path.join(".")
 }
 
+const titles: Record<string, Key> = {
+  locale: "language.title",
+  "theme.name": "main.setting.theme",
+  "theme.mode": "main.setting.colorMode",
+  animations: "main.setting.animations",
+  "session.sidebar": "main.setting.sidebar",
+  "session.scrollbar": "main.setting.scrollbar",
+  "session.thinking": "main.setting.thinking",
+  "session.markdown": "main.setting.markdown",
+  "session.grouping": "main.setting.grouping",
+  "session.image_preview": "main.setting.transcriptImages",
+  "session.tps": "main.setting.tps",
+  "session.new_location": "main.setting.newLocation",
+  "session.permissions": "main.setting.permissions",
+  "tabs.enabled": "main.setting.enabled",
+  "tabs.scope": "main.setting.scope",
+  "tabs.layout": "main.setting.layout",
+  "tabs.indicators": "main.setting.indicators",
+  "diffs.view": "main.setting.layout",
+  "diffs.wrap": "main.setting.wrapping",
+  "diffs.tree": "main.setting.fileTree",
+  "diffs.single": "main.setting.singlePatch",
+  "scroll.speed": "main.setting.scrollSpeed",
+  "scroll.acceleration": "main.setting.acceleration",
+  mouse: "main.setting.mouse",
+  "prompt.editor": "main.setting.editorContext",
+  "prompt.paste": "main.setting.largePastes",
+  "prompt.image_preview": "main.setting.imagePreviews",
+  "leader.timeout": "main.setting.leaderTimeout",
+  "attention.notifications": "main.setting.notifications",
+  "attention.sound": "main.setting.sounds",
+  "attention.volume": "main.setting.volume",
+  "terminal.title": "main.setting.windowTitle",
+  "terminal.copy": "main.setting.copyBehavior",
+  "debug.devtools": "main.setting.devtools",
+}
+
+const categories: Record<string, Key> = {
+  Appearance: "main.group.appearance",
+  Session: "main.group.session",
+  Tabs: "main.group.tabs",
+  Diffs: "main.group.diffs",
+  Input: "main.group.input",
+  Alerts: "main.group.alerts",
+  Terminal: "main.group.terminal",
+  Debug: "main.group.debug",
+}
+
+const labels: Record<string, Key> = {
+  off: "main.value.off",
+  on: "main.value.on",
+  system: "main.value.system",
+  dark: "main.value.dark",
+  light: "main.value.light",
+  hide: "main.value.hide",
+  auto: "main.value.auto",
+  show: "main.value.show",
+  source: "main.value.source",
+  rendered: "main.value.rendered",
+  none: "main.value.none",
+  "launch directory": "main.value.launch",
+  "active session": "main.value.active",
+  prompt: "main.value.prompt",
+  "auto accept": "main.value.autoaccept",
+  "current directory": "main.value.cwd",
+  global: "main.value.global",
+  horizontal: "main.value.horizontal",
+  vertical: "main.value.vertical",
+  "status icons": "main.value.status",
+  "always show numbers": "main.value.numbers",
+  split: "main.value.split",
+  unified: "main.value.unified",
+  word: "main.value.word",
+  compact: "main.value.compact",
+  full: "main.value.full",
+  manual: "main.value.manual",
+  select: "main.value.select",
+  zh: "language.zh",
+  en: "language.en",
+}
+
+export function settingTitle(setting: Setting, t: Translator<Key>) {
+  return titles[settingID(setting)] ? t(titles[settingID(setting)]) : setting.title
+}
+
+export function settingCategory(setting: Setting, t: Translator<Key>) {
+  return categories[setting.category] ? t(categories[setting.category]) : setting.category
+}
+
 export function DialogConfig(props: { current?: string }) {
+  const { t, setLocale } = useI18n()
   const config = useConfig()
   const toast = useToast()
   const themes = useThemes()
@@ -341,12 +441,14 @@ export function DialogConfig(props: { current?: string }) {
     const current = value(setting)
     if (setting.format) return setting.format(current)
     const index = setting.values?.indexOf(current)
-    return index === undefined || index < 0 ? String(current) : (setting.labels?.[index] ?? String(current))
+    const label = index === undefined || index < 0 ? String(current) : (setting.labels?.[index] ?? String(current))
+    if (settingID(setting) === "theme.name") return label
+    return labels[label] ? t(labels[label]) : label
   }
   const options = createMemo(() =>
     settings.map((setting, index) => ({
-      title: setting.title,
-      category: setting.category,
+      title: settingTitle(setting, t),
+      category: settingCategory(setting, t),
       searchText: setting.keywords?.join(" "),
       footer: display(setting),
       value: index,
@@ -363,6 +465,12 @@ export function DialogConfig(props: { current?: string }) {
       : Math.min(setting.max!, Math.max(setting.min!, Number(current) + direction * setting.step!))
     if (next === current) return
     setSaving(true)
+    if (settingID(setting) === "locale" && (next === "en" || next === "zh")) {
+      await setLocale(next)
+        .catch(toast.error)
+        .finally(() => setSaving(false))
+      return
+    }
     await config
       .update((draft) => {
         const parent = setting.path.slice(0, -1).reduce<Record<string, unknown>>((result, key) => {
@@ -377,24 +485,24 @@ export function DialogConfig(props: { current?: string }) {
 
   return (
     <DialogSelect
-      title="Settings"
+      title={t("main.settings")}
       options={options()}
       current={current}
       filterThreshold={0.7}
       onMove={(option) => setSelected(option.value)}
       onSelect={(option) => void change(1, option.value)}
-      footerHints={[{ title: "←/→", label: "change" }]}
+      footerHints={[{ title: "←/→", label: t("main.change") }]}
       bindings={[
         {
           bind: "left",
-          title: "Previous value",
-          group: "Settings",
+          title: t("main.value.previous"),
+          group: t("main.settings"),
           run: () => void change(-1),
         },
         {
           bind: "right",
-          title: "Next value",
-          group: "Settings",
+          title: t("main.value.next"),
+          group: t("main.settings"),
           run: () => void change(1),
         },
       ]}

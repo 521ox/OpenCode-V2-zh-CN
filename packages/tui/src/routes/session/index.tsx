@@ -117,6 +117,8 @@ import { createHistoryPrepend } from "./history"
 import { context, use, type PendingAction } from "./render-context"
 import { INLINE_TOOL_ICON_WIDTH, InlineToolRow, ReasoningPart, reasoningContent, TextPart } from "./message-parts"
 import { groupRefs } from "./grouping/session"
+import { useI18n } from "../../context/i18n"
+import type { Translator, Key } from "../../i18n"
 export { InlineToolRow } from "./message-parts"
 
 addDefaultParsers(parsers.parsers)
@@ -140,6 +142,7 @@ export function Session(props: {
   width?: number
 }) {
   const setEpilogue = useEpilogue()
+  const { t } = useI18n()
   const clipboard = useClipboard()
   const writeExport = async (file: string, content: string) => {
     await mkdir(path.dirname(file), { recursive: true })
@@ -179,7 +182,7 @@ export function Session(props: {
 
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
-    setEpilogue(sessionEpilogue({ title, sessionID: session()?.id }))
+    setEpilogue(sessionEpilogue({ title, sessionID: session()?.id }, t))
   })
   onCleanup(() => setEpilogue())
   const descendantSessionIDs = createMemo(() => {
@@ -232,7 +235,14 @@ export function Session(props: {
   Keymap.createLayer(() => ({
     priority: 10,
     enabled: () => props.sidebarVisible && dimensions().width - props.verticalTabsWidth <= 120 && !disabled(),
-    commands: [{ bind: "escape,ctrl+c", title: "Close sidebar", group: "Session", run: props.onToggleSidebar }],
+    commands: [
+      {
+        bind: "escape,ctrl+c",
+        title: t("session.closeSidebar"),
+        group: t("session.group"),
+        run: props.onToggleSidebar,
+      },
+    ],
   }))
   const contentWidth = createMemo(() => (props.width ?? dimensions().width - props.verticalTabsWidth) - 4)
   const models = createMemo(() => data.location.model.list(location()) ?? [])
@@ -322,7 +332,7 @@ export function Session(props: {
       const info = data.session.get(sessionID)
       if (!info) {
         toast.show({
-          message: `Session not found: ${sessionID}`,
+          message: t("session.notFound", { id: sessionID }),
           variant: "error",
           duration: 5000,
         })
@@ -559,8 +569,13 @@ export function Session(props: {
         (error) => error,
       )
       if (!error) return true
-      const label = action === "cancel" ? "delete" : action
-      toast.show({ title: `Failed to ${label} pending prompt`, message: errorMessage(error), variant: "error" })
+      const label =
+        action === "cancel" ? t("session.delete") : action === "steer" ? t("session.steer") : t("session.queue")
+      toast.show({
+        title: t("session.pendingFailed", { action: label }),
+        message: errorMessage(error),
+        variant: "error",
+      })
       return false
     })
     return result ?? false
@@ -568,11 +583,11 @@ export function Session(props: {
   const openQueuedPrompts = () =>
     dialog.replace(() => (
       <DialogSelect
-        title="Queued prompts"
+        title={t("session.queuedPrompts")}
         options={queuedPrompts().map((prompt, index) => ({
           title: prompt.text,
           value: prompt.id,
-          footer: `${index + 1} of ${queuedPrompts().length}`,
+          footer: t("session.position", { index: index + 1, total: queuedPrompts().length }),
         }))}
         onSelect={(option) => {
           void mutatePending("steer", option.value).then((steered) => {
@@ -582,7 +597,7 @@ export function Session(props: {
         actions={[
           {
             command: "queued_prompt.delete",
-            title: "delete",
+            title: t("session.delete"),
             onTrigger: (option) => {
               const last = queuedPrompts().length === 1
               void mutatePending("cancel", option.value).then((cancelled) => {
@@ -591,11 +606,11 @@ export function Session(props: {
             },
           },
         ]}
-        footerHints={[{ title: "steer", label: "enter" }]}
+        footerHints={[{ title: t("session.steer"), label: "enter" }]}
       />
     ))
   const unavailable = (feature: string) => {
-    toast.show({ message: `${feature} is not implemented for V2 sessions yet`, variant: "error", duration: 5000 })
+    toast.show({ message: t("session.unavailable", { feature }), variant: "error", duration: 5000 })
     dialog.clear()
   }
 
@@ -681,56 +696,56 @@ export function Session(props: {
     dialog.clear()
   }
 
-  const globalCommands = [
+  const globalCommands = createMemo(() => [
     {
       id: "session.page.up",
-      title: "Page up",
-      group: "Session",
+      title: t("session.pageUp"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 2),
     },
     {
       id: "session.page.down",
-      title: "Page down",
-      group: "Session",
+      title: t("session.pageDown"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(scroll.height / 2),
     },
     {
       id: "session.line.up",
-      title: "Line up",
-      group: "Session",
+      title: t("session.lineUp"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(-1),
     },
     {
       id: "session.line.down",
-      title: "Line down",
-      group: "Session",
+      title: t("session.lineDown"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(1),
     },
     {
       id: "session.half.page.up",
-      title: "Half page up",
-      group: "Session",
+      title: t("session.halfPageUp"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 4),
     },
     {
       id: "session.half.page.down",
-      title: "Half page down",
-      group: "Session",
+      title: t("session.halfPageDown"),
+      group: t("session.group"),
       palette: undefined,
       run: () => moveTranscript(scroll.height / 4),
     },
-  ]
+  ])
 
-  const baseAndUnfocusedCommands = [
+  const baseAndUnfocusedCommands = createMemo(() => [
     {
       id: "session.first",
-      title: "First message",
-      group: "Session",
+      title: t("session.firstMessage"),
+      group: t("session.group"),
       palette: undefined,
       run: () => {
         if (firstJump()) return
@@ -797,27 +812,27 @@ export function Session(props: {
     },
     {
       id: "session.last",
-      title: "Last message",
-      group: "Session",
+      title: t("session.lastMessage"),
+      group: t("session.group"),
       palette: undefined,
       run: () => {
         toBottom()
         dialog.clear()
       },
     },
-  ]
+  ])
 
   const baseCommands = createMemo(() => [
     {
-      title: "Share session",
+      title: t("session.share"),
       id: "session.share",
       suggested: route.type === "session",
       group: "Session",
       slash: { name: "share" },
-      run: () => unavailable("Sharing"),
+      run: () => unavailable(t("session.share")),
     },
     {
-      title: "Rename session",
+      title: t("session.rename"),
       id: "session.rename",
       group: "Session",
       slash: { name: "rename", arguments: true as const },
@@ -832,7 +847,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Jump to message",
+      title: t("session.jumpMessage"),
       id: "session.timeline",
       group: "Session",
       slash: { name: "timeline" },
@@ -847,7 +862,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Fork session",
+      title: t("session.fork"),
       id: "session.fork",
       group: "Session",
       slash: { name: "fork" },
@@ -864,7 +879,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Compact session",
+      title: t("session.compact"),
       id: "session.compact",
       group: "Session",
       slash: {
@@ -888,15 +903,15 @@ export function Session(props: {
       },
     },
     {
-      title: "Unshare session",
+      title: t("session.unshare"),
       id: "session.unshare",
       group: "Session",
       enabled: false,
       slash: { name: "unshare" },
-      run: () => unavailable("Unsharing"),
+      run: () => unavailable(t("session.unshare")),
     },
     {
-      title: "Undo previous message",
+      title: t("session.undo"),
       id: "session.undo",
       group: "Session",
       slash: { name: "undo" },
@@ -905,7 +920,7 @@ export function Session(props: {
           (message): message is SessionMessageUser => message.type === "user" && !!message.text.trim(),
         )
         if (!message) {
-          toast.show({ message: "Nothing to undo", variant: "error", duration: 3000 })
+          toast.show({ message: t("session.nothingUndo"), variant: "error", duration: 3000 })
           dialog.clear()
           return
         }
@@ -928,7 +943,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Redo",
+      title: t("session.redo"),
       id: "session.redo",
       group: "Session",
       enabled: !!session()?.revert?.messageID,
@@ -947,8 +962,8 @@ export function Session(props: {
     {
       title: (() => {
         const next = nextThinkingMode(thinkingMode())
-        if (next === "hide") return "Collapse thinking"
-        return "Expand thinking"
+        if (next === "hide") return t("session.collapseThinking")
+        return t("session.expandThinking")
       })(),
       id: "session.toggle.thinking",
       group: "Session",
@@ -963,7 +978,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Toggle session scrollbar",
+      title: t("session.toggleScrollbar"),
       id: "session.toggle.scrollbar",
       group: "Session",
       palette: undefined,
@@ -977,7 +992,7 @@ export function Session(props: {
       },
     },
     {
-      title: groupExploration() ? "Show tool calls individually" : "Group related tool calls",
+      title: groupExploration() ? t("session.ungroupTools") : t("session.groupTools"),
       id: "session.toggle.exploration_grouping",
       group: "Session",
       palette: undefined,
@@ -991,7 +1006,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Jump to last user message",
+      title: t("session.lastUserMessage"),
       id: "session.messages_last_user",
       group: "Session",
       palette: undefined,
@@ -1011,35 +1026,35 @@ export function Session(props: {
       },
     },
     {
-      title: "Next message",
+      title: t("session.nextMessage"),
       id: "session.message.next",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("next", dialog),
     },
     {
-      title: "Previous message",
+      title: t("session.previousMessage"),
       id: "session.message.previous",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("prev", dialog),
     },
     {
-      title: "Next user message",
+      title: t("session.nextUserMessage"),
       id: "session.message.user.next",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("next", dialog, true),
     },
     {
-      title: "Previous user message",
+      title: t("session.previousUserMessage"),
       id: "session.message.user.previous",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("prev", dialog, true),
     },
     {
-      title: "Copy last assistant message",
+      title: t("session.copyLastMessage"),
       id: "messages.copy",
       group: "Session",
       run: () => {
@@ -1047,14 +1062,14 @@ export function Session(props: {
           (msg): msg is SessionMessageAssistant => msg.type === "assistant",
         )
         if (!lastAssistantMessage) {
-          toast.show({ message: "No assistant messages found", variant: "error" })
+          toast.show({ message: t("session.noAssistant"), variant: "error" })
           dialog.clear()
           return
         }
 
         const textParts = lastAssistantMessage.content.filter((part) => part.type === "text")
         if (textParts.length === 0) {
-          toast.show({ message: "No text parts found in last assistant message", variant: "error" })
+          toast.show({ message: t("session.noTextParts"), variant: "error" })
           dialog.clear()
           return
         }
@@ -1065,7 +1080,7 @@ export function Session(props: {
           .trim()
         if (!text) {
           toast.show({
-            message: "No text content found in last assistant message",
+            message: t("session.noTextContent"),
             variant: "error",
           })
           dialog.clear()
@@ -1074,25 +1089,25 @@ export function Session(props: {
 
         clipboard
           .write(text)
-          .then(() => toast.show({ message: "Message copied to clipboard!", variant: "success" }))
-          .catch(() => toast.show({ message: "Failed to copy to clipboard", variant: "error" }))
+          .then(() => toast.show({ message: t("session.messageCopied"), variant: "success" }))
+          .catch(() => toast.show({ message: t("session.copyFailed"), variant: "error" }))
         dialog.clear()
       },
     },
     {
-      title: "Copy session ID",
+      title: t("session.copyID"),
       id: "session.copy.id",
       group: "Session",
       run: () => {
         clipboard
           .write(route.sessionID)
-          .then(() => toast.show({ message: "Session ID copied to clipboard!", variant: "success" }))
-          .catch(() => toast.show({ message: "Failed to copy session ID", variant: "error" }))
+          .then(() => toast.show({ message: t("session.idCopied"), variant: "success" }))
+          .catch(() => toast.show({ message: t("session.idCopyFailed"), variant: "error" }))
         dialog.clear()
       },
     },
     {
-      title: "Copy session transcript",
+      title: t("session.copyTranscript"),
       id: "session.copy",
       group: "Session",
       slash: {
@@ -1102,17 +1117,17 @@ export function Session(props: {
         try {
           const sessionData = session()
           if (!sessionData) return
-          const transcript = formatSessionTranscript(sessionData, messages(), true)
+          const transcript = formatSessionTranscript(sessionData, messages(), true, t)
           await clipboard.write(transcript)
-          toast.show({ message: "Session transcript copied to clipboard!", variant: "success" })
+          toast.show({ message: t("session.transcriptCopied"), variant: "success" })
         } catch {
-          toast.show({ message: "Failed to copy session transcript", variant: "error" })
+          toast.show({ message: t("session.transcriptCopyFailed"), variant: "error" })
         }
         dialog.clear()
       },
     },
     {
-      title: "Export session transcript",
+      title: t("session.exportTranscript"),
       id: "session.export",
       group: "Session",
       slash: {
@@ -1129,7 +1144,7 @@ export function Session(props: {
 
           const content =
             options.format === "markdown"
-              ? formatSessionTranscript(sessionData, messages(), options.thinking, options.tools)
+              ? formatSessionTranscript(sessionData, messages(), options.thinking, t, options.tools)
               : JSON.stringify(
                   await client.api.session.export({ sessionID: sessionData.id, sanitize: options.sanitize }),
                   null,
@@ -1139,7 +1154,7 @@ export function Session(props: {
           if (options.action === "copy") {
             await clipboard.write(content)
             dialog.clear()
-            toast.show({ message: "Copied to clipboard", variant: "success" })
+            toast.show({ message: t("session.copied"), variant: "success" })
             return
           }
 
@@ -1150,13 +1165,13 @@ export function Session(props: {
           await writeExport(filepath, content)
           await DialogExportResult.show(dialog, filepath)
         } catch {
-          toast.show({ message: "Failed to export session", variant: "error" })
+          toast.show({ message: t("session.exportFailed"), variant: "error" })
         }
         dialog.clear()
       },
     },
     {
-      title: "Background blocking tools",
+      title: t("session.backgroundTools"),
       id: "session.background",
       group: "Session",
       palette: undefined,
@@ -1166,7 +1181,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Toggle subagent picker",
+      title: t("session.toggleSubagents"),
       id: "session.child.first",
       group: "Session",
       run: () => {
@@ -1176,14 +1191,14 @@ export function Session(props: {
       },
     },
     {
-      title: "View queued prompts",
+      title: t("session.viewQueue"),
       id: "session.queued_prompts",
       group: "Prompt",
       enabled: queuedPrompts().length > 0,
       run: openQueuedPrompts,
     },
     {
-      title: "Go to parent session",
+      title: t("session.parent"),
       id: "session.parent",
       group: "Session",
       palette: undefined,
@@ -1202,12 +1217,13 @@ export function Session(props: {
   ])
 
   const commands = createMemo(() =>
-    [...globalCommands, ...baseAndUnfocusedCommands, ...baseCommands()].map(
+    [...globalCommands(), ...baseAndUnfocusedCommands(), ...baseCommands()].map(
       (command) =>
         ({
           bind: false,
           palette: true as const,
           ...command,
+          group: command.group === "Prompt" ? t("session.promptGroup") : t("session.group"),
         }) satisfies KeymapCommand,
     ),
   )
@@ -1215,16 +1231,16 @@ export function Session(props: {
   Keymap.createLayer(() => ({
     mode: "global",
     commands: commands(),
-    bindings: globalCommands.map((command) => command.id),
+    bindings: globalCommands().map((command) => command.id),
   }))
 
   Keymap.createLayer(() => ({
     enabled: () => renderer.currentFocusedEditor === null,
-    bindings: baseAndUnfocusedCommands.map((command) => command.id),
+    bindings: baseAndUnfocusedCommands().map((command) => command.id),
   }))
 
   Keymap.createLayer(() => ({
-    bindings: [...baseAndUnfocusedCommands, ...baseCommands()].map((command) => command.id),
+    bindings: [...baseAndUnfocusedCommands(), ...baseCommands()].map((command) => command.id),
   }))
 
   createEffect(
@@ -1330,7 +1346,7 @@ export function Session(props: {
             </box>
             <box height={1} flexShrink={0} flexDirection="row" justifyContent="flex-end">
               <Show when={firstJump()}>
-                <text fg={theme.text.feedback.info.base}>Loading session history…</text>
+                <text fg={theme.text.feedback.info.base}>{t("session.loadingHistory")}</text>
               </Show>
               <Show when={!firstJump() && awayFromBottom()}>
                 <box
@@ -1340,10 +1356,8 @@ export function Session(props: {
                   onMouseOut={() => setLatestHovered(false)}
                   onMouseUp={toBottom}
                 >
-                  <text
-                    fg={latestHovered() ? theme.text.action.secondary.hovered : theme.text.action.secondary.base}
-                  >
-                    Jump to latest ↓
+                  <text fg={latestHovered() ? theme.text.action.secondary.hovered : theme.text.action.secondary.base}>
+                    {t("session.jumpLatest")}
                   </text>
                 </box>
               </Show>
@@ -1387,12 +1401,7 @@ export function Session(props: {
                     }}
                   </Show>
                 </Match>
-                <Match
-                  when={
-                    session() &&
-                    currentLocation.error?.location.directory === session()!.location.directory
-                  }
-                >
+                <Match when={session() && currentLocation.error?.location.directory === session()!.location.directory}>
                   <SessionLocationMissing
                     directory={session()!.location.directory}
                     projectID={session()!.projectID}
@@ -1486,6 +1495,7 @@ function TurnTokenUsage(props: {
   previousCache?: CacheUsage
   message: (messageID: string) => SessionMessageInfo | undefined
 }) {
+  const { t } = useI18n()
   const config = useConfig()
   const theme = useTheme()
   const renderer = useRenderer()
@@ -1523,10 +1533,16 @@ function TurnTokenUsage(props: {
     })
   })
   const columns = createMemo(() => ({
-    step: Math.max("Step".length, ...steps().map((item) => item.finish.length)),
-    newTokens: Math.max("New".length, ...steps().map((item) => item.newTokens.toLocaleString().length)),
-    cached: Math.max("Cached".length, ...steps().map((item) => item.cached.toLocaleString().length)),
-    total: Math.max("Total".length, ...steps().map((item) => item.total.toLocaleString().length)),
+    step: Math.max(stringWidth(t("session.tokenStep")), ...steps().map((item) => item.finish.length)),
+    newTokens: Math.max(
+      stringWidth(t("session.tokenNew")),
+      ...steps().map((item) => item.newTokens.toLocaleString().length),
+    ),
+    cached: Math.max(
+      stringWidth(t("session.tokenCached")),
+      ...steps().map((item) => item.cached.toLocaleString().length),
+    ),
+    total: Math.max(stringWidth(t("session.tokenTotal")), ...steps().map((item) => item.total.toLocaleString().length)),
   }))
   const summary = createMemo(() => {
     const items = steps()
@@ -1552,15 +1568,22 @@ function TurnTokenUsage(props: {
         >
           <text fg={hover() ? theme.text.base : theme.text.muted} wrapMode="none">
             <span>{expanded() ? "- " : "+ "}</span>
-            <span style={{ attributes: TextAttributes.BOLD }}>Tokens</span>
+            <span style={{ attributes: TextAttributes.BOLD }}>{t("session.tokens")}</span>
             <span>
-              : {summary().count} {summary().count === 1 ? "step" : "steps"} · {summary().newTokens.toLocaleString()}{" "}
-              new · {summary().cached.toLocaleString()} cached · {summary().total.toLocaleString()} total
+              {t(summary().count === 1 ? "session.tokenSummaryOne" : "session.tokenSummary", {
+                count: summary().count,
+                fresh: summary().newTokens.toLocaleString(),
+                cached: summary().cached.toLocaleString(),
+                total: summary().total.toLocaleString(),
+              })}
             </span>
             <Show when={summary().reuseDrops > 0}>
               <span style={{ fg: theme.text.feedback.warning.base }}>
                 {" "}
-                · ! {summary().reuseDrops} likely cache {summary().reuseDrops === 1 ? "bust" : "busts"}
+                · !{" "}
+                {t(summary().reuseDrops === 1 ? "session.cacheBustOne" : "session.cacheBusts", {
+                  count: summary().reuseDrops,
+                })}
               </span>
             </Show>
           </text>
@@ -1568,12 +1591,16 @@ function TurnTokenUsage(props: {
         <Show when={expanded()}>
           <box paddingLeft={INLINE_TOOL_ICON_WIDTH}>
             <text fg={theme.text.muted} attributes={TextAttributes.ITALIC}>
-              {"Step".padEnd(columns().step + 2)}
-              {"New".padStart(columns().newTokens)}
+              {t("session.tokenStep")}
+              {" ".repeat(columns().step + 2 - stringWidth(t("session.tokenStep")))}
+              {" ".repeat(columns().newTokens - stringWidth(t("session.tokenNew")))}
+              {t("session.tokenNew")}
               {"  "}
-              {"Cached".padStart(columns().cached)}
+              {" ".repeat(columns().cached - stringWidth(t("session.tokenCached")))}
+              {t("session.tokenCached")}
               {"  "}
-              {"Total".padStart(columns().total)}
+              {" ".repeat(columns().total - stringWidth(t("session.tokenTotal")))}
+              {t("session.tokenTotal")}
             </text>
           </box>
           <For each={steps()}>
@@ -1592,7 +1619,7 @@ function TurnTokenUsage(props: {
                 <TurnTokenToolCalls tools={item.tools} />
                 <Show when={item.reuseDrop !== undefined}>
                   <text fg={theme.text.feedback.warning.base}>
-                    ! Likely cache bust: {item.reuseDrop?.toLocaleString()} fewer cached tokens than the previous step
+                    {t("session.cacheBust", { count: item.reuseDrop?.toLocaleString() ?? "" })}
                   </text>
                 </Show>
               </box>
@@ -1640,6 +1667,7 @@ function turnTokenToolSummary(tool: SessionMessageAssistantTool) {
 }
 
 function BackgroundToolHint(props: { messages: SessionMessageInfo[] }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const shortcut = Keymap.useShortcut("session.background")
   const running = createMemo(() => {
@@ -1665,7 +1693,9 @@ function BackgroundToolHint(props: { messages: SessionMessageInfo[] }) {
       {(value) => (
         <box marginTop={1} paddingLeft={3} flexShrink={0}>
           <text fg={theme.text.muted}>
-            Press <span style={{ fg: theme.text.base }}>{value()}</span> to move running work to the background
+            {t("session.pressKey")}
+            <span style={{ fg: theme.text.base }}>{value()}</span>
+            {t("session.backgroundHintAfter")}
           </text>
         </box>
       )}
@@ -1744,6 +1774,7 @@ function SessionReasoningGroupView(props: {
   completed: boolean
   message: (messageID: string) => SessionMessageInfo | undefined
 }) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
@@ -1798,7 +1829,7 @@ function SessionReasoningGroupView(props: {
                     )
             }
             complete={props.completed}
-            pending={latest() ? `Thinking: ${latest()}` : "Thinking"}
+            pending={latest() ? t("session.thinkingTitle", { title: latest()! }) : t("session.thinking")}
             spinner={!props.completed}
             onMouseOver={() => setHover(true)}
             onMouseOut={() => setHover(false)}
@@ -1807,9 +1838,13 @@ function SessionReasoningGroupView(props: {
               setExpanded((value) => !value)
             }}
           >
-            {props.completed ? "Thought" : latest() ? `Thinking: ${latest()}` : "Thinking"}
+            {props.completed
+              ? t("session.thought")
+              : latest()
+                ? t("session.thinkingTitle", { title: latest()! })
+                : t("session.thinking")}
             <Show when={props.completed && !expanded() && latest()}>: {latest()}</Show>
-            <Show when={props.completed && parts().length > 1}> · {parts().length} steps</Show>
+            <Show when={props.completed && parts().length > 1}> · {t("session.steps", { count: parts().length })}</Show>
             <Show when={props.completed && duration()}> · {Locale.duration(duration())}</Show>
           </InlineToolRow>
           <Show when={expanded()}>
@@ -1868,6 +1903,7 @@ function SessionGroupView(props: {
   completed: boolean
   message: (messageID: string) => SessionMessageInfo | undefined
 }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const ctx = use()
   const renderer = useRenderer()
@@ -1893,10 +1929,12 @@ function SessionGroupView(props: {
       result[name] = (result[name] ?? 0) + 1
       return result
     }, {})
-    const tools = Object.entries(counts).map(
-      ([name, count]) => `${count} ${count === 1 ? name : name === "search" ? "searches" : `${name}s`}`,
-    )
-    return `${completed() ? "Explored" : "Exploring"} — ${tools.join(", ")}`
+    const tools = Object.entries(counts).map(([name, count]) => {
+      if (name === "search") return t(count === 1 ? "session.searchOne" : "session.searchCount", { count })
+      if (name === "read") return t(count === 1 ? "session.readOne" : "session.readCount", { count })
+      return t("session.toolCount", { count, name })
+    })
+    return t(completed() ? "session.explored" : "session.exploring", { tools: tools.join(", ") })
   })
   return (
     <Show when={grouped().length > 0 || pending().length > 0}>
@@ -1932,6 +1970,7 @@ function SessionGroupView(props: {
 }
 
 function AssistantFooter(props: { message: SessionMessageAssistant }) {
+  const { t } = useI18n()
   const ctx = use()
   const config = useConfig()
   const data = useData()
@@ -1956,7 +1995,9 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
     <>
       <Show when={props.message.error && !interrupted() && !props.message.retry}>
         <box paddingLeft={3}>
-          <text fg={theme.text.feedback.error.base}>Error: {errorMessage(props.message.error)}</text>
+          <text fg={theme.text.feedback.error.base}>
+            {t("session.error", { error: errorMessage(props.message.error) })}
+          </text>
         </box>
       </Show>
       <AssistantRetry retry={props.message.retry} />
@@ -1975,7 +2016,7 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
             {(value) => <span style={{ fg: theme.text.muted }}> · {value().toFixed(1)} tok/s</span>}
           </Show>
           <Show when={interrupted()}>
-            <span style={{ fg: theme.text.muted }}> · interrupted</span>
+            <span style={{ fg: theme.text.muted }}> · {t("session.interrupted")}</span>
           </Show>
         </text>
       </box>
@@ -1984,13 +2025,14 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
 }
 
 function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   if (props.message.type === "location-switched")
     return (
       <box paddingLeft={3}>
         <text>
-          <span style={{ fg: theme.text.muted }}>↳ Moved to </span>
+          <span style={{ fg: theme.text.muted }}>{t("session.movedTo")}</span>
           <span style={{ fg: theme.text.feedback.info.base }}>{props.message.location.directory}</span>
         </text>
       </box>
@@ -1999,11 +2041,11 @@ function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
     if (props.message.type === "agent-switched") {
       const agent = Locale.titlecase(props.message.agent)
       if (props.message.previous && props.message.previous !== props.message.agent)
-        return `Switched agent from ${Locale.titlecase(props.message.previous)} to ${agent}`
-      return `Switched agent to ${agent}`
+        return t("session.agentFrom", { previous: Locale.titlecase(props.message.previous), agent })
+      return t("session.agentTo", { agent })
     }
     if (props.message.type === "model-switched")
-      return switchLabel(props.message.model, ctx.models(), props.message.previous)
+      return switchLabel(props.message.model, t, ctx.models(), props.message.previous)
     return ""
   }
   return (
@@ -2014,6 +2056,7 @@ function SessionSwitchMessageV2(props: { message: SessionMessageInfo }) {
 }
 
 function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const renderer = useRenderer()
@@ -2024,17 +2067,23 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
   const completion = () => source() === "subagent" || source() === "shell"
   const childID = () => (source() === "subagent" ? stringValue(metadata()?.childID) : undefined)
   const state = () => stringValue(metadata()?.state)
-  const actor = () => (source() === "shell" ? "Shell" : Locale.titlecase(stringValue(metadata()?.agent) ?? "Subagent"))
+  const actor = () =>
+    source() === "shell"
+      ? t("session.shell")
+      : stringValue(metadata()?.agent)
+        ? Locale.titlecase(stringValue(metadata()?.agent)!)
+        : t("session.subagent")
   const text = () => {
-    if (props.message.type === "system") return props.message.description ?? "Instructions updated"
+    if (props.message.type === "system") return props.message.description ?? t("session.instructionsUpdated")
     if (props.message.type === "synthetic") return props.message.description ?? ""
     return ""
   }
   const description = () => (source() === "shell" ? text().replace(/\s+/g, " ").trim() : text())
   const status = () => {
-    if (state() === "completed") return "finished"
-    if (state() === "error") return "failed"
-    return state() ?? "finished"
+    if (state() === "completed") return t("session.finished")
+    if (state() === "error") return t("session.failed")
+    if (state() === "cancelled") return t("session.cancelled")
+    return state() ?? t("session.finished")
   }
   const heading = () => `${state() === "completed" ? "↳" : "!"} ${actor()} ${status()}`
   const suffix = () => Locale.truncateWidth(` · ${description()}`, Math.max(0, ctx.width - 3 - stringWidth(heading())))
@@ -2048,7 +2097,7 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
     <Show
       when={completion()}
       fallback={
-        <InlineToolRow icon="◈" color={theme.text.muted} pending="Notice" complete={true}>
+        <InlineToolRow icon="◈" color={theme.text.muted} pending={t("session.notice")} complete={true}>
           {text()}
         </InlineToolRow>
       }
@@ -2073,15 +2122,17 @@ function SessionNoticeMessageV2(props: { message: SessionMessageInfo }) {
 }
 
 function SessionSkillMessage(props: { message: Extract<SessionMessageInfo, { type: "skill" }> }) {
+  const { t } = useI18n()
   const theme = useTheme()
   return (
-    <InlineToolRow icon="→" color={theme.text.muted} pending="Skill" complete={true}>
-      Skill {props.message.name}
+    <InlineToolRow icon="→" color={theme.text.muted} pending={t("session.skill")} complete={true}>
+      {t("session.skill")} {props.message.name}
     </InlineToolRow>
   )
 }
 
 function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type: "compaction" }> }) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
@@ -2099,7 +2150,7 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
     const input = tokens.input + tokens.cache.read + tokens.cache.write
     const output = tokens.output + tokens.reasoning
     if (input + output <= 0) return
-    return `${Locale.number(input)} in · ${Locale.number(output)} out`
+    return t("session.tokenIO", { input: Locale.number(input), output: Locale.number(output) })
   }
   return (
     <box>
@@ -2118,11 +2169,11 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
           </Switch>
           <text fg={color()}>
             {props.message.status === "completed" && props.message.providerContext
-              ? "Provider compaction"
-              : "Compaction"}
+              ? t("session.providerCompaction")
+              : t("session.compaction")}
           </text>
           <Show when={cancelled()}>
-            <text fg={color()}>· cancelled</text>
+            <text fg={color()}>· {t("session.cancelled")}</text>
           </Show>
           <Show when={usage()}>
             <text fg={color()}>· {usage()}</text>
@@ -2150,13 +2201,14 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
 }
 
 function CompactionQueued() {
+  const { t } = useI18n()
   const theme = useTheme()
   return (
     <box flexDirection="row" alignItems="center">
       <box border={["top"]} borderColor={theme.border.base} flexGrow={1} />
       <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1}>
         <text fg={theme.text.muted}>◇</text>
-        <text fg={theme.text.muted}>Compaction queued</text>
+        <text fg={theme.text.muted}>{t("session.compactionQueued")}</text>
       </box>
       <box border={["top"]} borderColor={theme.border.base} flexGrow={1} />
     </box>
@@ -2178,6 +2230,7 @@ function RevertMessage(props: {
     readonly deletions: number
   }>
 }) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const route = useRouteData("session")
@@ -2213,7 +2266,7 @@ function RevertMessage(props: {
         backgroundColor={hover() ? theme.decrease(theme.background.raised.base) : theme.background.raised.base}
       >
         <text fg={theme.text.muted}>
-          {props.count} message{props.count === 1 ? "" : "s"} reverted
+          {t(props.count === 1 ? "session.revertedOne" : "session.reverted", { count: props.count })}
         </text>
         <Show when={props.files.length > 0}>
           <box paddingTop={1} paddingBottom={1} flexDirection="column">
@@ -2244,7 +2297,8 @@ function RevertMessage(props: {
           </box>
         </Show>
         <text fg={theme.text.muted}>
-          <span style={{ fg: theme.text.base }}>{redoKey()}</span> or /redo to restore
+          <span style={{ fg: theme.text.base }}>{redoKey()}</span>
+          {t("session.restoreHintAfter")}
         </text>
       </box>
     </box>
@@ -2252,11 +2306,12 @@ function RevertMessage(props: {
 }
 
 function ShellMessage(props: { message: Extract<SessionMessageInfo, { type: "shell" }> }) {
+  const { t } = useI18n()
   const error = createMemo(() => {
-    if (props.message.status === "killed") return "Command cancelled"
-    if (props.message.status === "timeout") return "Command timed out"
+    if (props.message.status === "killed") return t("session.commandCancelled")
+    if (props.message.status === "timeout") return t("session.commandTimeout")
     if (props.message.exit !== undefined && props.message.exit !== 0)
-      return `Command exited with code ${props.message.exit}`
+      return t("session.commandExit", { code: props.message.exit })
   })
 
   return (
@@ -2271,6 +2326,7 @@ function ShellMessage(props: { message: Extract<SessionMessageInfo, { type: "she
 }
 
 function UserMessage(props: { message: SessionMessageUser }) {
+  const { t } = useI18n()
   const ctx = use()
   const data = useData()
   const local = useLocal()
@@ -2316,10 +2372,10 @@ function UserMessage(props: { message: SessionMessageUser }) {
             if (delivery() === "steer") {
               dialog.replace(() => (
                 <DialogSelect
-                  title="Pending steer"
+                  title={t("session.pendingSteer")}
                   options={[
-                    { title: "Move to queue", value: "queue" as const },
-                    { title: "Delete", value: "cancel" as const },
+                    { title: t("session.moveQueue"), value: "queue" as const },
+                    { title: t("session.delete"), value: "cancel" as const },
                   ]}
                   onSelect={(option) => {
                     void updatePendingSteer(option.value)
@@ -2355,7 +2411,7 @@ function UserMessage(props: { message: SessionMessageUser }) {
                         bold: true,
                       }}
                     >
-                      {" skill "}
+                      {` ${t("session.skill")} `}
                     </span>
                     <span style={{ bg: theme.decrease(theme.background.raised.base), fg: theme.text.muted }}>
                       {` ${skill.name} `}
@@ -2369,7 +2425,8 @@ function UserMessage(props: { message: SessionMessageUser }) {
             <box flexDirection="row" paddingTop={1} gap={1} flexWrap="wrap">
               <For each={files()}>
                 {(file) => {
-                  const label = file.mime === "application/x-directory" ? "dir" : "file"
+                  const label = () =>
+                    file.mime === "application/x-directory" ? t("session.directory") : t("session.file")
                   return (
                     <text fg={theme.text.base}>
                       <span
@@ -2379,11 +2436,11 @@ function UserMessage(props: { message: SessionMessageUser }) {
                           bold: true,
                         }}
                       >
-                        {` ${label} `}
+                        {` ${label()} `}
                       </span>
                       <span style={{ bg: theme.decrease(theme.background.raised.base), fg: theme.text.muted }}>
                         {" "}
-                        {file.name ?? (file.source.type === "uri" ? file.source.uri : "attachment")}{" "}
+                        {file.name ?? (file.source.type === "uri" ? file.source.uri : t("session.attachment"))}{" "}
                       </span>
                     </text>
                   )
@@ -2398,6 +2455,7 @@ function UserMessage(props: { message: SessionMessageUser }) {
 }
 
 function QueuedPromptDock(props: { prompts: { id: string; text: string }[]; onOpen: () => void }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const [hover, setHover] = createSignal(false)
   const next = createMemo(() => props.prompts[0]?.text.replaceAll("\n", " "))
@@ -2421,7 +2479,7 @@ function QueuedPromptDock(props: { prompts: { id: string; text: string }[]; onOp
         flexDirection="row"
       >
         <text fg={theme.text.muted} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-          <span style={{ fg: theme.text.base }}>{props.prompts.length} queued</span>
+          <span style={{ fg: theme.text.base }}>{t("session.queuedCount", { count: props.prompts.length })}</span>
           <Show when={next()}>{(text) => <> · {text()}</>}</Show>
         </text>
       </box>
@@ -2430,6 +2488,7 @@ function QueuedPromptDock(props: { prompts: { id: string; text: string }[]; onOp
 }
 
 function AssistantRetry(props: { retry: SessionMessageAssistant["retry"] }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const [seconds, setSeconds] = createSignal(0)
   createEffect(() => {
@@ -2447,8 +2506,8 @@ function AssistantRetry(props: { retry: SessionMessageAssistant["retry"] }) {
       {(retry) => (
         <box paddingLeft={3}>
           <text fg={theme.text.feedback.warning.base}>
-            ⚠ {seconds() > 0 ? `Retrying in ${seconds()}s` : "Retry due"} · attempt {retry().attempt} ·{" "}
-            {retry().error.message}
+            ⚠ {seconds() > 0 ? t("session.retryIn", { seconds: seconds() }) : t("session.retryDue")} ·{" "}
+            {t("session.attempt", { count: retry().attempt })} · {retry().error.message}
           </text>
         </box>
       )}
@@ -2542,6 +2601,7 @@ function ToolImages(props: { parts: readonly SessionMessageAssistantTool[] }) {
 }
 
 function SessionImages(props: { images: readonly { uri: string }[]; paddingLeft?: number }) {
+  const { t } = useI18n()
   const ctx = use()
   const dialog = useDialog()
   const images = createMemo(() => (ctx.config.session?.image_preview ? props.images : []))
@@ -2576,7 +2636,7 @@ function SessionImages(props: { images: readonly { uri: string }[]; paddingLeft?
                   dialog.replace(() => <DialogImagePreview images={images()} initial={index()} />)
                 }}
               >
-                <Show when={!failed()} fallback={<text>No preview</text>}>
+                <Show when={!failed()} fallback={<text>{t("session.noPreview")}</text>}>
                   <image
                     source={image.uri}
                     fit="cover"
@@ -2593,7 +2653,7 @@ function SessionImages(props: { images: readonly { uri: string }[]; paddingLeft?
         <Show when={images().length > visible().length}>
           <box width={8} height={height()} flexShrink={1} alignItems="center" justifyContent="center">
             <text wrapMode="none" truncate>
-              +{images().length - visible().length} more
+              {t("session.more", { count: images().length - visible().length })}
             </text>
           </box>
         </Show>
@@ -2618,6 +2678,7 @@ type ToolProps = {
   part: SessionMessageAssistantTool
 }
 function GenericTool(props: ToolProps) {
+  const { t } = useI18n()
   const theme = useTheme()
   const output = createMemo(() => props.output?.trim() ?? "")
   const input = createMemo(() => Object.entries(props.input))
@@ -2655,7 +2716,7 @@ function GenericTool(props: ToolProps) {
             {(value) => (
               <box flexDirection="row">
                 <text flexShrink={0} fg={theme.text.muted}>
-                  output:{" "}
+                  {t("session.output")}:{" "}
                 </text>
                 <text flexGrow={1} fg={theme.text.base} wrapMode="word">
                   {value()}
@@ -2817,9 +2878,7 @@ function BlockTool(props: BlockToolProps) {
               <Show
                 when={props.spinner}
                 fallback={
-                  <text
-                    fg={permission() ? theme.text.feedback.warning.base : (props.headerColor ?? theme.text.muted)}
-                  >
+                  <text fg={permission() ? theme.text.feedback.warning.base : (props.headerColor ?? theme.text.muted)}>
                     {title()}
                   </text>
                 }
@@ -2891,6 +2950,7 @@ function ShellDisplay(props: {
   output?: string
   error?: string
 }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const ctx = use()
   const client = useClient()
@@ -2973,7 +3033,7 @@ function ShellDisplay(props: {
       if (props.background && !expanded()) return ""
       if (props.status === "completed" && props.output !== undefined) return stripAnsi(props.output.trim())
       const text = stripAnsi((backgroundOutput() || props.output || "").trim())
-      return outputTruncated() ? `[earlier output omitted]\n${text}` : text
+      return outputTruncated() ? `${t("session.earlierOutput")}\n${text}` : text
     }
     return stripAnsi(props.output?.trim() ?? "")
   })
@@ -2998,20 +3058,16 @@ function ShellDisplay(props: {
           when={props.command}
           fallback={
             isRunning() || props.status === "streaming" ? (
-              <Spinner color={color()}>Writing command…</Spinner>
+              <Spinner color={color()}>{t("session.writingCommand")}</Spinner>
             ) : (
-              <text fg={theme.text.muted}>Writing command…</text>
+              <text fg={theme.text.muted}>{t("session.writingCommand")}</text>
             )
           }
         >
           <Show
             when={isRunning()}
             fallback={
-              <text
-                fg={theme.text.base}
-                wrapMode={expanded() ? "word" : "char"}
-                maxHeight={expanded() ? undefined : 2}
-              >
+              <text fg={theme.text.base} wrapMode={expanded() ? "word" : "char"} maxHeight={expanded() ? undefined : 2}>
                 {limitedInput()}
               </text>
             }
@@ -3034,7 +3090,7 @@ function ShellDisplay(props: {
           </Show>
         </Show>
         <Show when={props.background}>
-          <StatusBadge raised>Background</StatusBadge>
+          <StatusBadge raised>{t("session.background")}</StatusBadge>
         </Show>
       </box>
     </BlockTool>
@@ -3042,6 +3098,7 @@ function ShellDisplay(props: {
 }
 
 function Write(props: ToolProps) {
+  const { t } = useI18n()
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
   const pathFormatter = usePathFormatter()
@@ -3053,7 +3110,7 @@ function Write(props: ToolProps) {
     <Switch>
       <Match when={props.part.state.status === "completed"}>
         <BlockTool
-          path={{ label: "# Wrote", value: pathFormatter.format(stringValue(props.input.path)) }}
+          path={{ label: t("session.wrote"), value: pathFormatter.format(stringValue(props.input.path)) }}
           part={props.part}
         >
           <line_number fg={theme.text.muted} minWidth={3} paddingRight={1}>
@@ -3069,8 +3126,13 @@ function Write(props: ToolProps) {
         </BlockTool>
       </Match>
       <Match when={true}>
-        <InlineTool icon="←" pending="Preparing write…" complete={stringValue(props.input.path)} part={props.part}>
-          Write {pathFormatter.format(stringValue(props.input.path))}
+        <InlineTool
+          icon="←"
+          pending={t("session.preparingWrite")}
+          complete={stringValue(props.input.path)}
+          part={props.part}
+        >
+          {t("session.write")} {pathFormatter.format(stringValue(props.input.path))}
         </InlineTool>
       </Match>
     </Switch>
@@ -3078,19 +3140,32 @@ function Write(props: ToolProps) {
 }
 
 function Glob(props: ToolProps) {
+  const { t } = useI18n()
   const pathFormatter = usePathFormatter()
   return (
-    <InlineTool icon="✱" pending="Finding files…" complete={stringValue(props.input.pattern)} part={props.part}>
+    <InlineTool
+      icon="✱"
+      pending={t("session.findingFiles")}
+      complete={stringValue(props.input.pattern)}
+      part={props.part}
+    >
       Glob "{stringValue(props.input.pattern)}"{" "}
-      <Show when={stringValue(props.input.path)}>in {pathFormatter.format(stringValue(props.input.path))} </Show>
+      <Show when={stringValue(props.input.path)}>
+        {t("session.inPath", { path: pathFormatter.format(stringValue(props.input.path)) })}{" "}
+      </Show>
       <Show when={finiteNumber(props.metadata.count)}>
-        ({finiteNumber(props.metadata.count)} {finiteNumber(props.metadata.count) === 1 ? "match" : "matches"})
+        (
+        {t(finiteNumber(props.metadata.count) === 1 ? "session.matchOne" : "session.matches", {
+          count: finiteNumber(props.metadata.count)!,
+        })}
+        )
       </Show>
     </InlineTool>
   )
 }
 
 function Read(props: ToolProps) {
+  const { t } = useI18n()
   const theme = useTheme()
   const pathFormatter = usePathFormatter()
   const isRunning = createMemo(() => props.part.state.status === "running")
@@ -3104,18 +3179,18 @@ function Read(props: ToolProps) {
     <>
       <InlineTool
         icon="→"
-        pending="Reading file…"
+        pending={t("session.readingFile")}
         complete={stringValue(props.input.path)}
         spinner={isRunning()}
         part={props.part}
       >
-        Read {pathFormatter.format(stringValue(props.input.path))}
+        {t("session.read")} {pathFormatter.format(stringValue(props.input.path))}
       </InlineTool>
       <For each={loaded()}>
         {(filepath) => (
           <box paddingLeft={3}>
             <text paddingLeft={3} fg={theme.text.muted}>
-              ↳ Loaded {pathFormatter.format(filepath)}
+              {t("session.loaded", { path: pathFormatter.format(filepath) })}
             </text>
           </box>
         )}
@@ -3125,35 +3200,54 @@ function Read(props: ToolProps) {
 }
 
 function Grep(props: ToolProps) {
+  const { t } = useI18n()
   const pathFormatter = usePathFormatter()
   return (
-    <InlineTool icon="✱" pending="Searching content…" complete={stringValue(props.input.pattern)} part={props.part}>
+    <InlineTool
+      icon="✱"
+      pending={t("session.searchingContent")}
+      complete={stringValue(props.input.pattern)}
+      part={props.part}
+    >
       Grep "{stringValue(props.input.pattern)}"{" "}
-      <Show when={stringValue(props.input.path)}>in {pathFormatter.format(stringValue(props.input.path))} </Show>
+      <Show when={stringValue(props.input.path)}>
+        {t("session.inPath", { path: pathFormatter.format(stringValue(props.input.path)) })}{" "}
+      </Show>
       <Show when={finiteNumber(props.metadata.matches)}>
-        ({finiteNumber(props.metadata.matches)} {finiteNumber(props.metadata.matches) === 1 ? "match" : "matches"})
+        (
+        {t(finiteNumber(props.metadata.matches) === 1 ? "session.matchOne" : "session.matches", {
+          count: finiteNumber(props.metadata.matches)!,
+        })}
+        )
       </Show>
     </InlineTool>
   )
 }
 
 function WebFetch(props: ToolProps) {
+  const { t } = useI18n()
   return (
-    <InlineTool icon="%" pending="Fetching from the web…" complete={stringValue(props.input.url)} part={props.part}>
+    <InlineTool icon="%" pending={t("session.fetchingWeb")} complete={stringValue(props.input.url)} part={props.part}>
       WebFetch {stringValue(props.input.url)}
     </InlineTool>
   )
 }
 
 function WebSearch(props: ToolProps) {
+  const { t } = useI18n()
   const ctx = use()
   const provider = createMemo(() => stringValue(props.metadata.provider))
   return (
-    <InlineTool icon="◈" pending="Searching web…" complete={stringValue(props.input.query)} part={props.part}>
-      <Show when={provider()} fallback="Web Search">
+    <InlineTool
+      icon="◈"
+      pending={t("session.searchingWeb")}
+      complete={stringValue(props.input.query)}
+      part={props.part}
+    >
+      <Show when={provider()} fallback={t("session.webSearch")}>
         {(value) => (
           <>
-            Web Search via{" "}
+            {t("session.webSearchVia")}{" "}
             <RetryProvider
               value={{
                 id: `${ctx.sessionID}:${props.part.time.created}:${props.part.id}`,
@@ -3171,6 +3265,7 @@ function WebSearch(props: ToolProps) {
 }
 
 function Subagent(props: ToolProps) {
+  const { t } = useI18n()
   const { navigate } = useRoute()
   const data = useData()
   const sessionID = createMemo(() => stringValue(props.metadata.sessionID) ?? stringValue(props.metadata.sessionId))
@@ -3188,7 +3283,7 @@ function Subagent(props: ToolProps) {
       spinner={!continuation() && isRunning()}
       running={isRunning()}
       complete={description()}
-      pending="Delegating…"
+      pending={t("session.delegating")}
       part={props.part}
       onClick={() => {
         const id = sessionID()
@@ -3196,11 +3291,11 @@ function Subagent(props: ToolProps) {
       }}
       status={
         isBackgroundSubagent(props.metadata, props.part.state.status) ? (
-          <StatusBadge>Background</StatusBadge>
+          <StatusBadge>{t("session.background")}</StatusBadge>
         ) : undefined
       }
     >
-      {`${continuation() ? "Continue subagent" : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent`} — ${description() ?? "Subagent"}${model() ? ` · ${model()}` : ""}`}
+      {`${continuation() ? t("session.continueSubagent") : t("session.namedSubagent", { agent: Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? t("session.general")) })} — ${description() ?? t("session.subagent")}${model() ? ` · ${model()}` : ""}`}
     </InlineTool>
   )
 }
@@ -3322,6 +3417,7 @@ function Execute(props: ToolProps) {
 }
 
 function Edit(props: ToolProps) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
@@ -3342,7 +3438,7 @@ function Edit(props: ToolProps) {
     <Switch>
       <Match when={file()}>
         {(item) => (
-          <BlockTool path={{ label: "← Edit", value: pathFormatter.format(path()) }} part={props.part}>
+          <BlockTool path={{ label: t("session.edit"), value: pathFormatter.format(path()) }} part={props.part}>
             <box paddingLeft={1}>
               <PatchDiff
                 diff={item().patch}
@@ -3373,10 +3469,10 @@ function Edit(props: ToolProps) {
         <BlockTool
           path={
             stringValue(props.input.path)
-              ? { label: "← Edit", value: pathFormatter.format(stringValue(props.input.path)) }
+              ? { label: t("session.edit"), value: pathFormatter.format(stringValue(props.input.path)) }
               : undefined
           }
-          title={stringValue(props.input.path) ? undefined : "# Preparing edit…"}
+          title={stringValue(props.input.path) ? undefined : t("session.preparingEdit")}
           part={props.part}
           spinner={props.part.state.status === "streaming"}
         />
@@ -3386,6 +3482,7 @@ function Edit(props: ToolProps) {
 }
 
 function ApplyPatch(props: ToolProps) {
+  const { t } = useI18n()
   const ctx = use()
   const theme = useTheme()
   const { currentSyntax: syntax } = useThemes()
@@ -3420,7 +3517,12 @@ function ApplyPatch(props: ToolProps) {
             {(file) => (
               <BlockTool
                 path={{
-                  label: file.type === "add" ? "# Created" : file.type === "delete" ? "# Deleted" : "← Patched",
+                  label:
+                    file.type === "add"
+                      ? t("session.created")
+                      : file.type === "delete"
+                        ? t("session.deleted")
+                        : t("session.patched"),
                   value: pathFormatter.format(file.relativePath),
                 }}
                 part={props.part}
@@ -3429,7 +3531,9 @@ function ApplyPatch(props: ToolProps) {
                   when={file.type !== "delete"}
                   fallback={
                     <text fg={theme.diff.text.removed}>
-                      -{file.deletions} line{file.deletions !== 1 ? "s" : ""}
+                      {t(file.deletions === 1 ? "session.deletedLine" : "session.deletedLines", {
+                        count: file.deletions,
+                      })}
                     </text>
                   }
                 >
@@ -3467,7 +3571,12 @@ function ApplyPatch(props: ToolProps) {
             {(file) => (
               <BlockTool
                 path={{
-                  label: file.type === "add" ? "# Created" : file.type === "delete" ? "# Deleted" : "← Patched",
+                  label:
+                    file.type === "add"
+                      ? t("session.created")
+                      : file.type === "delete"
+                        ? t("session.deleted")
+                        : t("session.patched"),
                   value: pathFormatter.format(file.resource),
                 }}
                 part={props.part}
@@ -3487,13 +3596,17 @@ function ApplyPatch(props: ToolProps) {
           path={
             targets().length === 1
               ? {
-                  label: props.part.state.status === "error" ? "# Patch failed" : "Patching",
+                  label: props.part.state.status === "error" ? t("session.patchFailed") : t("session.patching"),
                   value: pathFormatter.format(targets()[0]),
                 }
               : undefined
           }
           title={
-            targets().length === 1 ? undefined : props.part.state.status === "error" ? "# Patch failed" : "Patching"
+            targets().length === 1
+              ? undefined
+              : props.part.state.status === "error"
+                ? t("session.patchFailed")
+                : t("session.patching")
           }
           part={props.part}
           spinner={props.part.state.status === "streaming" || props.part.state.status === "running"}
@@ -3506,20 +3619,21 @@ function ApplyPatch(props: ToolProps) {
 }
 
 function Question(props: ToolProps) {
+  const { t } = useI18n()
   const theme = useTheme()
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
   const count = createMemo(() => questions().length)
 
   function format(answer?: ReadonlyArray<string>) {
-    if (!answer?.length) return "(no answer)"
+    if (!answer?.length) return t("session.noAnswer")
     return answer.join(", ")
   }
 
   return (
     <Switch>
       <Match when={answers()}>
-        <BlockTool title="# Questions" part={props.part}>
+        <BlockTool title={t("session.questions")} part={props.part}>
           <box gap={1}>
             <For each={questions()}>
               {(q, i) => (
@@ -3533,8 +3647,8 @@ function Question(props: ToolProps) {
         </BlockTool>
       </Match>
       <Match when={true}>
-        <InlineTool icon="→" pending="Asking questions…" complete={count()} part={props.part}>
-          Asked {count()} question{count() !== 1 ? "s" : ""}
+        <InlineTool icon="→" pending={t("session.askingQuestions")} complete={count()} part={props.part}>
+          {t(count() === 1 ? "session.askedQuestion" : "session.askedQuestions", { count: count() })}
         </InlineTool>
       </Match>
     </Switch>
@@ -3542,15 +3656,17 @@ function Question(props: ToolProps) {
 }
 
 function Skill(props: ToolProps) {
+  const { t } = useI18n()
   const name = createMemo(() => stringValue(props.metadata.name) ?? stringValue(props.input.id))
   return (
-    <InlineTool icon="→" pending="Loading skill…" complete={name()} part={props.part}>
-      Skill "{name()}"
+    <InlineTool icon="→" pending={t("session.loadingSkill")} complete={name()} part={props.part}>
+      {t("session.skill")} "{name()}"
     </InlineTool>
   )
 }
 
 function Diagnostics(props: { diagnostics: unknown; filePath: string }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const terminalEnvironment = useTuiTerminalEnvironment()
   const errors = createMemo(() => {
@@ -3567,7 +3683,11 @@ function Diagnostics(props: { diagnostics: unknown; filePath: string }) {
         <For each={errors()}>
           {(diagnostic) => (
             <text fg={theme.text.feedback.error.base}>
-              Error [{diagnostic.range.start.line + 1}:{diagnostic.range.start.character + 1}] {diagnostic.message}
+              {t("session.diagnostic", {
+                line: diagnostic.range.start.line + 1,
+                column: diagnostic.range.start.character + 1,
+                message: diagnostic.message,
+              })}
             </text>
           )}
         </For>
@@ -3605,15 +3725,21 @@ function recordValue(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined
 }
 
-function formatSessionTranscript(session: SessionInfo, messages: SessionMessageInfo[], thinking: boolean, tools = true) {
+function formatSessionTranscript(
+  session: SessionInfo,
+  messages: SessionMessageInfo[],
+  thinking: boolean,
+  t: Translator<Key>,
+  tools = true,
+) {
   const body = messages.flatMap((message) => {
-    if (message.type === "user") return [`## User\n\n${message.text}`]
+    if (message.type === "user") return [`## ${t("session.user")}\n\n${message.text}`]
     if (message.type === "shell")
-      return [`## Shell\n\n\`\`\`\n$ ${message.command}\n${message.output?.output ?? ""}\n\`\`\``]
+      return [`## ${t("session.shell")}\n\n\`\`\`\n$ ${message.command}\n${message.output?.output ?? ""}\n\`\`\``]
     if (message.type !== "assistant") return []
     const content = message.content.flatMap((item) => {
       if (item.type === "text") return [item.text]
-      if (item.type === "reasoning") return thinking ? [`_Thinking:_\n\n${item.text}`] : []
+      if (item.type === "reasoning") return thinking ? [`_${t("session.thinking")}:_\n\n${item.text}`] : []
       if (!tools) return []
       const input = typeof item.state.input === "string" ? item.state.input : JSON.stringify(item.state.input, null, 2)
       const output =
@@ -3624,12 +3750,14 @@ function formatSessionTranscript(session: SessionInfo, messages: SessionMessageI
             : toolDisplayContent(item.state)
                 .flatMap((entry) => (entry.type === "text" ? [entry.text] : [entry.name ?? entry.uri]))
                 .join("\n")
-      return [`**Tool: ${item.name}**\n\n**Input:**\n\`\`\`json\n${input}\n\`\`\`\n\n${output}`]
+      return [
+        `**${t("session.tool")}: ${item.name}**\n\n**${t("session.input")}:**\n\`\`\`json\n${input}\n\`\`\`\n\n${output}`,
+      ]
     })
     if (content.length === 0) return []
-    return [`## Assistant\n\n${content.join("\n\n")}`]
+    return [`## ${t("session.assistant")}\n\n${content.join("\n\n")}`]
   })
-  return `# ${withTimestampedFallback(session)}\n\n**Session ID:** ${session.id}\n**Created:** ${new Date(session.time.created).toLocaleString()}\n**Updated:** ${new Date(session.time.updated).toLocaleString()}\n\n---\n\n${body.join("\n\n---\n\n")}\n`
+  return `# ${withTimestampedFallback(session)}\n\n**${t("session.sessionID")}:** ${session.id}\n**${t("session.createdAt")}:** ${new Date(session.time.created).toLocaleString()}\n**${t("session.updatedAt")}:** ${new Date(session.time.updated).toLocaleString()}\n\n---\n\n${body.join("\n\n---\n\n")}\n`
 }
 
 export function parseApplyPatchFiles(value: unknown) {

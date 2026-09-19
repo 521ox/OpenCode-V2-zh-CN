@@ -10,6 +10,7 @@
 // Resolves when the footer closes and all in-flight work finishes.
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Locale } from "../util/locale"
+import { resolveLocale, translate } from "../i18n"
 import { isCompactCommand, isExitCommand, isNewCommand } from "./prompt.shared"
 import type { FooterApi, FooterEvent, RunDelivery, RunPrompt } from "./types"
 
@@ -18,6 +19,7 @@ type Trace = {
 }
 
 export type QueueInput = {
+  locale?: string
   footer: FooterApi
   initialInput?: string
   trace?: Trace
@@ -98,7 +100,7 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 {
                   type: "stream.patch",
                   patch: {
-                    status: "new sessions unavailable",
+                    status: translate(resolveLocale(input.locale), "miniCli.newUnavailable"),
                   },
                 },
                 {
@@ -113,7 +115,7 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 type: "stream.patch",
                 patch: {
                   phase: "running",
-                  status: "starting new session",
+                  status: translate(resolveLocale(input.locale), "miniCli.newStarting"),
                 },
               },
               {
@@ -131,7 +133,7 @@ export async function runPromptQueue(input: QueueInput): Promise<void> {
                 type: "stream.patch",
                 patch: {
                   phase: "running",
-                  status: "compacting session",
+                  status: translate(resolveLocale(input.locale), "miniCli.compacting"),
                 },
               },
               {

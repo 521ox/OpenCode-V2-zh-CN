@@ -8,6 +8,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { watch } from "fs"
 import path from "path"
 import { TuiKeybind } from "./keybind"
+import { resolveLocale, type Locale } from "../i18n/locale"
 
 export interface Interface {
   readonly path?: string
@@ -64,6 +65,10 @@ export const Cursor = Schema.Struct({
 }).annotate({ description: "Terminal cursor settings" })
 
 export const Info = Schema.Struct({
+  locale: Schema.optional(Schema.String).annotate({
+    description:
+      "Interface language: zh (Simplified Chinese, default) or en (English). Locale aliases are normalized; unsupported languages use English",
+  }),
   theme: Schema.optional(
     Schema.Struct({
       name: Schema.optional(Schema.String).annotate({ description: "Theme name" }),
@@ -239,7 +244,11 @@ export const Info = Schema.Struct({
 })
 export type Info = Schema.Schema.Type<typeof Info>
 
-export type Resolved = Omit<Info, "attention" | "cursor" | "keybinds" | "leader" | "mouse" | "session" | "tabs"> & {
+export type Resolved = Omit<
+  Info,
+  "attention" | "cursor" | "keybinds" | "leader" | "locale" | "mouse" | "session" | "tabs"
+> & {
+  locale: Locale
   attention: {
     notifications: boolean
     sound: boolean
@@ -282,6 +291,7 @@ export function resolve(input: Info, options: { terminalSuspend: boolean }): Res
 
   return {
     ...input,
+    locale: resolveLocale(input.locale),
     attention: {
       notifications: input.attention?.notifications ?? false,
       sound: input.attention?.sound ?? false,

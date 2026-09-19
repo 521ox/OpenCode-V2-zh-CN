@@ -5,6 +5,7 @@ import { testRender, type JSX } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { createSignal, onMount } from "solid-js"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider, useData, type FormWithLocation } from "../../../src/context/data"
 import { Keymap } from "../../../src/context/keymap"
@@ -74,20 +75,22 @@ async function mountPanes(root: string, render: () => JSX.Element, parentID?: st
   const app = await testRender(
     () => (
       <TestTuiContexts directory={root} paths={{ home: root, state: root, worktree: root }}>
-        <ConfigProvider config={createTuiResolvedConfig({ animations: false })}>
-          <Keymap.Provider>
-            <ClientProvider api={createApi(transport.fetch)}>
-              <DataProvider directory={root}>
-                <LocationProvider>
-                  <ThemeProvider mode="dark" source={emptyThemeSource}>
-                    <ToastProvider>
-                      <Panes />
-                    </ToastProvider>
-                  </ThemeProvider>
-                </LocationProvider>
-              </DataProvider>
-            </ClientProvider>
-          </Keymap.Provider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", animations: false })}>
+          <I18nProvider>
+            <Keymap.Provider>
+              <ClientProvider api={createApi(transport.fetch)}>
+                <DataProvider directory={root}>
+                  <LocationProvider>
+                    <ThemeProvider mode="dark" source={emptyThemeSource}>
+                      <ToastProvider>
+                        <Panes />
+                      </ToastProvider>
+                    </ThemeProvider>
+                  </LocationProvider>
+                </DataProvider>
+              </ClientProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

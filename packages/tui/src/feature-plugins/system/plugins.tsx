@@ -7,6 +7,8 @@ import { Spinner } from "../../component/spinner"
 import { usePlugin } from "../../plugin/context"
 import { DialogSelect, type DialogSelectOption } from "../../ui/dialog-select"
 import { useDialog } from "../../ui/dialog"
+import { useI18n } from "../../context/i18n"
+import type { Key, Translator } from "../../i18n"
 
 const id = "opencode.plugins"
 
@@ -27,6 +29,7 @@ export function PluginsDialog(props: {
   plugins: ReturnType<typeof usePlugin>
   server?: () => readonly PluginInfo[]
 }) {
+  const i18n = useI18n()
   const dialog = useDialog()
   const [locked, setLocked] = createSignal(false)
   const [checking, setChecking] = createSignal(false)
@@ -93,9 +96,9 @@ export function PluginsDialog(props: {
       (entry): DialogSelectOption<string> => ({
         title: label(entry, props.context),
         value: entry.key,
-        category: entry.runtime === "tui" ? "TUI" : "Server",
+        category: entry.runtime === "tui" ? "TUI" : i18n.t("feature.plugins.server"),
         searchText: entry.runtime === "tui" ? entry.target : source(entry.plugin, props.context),
-        footer: updating(entry) ? "updating" : footer(entry),
+        footer: updating(entry) ? i18n.t("feature.plugins.updating") : footer(entry, i18n.t),
         footerColor:
           status(entry) === "failed"
             ? props.context.theme.text.feedback.error.base
@@ -118,8 +121,12 @@ export function PluginsDialog(props: {
   })
   const toggleTitle = createMemo(() => {
     const entry = focusedTui()
-    if (!entry) return "toggle"
-    return props.plugins.registered().find((plugin) => plugin.id === entry.id)?.active ? "disable" : "enable"
+    if (!entry) return i18n.t("feature.plugins.toggle")
+    return i18n.t(
+      props.plugins.registered().find((plugin) => plugin.id === entry.id)?.active
+        ? "feature.plugins.disable"
+        : "feature.plugins.enable",
+    )
   })
   const toggle = (entry: Entry | undefined) => {
     if (locked() || entry?.runtime !== "tui" || !entry.id) return
@@ -129,7 +136,10 @@ export function PluginsDialog(props: {
     void (current.active ? props.plugins.deactivate(current.id) : props.plugins.activate(current.id))
       .then((ok) => {
         if (ok) return
-        props.context.ui.toast.show({ variant: "error", message: `Failed to update plugin ${current.id}` })
+        props.context.ui.toast.show({
+          variant: "error",
+          message: i18n.t("feature.plugins.updateFailed", { id: current.id }),
+        })
       })
       .catch((cause) => {
         props.context.ui.toast.show({
@@ -185,21 +195,26 @@ export function PluginsDialog(props: {
         when={detail()}
         fallback={
           <DialogSelect
-            title="Plugins"
+            title={i18n.t("feature.plugins.title")}
             options={options()}
             locked={locked()}
             preserveSelection={true}
             bindings={[
               {
                 bind: "ctrl+a",
-                title: "Toggle internal plugins",
-                group: "Plugins",
+                title: i18n.t("feature.plugins.toggleInternal"),
+                group: i18n.t("feature.plugins.title"),
                 run: () => {
                   setShowInternal((value) => !value)
                 },
               },
             ]}
-            footerHints={[{ title: "ctrl+a", label: `${showInternal() ? "hide" : "show"} internal` }]}
+            footerHints={[
+              {
+                title: "ctrl+a",
+                label: i18n.t(showInternal() ? "feature.plugins.hideInternal" : "feature.plugins.showInternal"),
+              },
+            ]}
             onMove={(option) => setFocused(option.value)}
             onSelect={(option) => {
               const entry = entries().find((entry) => entry.key === option.value)
@@ -213,7 +228,7 @@ export function PluginsDialog(props: {
             }}
             actions={[
               {
-                title: checking() ? "checking for updates" : "check for updates",
+                title: i18n.t(checking() ? "feature.plugins.checking" : "feature.plugins.check"),
                 command: "dialog.plugins.check",
                 selection: "none",
                 hidden: !entries().some(
@@ -223,7 +238,7 @@ export function PluginsDialog(props: {
                 onTrigger: check,
               },
               {
-                title: "view error",
+                title: i18n.t("feature.plugins.viewError"),
                 command: "dialog.plugins.error",
                 hidden: !pluginError(focusedTui()),
                 onTrigger: (option) => {
@@ -239,7 +254,7 @@ export function PluginsDialog(props: {
                 onTrigger: (option) => toggle(entries().find((entry) => entry.key === option.value)),
               },
               {
-                title: "update",
+                title: i18n.t("feature.plugins.update"),
                 command: "dialog.plugins.update",
                 side: "right",
                 hidden: !updatable(focusedEntry()),
@@ -252,7 +267,7 @@ export function PluginsDialog(props: {
                   <span style={{ fg: props.context.theme.text.base }}>
                     <b>enter</b>
                   </span>
-                  <span style={{ fg: props.context.theme.text.muted }}> view error</span>
+                  <span style={{ fg: props.context.theme.text.muted }}> {i18n.t("feature.plugins.viewError")}</span>
                 </text>
               </Show>
             }
@@ -261,9 +276,11 @@ export function PluginsDialog(props: {
       >
         {(entry) => (
           <DialogErrorDetails
-            title={`${entry().runtime === "tui" ? "TUI" : "Server"} plugin error`}
+            title={i18n.t("feature.plugins.errorTitle", {
+              runtime: entry().runtime === "tui" ? "TUI" : i18n.t("feature.plugins.server"),
+            })}
             source={pluginSource(entry(), props.context)}
-            error={pluginError(entry()) ?? "Unknown plugin error"}
+            error={pluginError(entry()) ?? i18n.t("feature.plugins.unknownError")}
             diagnosticRef={pluginErrorRef(entry())}
             context={`Plugin: ${label(entry(), props.context)}\nStatus: failed\nRuntime: ${entry().runtime}\nSource: ${pluginSource(entry(), props.context)}`}
             onBack={() => {
@@ -308,14 +325,23 @@ function outdated(entry: Entry) {
   return entry.runtime === "server" && entry.plugin.source.type === "package" && entry.plugin.source.outdated === true
 }
 
-function footer(entry: Entry) {
+function footer(entry: Entry, t: Translator<Key>) {
+  const state = status(entry)
   const details = [
-    ...(status(entry) === "active" ? [] : [status(entry)]),
-    ...(isLocal(entry) ? ["local"] : []),
+    ...(state === "active"
+      ? []
+      : [
+          state === "failed"
+            ? t("feature.plugins.failed")
+            : state === "inactive"
+              ? t("feature.plugins.inactive")
+              : state,
+        ]),
+    ...(isLocal(entry) ? [t("feature.plugins.local")] : []),
     ...(entry.runtime === "server" && entry.plugin.source.type === "package" && entry.plugin.source.version
       ? [displayVersion(entry.plugin.source.version)]
       : []),
-    ...(outdated(entry) ? ["update available"] : []),
+    ...(outdated(entry) ? [t("feature.plugins.updateAvailable")] : []),
   ]
   return details.length ? details.join(", ") : undefined
 }
@@ -334,14 +360,15 @@ function pluginErrorRef(entry: Entry) {
 }
 
 function Commands(props: { context: Plugin.Context }) {
+  const i18n = useI18n()
   const plugins = usePlugin()
   props.context.keymap.layer(() => ({
     mode: "global",
     commands: [
       {
         id: "plugins.list",
-        title: "Plugins",
-        group: "System",
+        title: i18n.t("feature.plugins.title"),
+        group: i18n.t("feature.group.system"),
         slash: { name: "plugins" },
         palette: true,
         run() {

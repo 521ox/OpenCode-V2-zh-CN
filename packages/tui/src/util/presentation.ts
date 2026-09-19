@@ -1,4 +1,5 @@
 import { logo } from "../logo"
+import { type Key, type Translator } from "../i18n"
 
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
@@ -23,13 +24,13 @@ function wordmark(pad = "") {
   })
 }
 
-export function sessionEpilogue(input: { title: string; sessionID?: string }) {
+export function sessionEpilogue(input: { title: string; sessionID?: string }, t: Translator<Key>) {
   const weak = (text: string) => `${dim}${text.padEnd(10, " ")}${reset}`
   return [
     ...wordmark("  "),
     "",
-    `  ${weak("Session")}${bold}${input.title}${reset}`,
-    `  ${weak("Continue")}${bold}opencode -s ${input.sessionID}${reset}`,
+    `  ${weak(t("main.group.session"))}${bold}${input.title}${reset}`,
+    `  ${weak(t("main.continue"))}${bold}opencode -s ${input.sessionID}${reset}`,
     "",
   ].join("\n")
 }

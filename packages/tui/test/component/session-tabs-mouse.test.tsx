@@ -4,6 +4,7 @@ import { MouseButton } from "@opentui/core"
 import { expect, test } from "bun:test"
 import { createSignal } from "solid-js"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { EMPTY_SESSION_TAB_STATUS, SessionTabs, type SessionTabsController } from "../../src/component/session-tabs"
 import { ThemeProvider } from "../../src/context/theme"
 import { emptyThemeSource } from "../fixture/fixture"
@@ -28,13 +29,15 @@ test("releasing a transcript selection over tab controls does not activate them"
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <box flexDirection="column">
-              <SessionTabs controller={controller} animations={false} />
-              <text>selectable transcript text</text>
-            </box>
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <box flexDirection="column">
+                <SessionTabs controller={controller} animations={false} />
+                <text>selectable transcript text</text>
+              </box>
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),
@@ -79,10 +82,12 @@ test("middle-click closes a session tab without selecting it", async () => {
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <SessionTabs controller={controller} animations={false} />
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <SessionTabs controller={controller} animations={false} />
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),
@@ -127,10 +132,12 @@ test("keeps consecutive close controls fixed across overflow window changes", as
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <SessionTabs controller={controller} animations={false} />
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <SessionTabs controller={controller} animations={false} />
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),
@@ -178,13 +185,15 @@ test("reflows held tabs when the pointer leaves the strip", async () => {
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ tabs: { enabled: true } })}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <box flexDirection="column">
-              <SessionTabs controller={controller} animations={false} />
-              <text>outside</text>
-            </box>
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <box flexDirection="column">
+                <SessionTabs controller={controller} animations={false} />
+                <text>outside</text>
+              </box>
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),

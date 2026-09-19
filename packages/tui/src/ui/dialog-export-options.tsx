@@ -4,6 +4,7 @@ import { useTheme } from "../context/theme"
 import { useDialog, type DialogContext } from "./dialog"
 import { createStore } from "solid-js/store"
 import { For, Show } from "solid-js"
+import { useI18n } from "../context/i18n"
 
 export type ExportFormat = "markdown" | "json"
 
@@ -22,6 +23,7 @@ export type DialogExportOptionsProps = {
 type Active = ExportFormat | "thinking" | "tools" | "sanitize" | "copy" | "export"
 
 export function DialogExportOptions(props: DialogExportOptionsProps) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
   const overlayTheme = useTheme()
@@ -58,8 +60,8 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
     commands: [
       {
         bind: "tab",
-        title: "Next export option",
-        group: "Dialog",
+        title: t("main.export.next"),
+        group: t("main.group.dialog"),
         run: () => {
           const order: Active[] =
             store.format === "markdown"
@@ -70,8 +72,8 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
       },
       {
         bind: "return",
-        title: "Select export option",
-        group: "Dialog",
+        title: t("main.export.select"),
+        group: t("main.group.dialog"),
         run: activate,
       },
     ],
@@ -86,14 +88,14 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
     <box paddingLeft={2} paddingRight={2} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          Export session
+          {t("main.export.session")}
         </text>
         <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
           esc
         </text>
       </box>
       <box flexDirection="row" gap={1}>
-        <text fg={theme.text.base}>Export as:</text>
+        <text fg={theme.text.base}>{t("main.export.as")}</text>
         <box flexDirection="row" gap={1}>
           <For each={["markdown", "json"] as const}>
             {(format) => (
@@ -161,7 +163,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
                   : theme.text.formfield.base
             }
           >
-            Include thinking
+            {t("main.export.thinking")}
           </text>
         </box>
         <box
@@ -199,7 +201,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
                   : theme.text.formfield.base
             }
           >
-            Include tools
+            {t("main.export.tools")}
           </text>
         </box>
       </Show>
@@ -239,7 +241,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
                   : theme.text.formfield.base
             }
           >
-            Sanitize sensitive data
+            {t("main.export.sanitize")}
           </text>
         </box>
       </Show>
@@ -250,20 +252,18 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           backgroundColor={overlayTheme.background.raised.high}
           onMouseUp={() => confirm("copy")}
         >
-          <text fg={overlayTheme.text.base}>Copy</text>
+          <text fg={overlayTheme.text.base}>{t("main.copy")}</text>
         </box>
         <box
           paddingLeft={4}
           paddingRight={4}
           backgroundColor={
-            store.active === "export"
-              ? theme.background.action.primary.focused
-              : theme.background.action.primary.base
+            store.active === "export" ? theme.background.action.primary.focused : theme.background.action.primary.base
           }
           onMouseUp={() => confirm("export")}
         >
           <text fg={store.active === "export" ? theme.text.action.primary.focused : theme.text.action.primary.base}>
-            Export
+            {t("main.export")}
           </text>
         </box>
       </box>

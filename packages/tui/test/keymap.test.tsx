@@ -2,6 +2,7 @@
 import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { ConfigProvider } from "../src/config"
+import { I18nProvider } from "../src/context/i18n"
 import { Keymap } from "../src/context/keymap"
 import { createTuiResolvedConfig } from "./fixture/tui-runtime"
 
@@ -26,15 +27,18 @@ test("legacy page key aliases compile as page keys", async () => {
   const app = await testRender(() => (
     <ConfigProvider
       config={createTuiResolvedConfig({
+        locale: "en",
         keybinds: {
           "session.page.up": "pgup",
           "session.page.down": "pgdown",
         },
       })}
     >
-      <Keymap.Provider>
-        <Harness />
-      </Keymap.Provider>
+      <I18nProvider>
+        <Keymap.Provider>
+          <Harness />
+        </Keymap.Provider>
+      </I18nProvider>
     </ConfigProvider>
   ))
   try {
@@ -58,10 +62,12 @@ test("formats navigation keys as arrows", async () => {
   }
 
   const app = await testRender(() => (
-    <ConfigProvider config={createTuiResolvedConfig()}>
-      <Keymap.Provider>
-        <Harness />
-      </Keymap.Provider>
+    <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+      <I18nProvider>
+        <Keymap.Provider>
+          <Harness />
+        </Keymap.Provider>
+      </I18nProvider>
     </ConfigProvider>
   ))
   try {
@@ -87,10 +93,12 @@ test("returns every formatted command shortcut", async () => {
   }
 
   const app = await testRender(() => (
-    <ConfigProvider config={createTuiResolvedConfig()}>
-      <Keymap.Provider>
-        <Harness />
-      </Keymap.Provider>
+    <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+      <I18nProvider>
+        <Keymap.Provider>
+          <Harness />
+        </Keymap.Provider>
+      </I18nProvider>
     </ConfigProvider>
   ))
   try {
@@ -126,10 +134,12 @@ test("global commands stay reachable when the mode changes", async () => {
   }
 
   const app = await testRender(() => (
-    <ConfigProvider config={createTuiResolvedConfig()}>
-      <Keymap.Provider>
-        <Harness />
-      </Keymap.Provider>
+    <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+      <I18nProvider>
+        <Keymap.Provider>
+          <Harness />
+        </Keymap.Provider>
+      </I18nProvider>
     </ConfigProvider>
   ))
   try {

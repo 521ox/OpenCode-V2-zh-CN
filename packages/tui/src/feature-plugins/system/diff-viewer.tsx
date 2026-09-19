@@ -24,6 +24,8 @@ import { createDebouncedSignal } from "../../util/signal"
 import { useConfig } from "../../config"
 import { locationKey } from "../../context/data"
 import { useThemes } from "../../context/theme"
+import { useI18n } from "../../context/i18n"
+import type { Key, Translator } from "../../i18n"
 import { PatchDiff, type PatchDiffRef } from "../../component/patch-diff"
 import {
   allExpandedFileTreeDirectories,
@@ -70,13 +72,14 @@ function storedView(value: unknown): DiffView | undefined {
   if (value === "split" || value === "unified") return value
 }
 
-function diffSourceLabel(mode: DiffMode) {
-  if (mode === "branch") return "All"
-  if (mode === "committed") return "Committed"
-  return "Uncommitted"
+function diffSourceLabel(mode: DiffMode, t: Translator<Key>) {
+  if (mode === "branch") return t("feature.diff.all")
+  if (mode === "committed") return t("feature.diff.committed")
+  return t("feature.diff.uncommitted")
 }
 
 function DiffViewer(props: { context: Plugin.Context }) {
+  const i18n = useI18n()
   const dimensions = useTerminalDimensions()
   const config = useConfig()
   const [memory, updateMemory] = props.context.storage.memory<{
@@ -151,12 +154,12 @@ function DiffViewer(props: { context: Plugin.Context }) {
   }
   const result = () => (diff.error || diff.loading ? undefined : diff())
   const sourceDetail = () => {
-    if (mode() === "working") return "vs HEAD"
-    if (diff.error) return "Base or diff unavailable"
-    if (!result()) return "Resolving diff…"
+    if (mode() === "working") return i18n.t("feature.diff.vs", { base: "HEAD" })
+    if (diff.error) return i18n.t("feature.diff.unavailable")
+    if (!result()) return i18n.t("feature.diff.resolving")
     const base = result()?.base
-    if (!base) return "Base not reported"
-    return `vs ${base.name}`
+    if (!base) return i18n.t("feature.diff.noBase")
+    return i18n.t("feature.diff.vs", { base: base.name })
   }
 
   return (
@@ -214,6 +217,7 @@ function DiffBaseDialog(props: {
   current?: string
   onSelect: (ref: string) => void
 }) {
+  const i18n = useI18n()
   const theme = props.context.theme.surface("dialog")
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [branches] = createResource(search, (search) =>
@@ -223,24 +227,24 @@ function DiffBaseDialog(props: {
     <box paddingLeft={4} paddingRight={4}>
       <text fg={branches.error ? theme.text.feedback.error.base : theme.text.muted}>
         {branches.loading
-          ? "Loading branches…"
+          ? i18n.t("feature.diff.branchesLoading")
           : branches.error
-            ? "Could not load branches. Reopen the picker to try again."
-            : "No branches found"}
+            ? i18n.t("feature.diff.branchesError")
+            : i18n.t("feature.diff.noBranches")}
       </text>
     </box>
   )
 
   return (
     <DialogSelect
-      title="Base branch"
-      placeholder="Search local and remote branches"
+      title={i18n.t("feature.diff.baseBranch")}
+      placeholder={i18n.t("feature.diff.searchBranches")}
       skipFilter
       current={props.current?.replace(/^refs\/(heads|remotes)\//, "")}
       onFilter={setSearch}
       emptyView={<Empty />}
       noMatchView={<Empty />}
-      footer={<text fg={theme.text.muted}>Remembered until the TUI exits</text>}
+      footer={<text fg={theme.text.muted}>{i18n.t("feature.diff.remembered")}</text>}
       options={(branches.loading || branches.error ? [] : (branches()?.data ?? [])).map((name) => ({
         title: name,
         value: name,
@@ -272,6 +276,7 @@ export function DiffViewerContent(props: {
   onSwitchSource: (mode: DiffMode) => void
   onChooseBase?: () => void
 }) {
+  const i18n = useI18n()
   const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
   const config = useConfig()
@@ -525,16 +530,16 @@ export function DiffViewerContent(props: {
     props.onClose()
   }
 
-  const commands: KeymapCommand[] = [
+  const commands = (): KeymapCommand[] => [
     {
       id: "diff.close",
-      title: "Close diff viewer",
+      title: i18n.t("feature.diff.close"),
       group: "VCS",
       run: close,
     },
     {
       id: "diff.down",
-      title: "Move diff viewer down",
+      title: i18n.t("feature.diff.down"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -543,7 +548,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.up",
-      title: "Move diff viewer up",
+      title: i18n.t("feature.diff.up"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -552,31 +557,31 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.page.down",
-      title: "Page diff viewer down",
+      title: i18n.t("feature.diff.pageDown"),
       group: "VCS",
       run: () => scrollPage(1, 1),
     },
     {
       id: "diff.page.up",
-      title: "Page diff viewer up",
+      title: i18n.t("feature.diff.pageUp"),
       group: "VCS",
       run: () => scrollPage(-1, 1),
     },
     {
       id: "diff.half_page.down",
-      title: "Scroll down half a page",
+      title: i18n.t("feature.diff.halfDown"),
       group: "VCS",
       run: () => scrollPage(1, 2),
     },
     {
       id: "diff.half_page.up",
-      title: "Scroll up half a page",
+      title: i18n.t("feature.diff.halfUp"),
       group: "VCS",
       run: () => scrollPage(-1, 2),
     },
     {
       id: "diff.first",
-      title: "Go to the start of the diff",
+      title: i18n.t("feature.diff.first"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -585,7 +590,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.last",
-      title: "Go to the end of the diff",
+      title: i18n.t("feature.diff.last"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -594,7 +599,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.next_hunk",
-      title: "Jump to next diff hunk",
+      title: i18n.t("feature.diff.nextHunk"),
       group: "VCS",
       run() {
         jumpRelativeHunk(1)
@@ -602,7 +607,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.previous_hunk",
-      title: "Jump to previous diff hunk",
+      title: i18n.t("feature.diff.previousHunk"),
       group: "VCS",
       run() {
         jumpRelativeHunk(-1)
@@ -610,7 +615,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.next_file",
-      title: "Jump to next diff file",
+      title: i18n.t("feature.diff.nextFile"),
       group: "VCS",
       run() {
         jumpRelativePatchFile(1)
@@ -618,7 +623,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.previous_file",
-      title: "Jump to previous diff file",
+      title: i18n.t("feature.diff.previousFile"),
       group: "VCS",
       run() {
         jumpRelativePatchFile(-1)
@@ -626,7 +631,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.mark_reviewed",
-      title: "Toggle selected diff file reviewed",
+      title: i18n.t("feature.diff.toggleReviewed"),
       group: "VCS",
       run() {
         toggleFileReviewed(selectedFileIndex() ?? currentPatchFileIndex())
@@ -634,7 +639,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.toggle_file_tree",
-      title: "Toggle diff viewer file tree",
+      title: i18n.t("feature.diff.toggleTree"),
       group: "VCS",
       run() {
         const next = !fileTreeEnabled()
@@ -644,7 +649,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.single_patch",
-      title: "Toggle single patch view",
+      title: i18n.t("feature.diff.toggleSingle"),
       group: "VCS",
       run() {
         setSelectedHunk(undefined)
@@ -666,7 +671,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.switch_source",
-      title: "Switch diff viewer source",
+      title: i18n.t("feature.diff.switchSource"),
       group: "VCS",
       run() {
         openSwitchDiffDialog()
@@ -674,7 +679,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.toggle_view",
-      title: "Toggle diff viewer split or unified view",
+      title: i18n.t("feature.diff.toggleView"),
       group: "VCS",
       run() {
         if (!splitAvailable()) return
@@ -686,7 +691,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.help",
-      title: "Show more diff viewer shortcuts",
+      title: i18n.t("feature.diff.moreShortcuts"),
       group: "VCS",
       run() {
         openHelpDialog()
@@ -695,38 +700,38 @@ export function DiffViewerContent(props: {
     // Specific diff bindings take precedence over app.exit's Ctrl+D binding.
     {
       id: "app.exit",
-      title: "Close diff viewer",
+      title: i18n.t("feature.diff.close"),
       group: "VCS",
       run: close,
     },
   ]
 
   const openSwitchDiffDialog = () => {
-    const options = [
+    const options = () => [
       {
         value: "branch" as const,
-        description: "Branch + local changes",
+        description: i18n.t("feature.diff.branchLocal"),
       },
       {
         value: "committed" as const,
-        description: "Branch commits only",
+        description: i18n.t("feature.diff.branchOnly"),
       },
       {
         value: "working" as const,
-        description: "Local changes only",
+        description: i18n.t("feature.diff.localOnly"),
       },
     ]
     dialog.show(() => (
       <DialogSelect<DiffMode | "base">
-        title="Diff source"
+        title={i18n.t("feature.diff.source")}
         skipFilter={true}
         renderFilter={false}
         current={mode()}
         options={[
-          ...options.map((option) => ({
+          ...options().map((option) => ({
             ...option,
-            title: diffSourceLabel(option.value),
-            titleView: diffSourceLabel(option.value).padEnd(11),
+            title: diffSourceLabel(option.value, i18n.t),
+            titleView: diffSourceLabel(option.value, i18n.t).padEnd(11),
             onSelect() {
               dialog.clear()
               props.onSwitchSource(option.value)
@@ -735,10 +740,10 @@ export function DiffViewerContent(props: {
           ...(props.onChooseBase
             ? [
                 {
-                  title: "Base",
-                  titleView: "Base".padEnd(11),
+                  title: i18n.t("feature.diff.base"),
+                  titleView: i18n.t("feature.diff.base").padEnd(11),
                   value: "base" as const,
-                  description: props.sourceBase?.name ?? "Choose…",
+                  description: props.sourceBase?.name ?? i18n.t("feature.diff.choose"),
                   onSelect: props.onChooseBase,
                 },
               ]
@@ -770,7 +775,7 @@ export function DiffViewerContent(props: {
         >
           {props.compact ? "?" : shortcut()}
           <Show when={!props.compact}>
-            <span style={{ fg: theme.text.muted }}> help</span>
+            <span style={{ fg: theme.text.muted }}> {i18n.t("feature.diff.help")}</span>
           </Show>
         </text>
       )}
@@ -778,7 +783,7 @@ export function DiffViewerContent(props: {
   )
 
   props.context.keymap.layer(() => ({
-    commands,
+    commands: commands(),
   }))
 
   return (
@@ -811,7 +816,7 @@ export function DiffViewerContent(props: {
               flexShrink={0}
               wrapMode="none"
             >
-              {diffSourceLabel(mode())}
+              {diffSourceLabel(mode(), i18n.t)}
             </text>
             <Show when={props.sourceDetail}>
               <text fg={theme.text.muted} selectable={false} flexGrow={1} minWidth={0} wrapMode="none" truncate>
@@ -828,28 +833,26 @@ export function DiffViewerContent(props: {
         <Switch>
           <Match when={props.loading}>
             <box flexGrow={1} padding={2}>
-              <text fg={theme.text.muted}>Loading diff…</text>
+              <text fg={theme.text.muted}>{i18n.t("feature.diff.loading")}</text>
             </box>
           </Match>
           <Match when={!props.loading && props.error}>
             <box flexGrow={1} padding={2}>
               <text fg={theme.text.feedback.error.base}>
                 {!props.sourceBase && mode() !== "working"
-                  ? "Could not load diff. Choose a base branch from Diff source, or select Uncommitted."
-                  : "Could not load diff. Reopen the diff viewer to try again."}
+                  ? i18n.t("feature.diff.loadBaseError")
+                  : i18n.t("feature.diff.loadError")}
               </text>
             </box>
           </Match>
           <Match when={!props.loading && props.unavailable}>
             <box flexGrow={1} padding={2}>
-              <text fg={theme.text.muted}>
-                Committed comparison unavailable without base metadata. Choose a base branch from Diff source.
-              </text>
+              <text fg={theme.text.muted}>{i18n.t("feature.diff.committedUnavailable")}</text>
             </box>
           </Match>
           <Match when={!props.loading && files().length === 0}>
             <box flexGrow={1} padding={2}>
-              <text fg={theme.text.muted}>No changes to show</text>
+              <text fg={theme.text.muted}>{i18n.t("feature.diff.noChanges")}</text>
             </box>
           </Match>
           <Match when={!props.loading}>
@@ -868,7 +871,7 @@ export function DiffViewerContent(props: {
                   expandedNodes={expandedFileNodes()}
                   onRowClick={clickFileTreeRow}
                   onFileContextMenu={openFileMenu}
-                  source={diffSourceLabel(mode())}
+                  source={diffSourceLabel(mode(), i18n.t)}
                   sourceDetail={props.sourceDetail}
                   onSwitchSource={openSwitchDiffDialog}
                   footer={<HelpShortcut />}
@@ -970,7 +973,10 @@ export function DiffViewerContent(props: {
                                   ✓
                                 </text>
                               </Show>
-                              <Show when={!image()} fallback={<text fg={theme.text.muted}>Image</text>}>
+                              <Show
+                                when={!image()}
+                                fallback={<text fg={theme.text.muted}>{i18n.t("feature.diff.image")}</text>}
+                              >
                                 <text flexShrink={0} fg={reviewed() ? theme.text.muted : theme.diff.text.added}>
                                   +{entry.file.additions}
                                 </text>
@@ -998,10 +1004,10 @@ export function DiffViewerContent(props: {
                                   <box width="100%" flexShrink={0} paddingLeft={1} paddingRight={1} paddingBottom={1}>
                                     <text fg={theme.text.muted}>
                                       {mode() === "committed" && image()
-                                        ? "Committed image preview unavailable. The working-tree image is not shown."
+                                        ? i18n.t("feature.diff.committedImage")
                                         : entry.file.status === "deleted" && image()
-                                          ? "Deleted image. The previous revision is not available for preview."
-                                          : "No patch available for this file."}
+                                          ? i18n.t("feature.diff.deletedImage")
+                                          : i18n.t("feature.diff.noPatch")}
                                     </text>
                                   </box>
                                 }
@@ -1078,6 +1084,7 @@ export function DiffViewerContent(props: {
 }
 
 function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean }) {
+  const i18n = useI18n()
   const dimensions = useTerminalDimensions()
   const theme = props.context.theme.surface("dialog")
   const shortcut =
@@ -1087,37 +1094,46 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
         .map((id) => props.context.keymap.shortcuts(id)[0])
         .filter(Boolean)
         .join(" / ")
-  const groups = [
+  const groups = () => [
     {
-      title: "Review",
+      title: i18n.t("feature.diff.helpReview"),
       rows: [
-        { shortcut: () => props.context.keymap.shortcuts("diff.next_file").join(" / "), label: "Next file" },
-        { shortcut: () => props.context.keymap.shortcuts("diff.previous_file").join(" / "), label: "Previous file" },
+        {
+          shortcut: () => props.context.keymap.shortcuts("diff.next_file").join(" / "),
+          label: i18n.t("feature.diff.helpNextFile"),
+        },
+        {
+          shortcut: () => props.context.keymap.shortcuts("diff.previous_file").join(" / "),
+          label: i18n.t("feature.diff.helpPreviousFile"),
+        },
         {
           shortcut: shortcut("diff.mark_reviewed"),
-          label: props.single ? "Review + next / reopen" : "Review + collapse / reopen",
+          label: i18n.t(props.single ? "feature.diff.helpReviewNext" : "feature.diff.helpReviewCollapse"),
         },
-        { shortcut: shortcut("diff.next_hunk", "diff.previous_hunk"), label: "Next / previous change" },
-        { shortcut: () => "right-click", label: "File menu (heading or tree)" },
+        { shortcut: shortcut("diff.next_hunk", "diff.previous_hunk"), label: i18n.t("feature.diff.helpChange") },
+        { shortcut: () => i18n.t("feature.diff.rightClick"), label: i18n.t("feature.diff.helpFileMenu") },
       ],
     },
     {
-      title: "Scroll",
+      title: i18n.t("feature.diff.helpScroll"),
       rows: [
-        { shortcut: shortcut("diff.down", "diff.up"), label: "Down / up" },
-        { shortcut: shortcut("diff.half_page.down", "diff.half_page.up"), label: "Half page down / up" },
-        { shortcut: shortcut("diff.page.down", "diff.page.up"), label: "Page down / up" },
-        { shortcut: shortcut("diff.first", "diff.last"), label: "First / last" },
+        { shortcut: shortcut("diff.down", "diff.up"), label: i18n.t("feature.diff.helpDownUp") },
+        { shortcut: shortcut("diff.half_page.down", "diff.half_page.up"), label: i18n.t("feature.diff.helpHalfPage") },
+        { shortcut: shortcut("diff.page.down", "diff.page.up"), label: i18n.t("feature.diff.helpPage") },
+        { shortcut: shortcut("diff.first", "diff.last"), label: i18n.t("feature.diff.helpFirstLast") },
       ],
     },
     {
-      title: "View",
+      title: i18n.t("feature.diff.helpView"),
       rows: [
-        { shortcut: shortcut("diff.toggle_view"), label: "Split / unified" },
-        { shortcut: shortcut("diff.single_patch"), label: "All files / single file" },
-        { shortcut: shortcut("diff.toggle_file_tree"), label: "Show / hide file tree" },
-        { shortcut: shortcut("diff.switch_source"), label: "Switch diff source" },
-        { shortcut: () => props.context.keymap.shortcuts("diff.close").join(" / "), label: "Close diff viewer" },
+        { shortcut: shortcut("diff.toggle_view"), label: i18n.t("feature.diff.helpSplit") },
+        { shortcut: shortcut("diff.single_patch"), label: i18n.t("feature.diff.helpAllFiles") },
+        { shortcut: shortcut("diff.toggle_file_tree"), label: i18n.t("feature.diff.helpTree") },
+        { shortcut: shortcut("diff.switch_source"), label: i18n.t("feature.diff.helpSource") },
+        {
+          shortcut: () => props.context.keymap.shortcuts("diff.close").join(" / "),
+          label: i18n.t("feature.diff.close"),
+        },
       ],
     },
   ]
@@ -1126,10 +1142,10 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
     <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          Diff shortcuts
+          {i18n.t("feature.diff.shortcuts")}
         </text>
         <text fg={theme.text.muted} selectable={false} onMouseUp={() => props.context.ui.dialog.clear()}>
-          esc close
+          esc {i18n.t("feature.diff.closeShort")}
         </text>
       </box>
       <scrollbox
@@ -1139,14 +1155,14 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
           1,
           Math.min(
             dimensions().height - 6,
-            groups.reduce((height, group) => height + group.rows.length + 2, -1),
+            groups().reduce((height, group) => height + group.rows.length + 2, -1),
           ),
         )}
         horizontalScrollbarOptions={{ visible: false }}
         verticalScrollbarOptions={{ visible: false }}
       >
         <box gap={1}>
-          <For each={groups}>
+          <For each={groups()}>
             {(group) => (
               <box flexShrink={0}>
                 <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
@@ -1156,7 +1172,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
                   {(row) => (
                     <box flexDirection="row" gap={2}>
                       <text fg={theme.text.base} width={17} flexShrink={0}>
-                        {row.shortcut() || "unbound"}
+                        {row.shortcut() || i18n.t("feature.diff.unbound")}
                       </text>
                       <text fg={theme.text.muted} flexGrow={1} minWidth={0}>
                         {row.label}
@@ -1174,12 +1190,13 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean 
 }
 
 function Commands(props: { context: Plugin.Context }) {
+  const i18n = useI18n()
   props.context.keymap.layer(() => ({
     mode: "global",
     commands: [
       {
         id: "diff.open",
-        title: "Open diff viewer",
+        title: i18n.t("feature.diff.open"),
         slash: { name: "diff" },
         group: "VCS",
         palette: true,

@@ -11,6 +11,7 @@ import { useDialog, type DialogContext } from "./dialog"
 import { Locale } from "../util/locale"
 import { getScrollAcceleration } from "../util/scroll"
 import { useConfig } from "../config"
+import { useI18n } from "../context/i18n"
 import { moveSelection, reconcileSelection } from "./select-controller"
 
 export interface DialogSelectProps<T> {
@@ -101,6 +102,7 @@ export type DialogSelectRef<T> = {
 }
 
 export function DialogSelect<T>(props: DialogSelectProps<T>) {
+  const { t } = useI18n()
   type Action = NonNullable<DialogSelectProps<T>["actions"]>[number]
   type FooterHint = NonNullable<DialogSelectProps<T>["footerHints"]>[number]
   type VisibleAction = (Action & { label: string }) | FooterHint
@@ -418,40 +420,40 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       commands: [
         {
           id: "dialog.select.prev",
-          title: "Previous item",
-          group: "Dialog",
+          title: t("main.item.previous"),
+          group: t("main.group.dialog"),
           run() {
             move(-1)
           },
         },
         {
           id: "dialog.select.next",
-          title: "Next item",
-          group: "Dialog",
+          title: t("main.item.next"),
+          group: t("main.group.dialog"),
           run() {
             move(1)
           },
         },
         {
           id: "dialog.select.page_up",
-          title: "Page up",
-          group: "Dialog",
+          title: t("main.page.up"),
+          group: t("main.group.dialog"),
           run() {
             move(-10)
           },
         },
         {
           id: "dialog.select.page_down",
-          title: "Page down",
-          group: "Dialog",
+          title: t("main.page.down"),
+          group: t("main.group.dialog"),
           run() {
             move(10)
           },
         },
         {
           id: "dialog.select.home",
-          title: "First item",
-          group: "Dialog",
+          title: t("main.item.first"),
+          group: t("main.group.dialog"),
           run() {
             if (props.locked) return
             moveTo(0)
@@ -459,8 +461,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         },
         {
           id: "dialog.select.end",
-          title: "Last item",
-          group: "Dialog",
+          title: t("main.item.last"),
+          group: t("main.group.dialog"),
           run() {
             if (props.locked) return
             moveTo(flat().length - 1)
@@ -468,28 +470,28 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         },
         {
           id: "dialog.select.submit",
-          title: "Select item",
-          group: "Dialog",
+          title: t("main.item.select"),
+          group: t("main.group.dialog"),
           run: submit,
         },
         ...visible.map((item) => ({
           id: item.command,
           title: item.title,
-          group: "Dialog",
+          group: t("main.group.dialog"),
           run: () => trigger(item),
         })),
         ...(visible.length
           ? [
               {
                 bind: "tab",
-                title: "Next dialog action",
-                group: "Dialog",
+                title: t("main.action.next"),
+                group: t("main.group.dialog"),
                 run: () => moveAction(1),
               },
               {
                 bind: "shift+tab",
-                title: "Previous dialog action",
-                group: "Dialog",
+                title: t("main.action.previous"),
+                group: t("main.group.dialog"),
                 run: () => moveAction(-1),
               },
             ]
@@ -499,8 +501,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           ? [
               {
                 bind: "escape",
-                title: "Back",
-                group: "Dialog",
+                title: t("main.back"),
+                group: t("main.group.dialog"),
                 run: () => {
                   if (renderer.getSelection()) {
                     renderer.clearSelection()
@@ -515,14 +517,14 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           ? [
               {
                 bind: "alt+up",
-                title: "Previous section",
-                group: "Dialog",
+                title: t("main.section.previous"),
+                group: t("main.group.dialog"),
                 run: () => moveSection(-1),
               },
               {
                 bind: "alt+down",
-                title: "Next section",
-                group: "Dialog",
+                title: t("main.section.next"),
+                group: t("main.group.dialog"),
                 run: () => moveSection(1),
               },
             ]
@@ -672,7 +674,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                   r.focus()
                 }, 1)
               }}
-              placeholder={props.placeholder ?? "Search"}
+              placeholder={props.placeholder ?? t("main.search")}
               placeholderColor={theme.text.muted}
             />
           </box>
@@ -687,14 +689,14 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
               fallback={
                 props.emptyView ?? (
                   <box paddingLeft={4} paddingRight={4}>
-                    <text fg={theme.text.muted}>No items available</text>
+                    <text fg={theme.text.muted}>{t("main.items.empty")}</text>
                   </box>
                 )
               }
             >
               {props.noMatchView ?? (
                 <box paddingLeft={4} paddingRight={4}>
-                  <text fg={theme.text.muted}>No results found</text>
+                  <text fg={theme.text.muted}>{t("main.results.empty")}</text>
                 </box>
               )}
             </Show>

@@ -8,11 +8,14 @@ import { applyEdits, modify, parse, type ParseError } from "jsonc-parser"
 import path from "path"
 import { ConfigMigration } from "./migrate"
 import { Info, SchemaURL } from "./schema"
+import { resolveLocale, type Locale } from "@opencode/tui/i18n"
 
 export * from "./schema"
 
 export interface Interface {
   readonly path: string
+  /** Presentation-only projection of the last successful load, or the already-decoded inline config before load. Does not perform I/O. */
+  readonly locale: () => Locale
   readonly get: () => Effect.Effect<Info>
   readonly update: (update: (draft: Draft<Info>) => void) => Effect.Effect<Info, Error>
 }
@@ -32,6 +35,7 @@ export const layer = Layer.effect(
     const content = process.env.OPENCODE_CLI_CONFIG_CONTENT
       ? Option.getOrUndefined(decode(parseRecord(process.env.OPENCODE_CLI_CONFIG_CONTENT)))
       : undefined
+    let locale = resolveLocale(content?.locale)
 
     const readJson = Effect.fnUntraced(function* () {
       const text = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => undefined))
@@ -62,7 +66,9 @@ export const layer = Layer.effect(
         ),
       )
     const load = Effect.fnUntraced(function* (migration?: Info) {
-      return merge(migration ?? Option.getOrUndefined(decode(yield* readJson())), content)
+      const info = merge(migration ?? Option.getOrUndefined(decode(yield* readJson())), content)
+      locale = resolveLocale(info.locale)
+      return info
     })
 
     const get = Effect.fn("cli.config.get")(() =>
@@ -104,12 +110,14 @@ export const layer = Layer.effect(
           const config = Option.getOrUndefined(decode(parse(updated, errors, { allowTrailingComma: true })))
           if (errors.length || config === undefined) return yield* Effect.fail(new Error("Invalid CLI config update"))
           yield* write(updated.endsWith("\n") ? updated : updated + "\n")
-          return merge(config, content)
+          const info = merge(config, content)
+          locale = resolveLocale(info.locale)
+          return info
         }),
       ).pipe(Effect.mapError((cause) => new Error("Failed to update CLI config", { cause }))),
     )
 
-    return Service.of({ path: file, get, update })
+    return Service.of({ path: file, get, update, locale: () => locale })
   }),
 )
 
@@ -117,12 +125,7 @@ type Edit = { readonly path: (string | number)[]; readonly value: any }
 
 function merge(...values: readonly (Info | undefined)[]) {
   return Option.getOrElse(
-    decode(
-      values.reduce<Record<string, unknown>>(
-        (result, value) => mergeRecords(result, value ?? {}),
-        {},
-      ),
-    ),
+    decode(values.reduce<Record<string, unknown>>((result, value) => mergeRecords(result, value ?? {}), {})),
     () => empty,
   )
 }

@@ -4,6 +4,7 @@ import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { createSignal } from "solid-js"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { ThemeProvider, useTheme } from "../../src/context/theme"
 import { createPaneResize } from "../../src/ui/pane-resize"
 import { PaneResizeHandle } from "../../src/ui/pane-resize-handle"
@@ -47,10 +48,12 @@ for (const mode of ["dark", "light"] as const) {
     const app = await testRender(
       () => (
         <TestTuiContexts>
-          <ConfigProvider config={createTuiResolvedConfig({ theme: { name: "opencode", mode } })}>
-            <ThemeProvider mode={mode} source={emptyThemeSource}>
-              <Pane />
-            </ThemeProvider>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en", theme: { name: "opencode", mode } })}>
+            <I18nProvider>
+              <ThemeProvider mode={mode} source={emptyThemeSource}>
+                <Pane />
+              </ThemeProvider>
+            </I18nProvider>
           </ConfigProvider>
         </TestTuiContexts>
       ),

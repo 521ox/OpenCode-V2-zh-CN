@@ -7,6 +7,7 @@ import { onCleanup } from "solid-js"
 import type { PluginInfo } from "@opencode/client"
 import type { Context, ToastOptions } from "@opencode/plugin/tui/context"
 import { ConfigProvider } from "../../../src/config"
+import { I18nProvider } from "../../../src/context/i18n"
 import { Keymap } from "../../../src/context/keymap"
 import { ThemeProvider, useThemes } from "../../../src/context/theme"
 // The plugin context registers every builtin, and the plugins dialog imports
@@ -92,24 +93,26 @@ async function renderPlugins(
 
     return (
       <TestTuiContexts directory={root} paths={{ home: root, state, worktree: root }}>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <RouteProvider initialRoute={{ type: "home" }}>
-            <ClientProvider api={api}>
-              <DataProvider directory={root}>
-                <LocationProvider>
-                  <Keymap.Provider>
-                    <ThemeProvider mode="dark" source={emptyThemeSource}>
-                      <ToastProvider>
-                        <DialogProvider>
-                          <Content />
-                        </DialogProvider>
-                      </ToastProvider>
-                    </ThemeProvider>
-                  </Keymap.Provider>
-                </LocationProvider>
-              </DataProvider>
-            </ClientProvider>
-          </RouteProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <RouteProvider initialRoute={{ type: "home" }}>
+              <ClientProvider api={api}>
+                <DataProvider directory={root}>
+                  <LocationProvider>
+                    <Keymap.Provider>
+                      <ThemeProvider mode="dark" source={emptyThemeSource}>
+                        <ToastProvider>
+                          <DialogProvider>
+                            <Content />
+                          </DialogProvider>
+                        </ToastProvider>
+                      </ThemeProvider>
+                    </Keymap.Provider>
+                  </LocationProvider>
+                </DataProvider>
+              </ClientProvider>
+            </RouteProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     )

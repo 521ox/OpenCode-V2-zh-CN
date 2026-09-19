@@ -28,6 +28,7 @@ import type {
   RunProvider,
 } from "./types"
 import { matchMiniVerbosity, verbosityChange, verbosityLabel } from "./verbosity"
+import { resolveLocale, translate, type Locale, type Key, type Params } from "../i18n"
 
 type PanelEntry = RunFooterMenuItem & {
   category: string
@@ -113,20 +114,20 @@ function countLabel(count: number, total: number, query: string) {
   return `${count}/${total}`
 }
 
-function subagentStatusLabel(status: FooterSubagentTab["status"]) {
+function subagentStatusLabel(status: FooterSubagentTab["status"], locale?: Locale) {
   if (status === "completed") {
-    return "done"
+    return translate(resolveLocale(locale), "miniCli.done")
   }
 
   if (status === "cancelled") {
-    return "cancelled"
+    return translate(resolveLocale(locale), "miniCli.cancelled")
   }
 
   if (status === "error") {
-    return "error"
+    return translate(resolveLocale(locale), "miniCli.errorStatus")
   }
 
-  return "running"
+  return translate(resolveLocale(locale), "miniCli.running")
 }
 
 function match<T extends PanelEntry>(query: string, entries: T[]) {
@@ -389,6 +390,7 @@ function PanelShell(props: {
 }
 
 export function RunCommandMenuBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   commands: Accessor<RunCommand[] | undefined>
   subagents: Accessor<FooterSubagentTab[]>
@@ -412,30 +414,33 @@ export function RunCommandMenuBody(props: {
   clearShortcut?: string
   mono?: boolean
 }) {
+  const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
   const activeSubagentCount = createMemo(() => props.subagents().filter((item) => item.status === "running").length)
   const entries = createMemo<CommandEntry[]>(() => {
     const session: CommandEntry[] = [
       {
         action: "editor",
-        category: "Session",
-        display: "Open editor",
+        category: t("miniCli.category.session"),
+        display: t("miniCli.command.editor"),
         footer: "/editor",
         keywords: "editor compose draft external editor",
       },
       {
         action: "status",
-        category: "Session",
-        display: "Show status",
+        category: t("miniCli.category.session"),
+        display: t("miniCli.command.status"),
         keywords: "status activity model context usage footer",
       },
       ...(props.subagents().length > 0
         ? [
             {
               action: "subagent" as const,
-              category: "Session",
-              display: "View subagents",
+              category: t("miniCli.category.session"),
+              display: t("miniCli.command.subagents"),
               footer:
-                activeSubagentCount() > 0 ? `${activeSubagentCount()} active` : `${props.subagents().length} recent`,
+                activeSubagentCount() > 0
+                  ? t("miniCli.activeCount", { count: activeSubagentCount() })
+                  : t("miniCli.recentCount", { count: props.subagents().length }),
               keywords: props
                 .subagents()
                 .map((item) => `${item.label} ${item.description} ${item.title ?? ""}`)
@@ -445,17 +450,17 @@ export function RunCommandMenuBody(props: {
         : []),
       {
         action: "slash",
-        category: "Session",
+        category: t("miniCli.category.session"),
         name: "compact",
-        display: "Compact session",
+        display: t("miniCli.command.compact"),
         footer: "/compact",
         keywords: "compact session context",
       },
       {
         action: "slash",
-        category: "Session",
+        category: t("miniCli.category.session"),
         name: "new",
-        display: "New session",
+        display: t("miniCli.command.new"),
         footer: "/new",
         keywords: "new session clear",
       },
@@ -463,21 +468,21 @@ export function RunCommandMenuBody(props: {
     const agent: CommandEntry[] = [
       {
         action: "agent",
-        category: "Agent",
-        display: "Switch agent",
+        category: t("miniCli.category.agent"),
+        display: t("miniCli.command.agent"),
       },
       {
         action: "model",
-        category: "Agent",
-        display: "Switch model",
+        category: t("miniCli.category.agent"),
+        display: t("miniCli.command.model"),
       },
       ...(props.queued().length > 0
         ? [
             {
               action: "queued" as const,
-              category: "Agent",
-              display: "View pending prompts",
-              footer: `${props.queued().length} pending`,
+              category: t("miniCli.category.agent"),
+              display: t("miniCli.command.pending"),
+              footer: t("miniCli.pending", { count: props.queued().length }),
               keywords: props
                 .queued()
                 .map((item) => item.prompt.text)
@@ -487,8 +492,8 @@ export function RunCommandMenuBody(props: {
         : []),
       {
         action: "variant.cycle",
-        category: "Agent",
-        display: "Variant cycle",
+        category: t("miniCli.category.agent"),
+        display: t("miniCli.command.cycle"),
         footer: props.variantCycle,
         keywords: "variant cycle",
       },
@@ -496,8 +501,8 @@ export function RunCommandMenuBody(props: {
         ? [
             {
               action: "variant.list" as const,
-              category: "Agent",
-              display: "Switch model variant",
+              category: t("miniCli.category.agent"),
+              display: t("miniCli.command.variant"),
               keywords: `variant variants ${props.variants().join(" ")}`,
             },
           ]
@@ -508,19 +513,25 @@ export function RunCommandMenuBody(props: {
       ...agent,
       {
         action: "clear",
-        category: "System",
-        display: "Clear screen",
+        category: t("miniCli.category.system"),
+        display: t("miniCli.command.clear"),
         footer: props.clearShortcut,
         keywords: "clear screen cls redraw",
       },
       {
         action: "settings",
-        category: "System",
-        display: "Settings",
+        category: t("miniCli.category.system"),
+        display: t("miniCli.command.settings"),
         footer: "/settings",
         keywords: "/settings settings preferences configuration",
       },
-      { action: "exit", category: "System", display: "Exit", footer: "/exit", keywords: "/exit exit" },
+      {
+        action: "exit",
+        category: t("miniCli.category.system"),
+        display: t("miniCli.command.exit"),
+        footer: "/exit",
+        keywords: "/exit exit",
+      },
     ]
   })
   const pick = (item: CommandEntry) => {
@@ -538,7 +549,6 @@ export function RunCommandMenuBody(props: {
       props.onEditor()
       return
     }
-
 
     if (item.action === "subagent") {
       props.onSubagent()
@@ -596,13 +606,13 @@ export function RunCommandMenuBody(props: {
 
   return (
     <PanelShell
-      title="Commands"
+      title={t("miniCli.commands")}
       layout={controller.layout()}
       countVisible={false}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
@@ -616,7 +626,7 @@ export function RunCommandMenuBody(props: {
         rows={controller.menu.limit}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No results found"
+        empty={t("miniCli.noResults")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -630,6 +640,7 @@ export function RunCommandMenuBody(props: {
 }
 
 export function RunAgentSelectBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   agents: Accessor<RunAgent[]>
   current: Accessor<string | undefined>
@@ -637,6 +648,7 @@ export function RunAgentSelectBody(props: {
   onSelect: (agent: string) => void
   mono?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const entries = createMemo<AgentEntry[]>(() =>
     props
       .agents()
@@ -645,7 +657,7 @@ export function RunAgentSelectBody(props: {
         category: "",
         display: agent.id,
         description: agent.description,
-        footer: props.current() === agent.id ? "current" : undefined,
+        footer: props.current() === agent.id ? t("miniCli.current") : undefined,
         footerTone: "selection" as const,
         keywords: `${agent.id} ${agent.name} ${agent.description ?? ""}`,
         id: agent.id,
@@ -662,12 +674,12 @@ export function RunAgentSelectBody(props: {
 
   return (
     <PanelShell
-      title="Select agent"
+      title={t("miniCli.selectAgent")}
       layout={controller.layout()}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
@@ -681,7 +693,7 @@ export function RunAgentSelectBody(props: {
         rows={controller.menu.limit}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No agents found"
+        empty={t("miniCli.noAgents")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -694,6 +706,7 @@ export function RunAgentSelectBody(props: {
 }
 
 export function RunSettingsBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   settings: Accessor<MiniSettings>
   onClose: () => void
@@ -701,75 +714,79 @@ export function RunSettingsBody(props: {
   mono?: boolean
   animations?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const [saving, setSaving] = createSignal<SettingEntry["key"]>()
   const entries = createMemo<SettingEntry[]>(() => [
     {
-      category: "Transcript",
-      display: "Verbosity",
-      footer: saving() === "verbosity" ? "saving" : verbosityLabel(matchMiniVerbosity(props.settings())),
+      category: t("miniCli.category.transcript"),
+      display: t("miniCli.verbosity"),
+      footer:
+        saving() === "verbosity"
+          ? t("miniCli.saving")
+          : verbosityLabel(matchMiniVerbosity(props.settings()), props.locale),
       footerTone: saving() === "verbosity" ? "running" : "selection",
       keywords: `verbosity quiet default everything custom noise ${verbosityLabel(matchMiniVerbosity(props.settings()))}`,
       key: "verbosity",
     },
     {
-      category: "Transcript",
-      display: "Thinking",
-      footer: saving() === "thinking" ? "saving" : props.settings().thinking,
+      category: t("miniCli.category.transcript"),
+      display: t("miniCli.thinkingLabel"),
+      footer: saving() === "thinking" ? t("miniCli.saving") : t(`miniCli.${props.settings().thinking}`),
       footerTone: saving() === "thinking" ? "running" : "selection",
       keywords: `thinking reasoning ${props.settings().thinking}`,
       key: "thinking",
     },
     {
-      category: "Transcript",
-      display: "Tools",
-      footer: saving() === "tools" ? "saving" : props.settings().tools,
+      category: t("miniCli.category.transcript"),
+      display: t("miniCli.tools"),
+      footer: saving() === "tools" ? t("miniCli.saving") : t(`miniCli.${props.settings().tools}`),
       footerTone: saving() === "tools" ? "running" : "selection",
       keywords: `tools files skills activity work steps intermediate ${props.settings().tools}`,
       key: "tools",
     },
     {
-      category: "Transcript",
-      display: "Shell",
-      footer: saving() === "shell_output" ? "saving" : props.settings().shell_output,
+      category: t("miniCli.category.transcript"),
+      display: t("miniCli.shell"),
+      footer: saving() === "shell_output" ? t("miniCli.saving") : t(`miniCli.${props.settings().shell_output}`),
       footerTone: saving() === "shell_output" ? "running" : "selection",
       keywords: `shell tool command output ${props.settings().shell_output}`,
       key: "shell_output",
     },
     {
-      category: "Transcript",
-      display: "Turn summary",
-      footer: saving() === "turn_summary" ? "saving" : props.settings().turn_summary,
+      category: t("miniCli.category.transcript"),
+      display: t("miniCli.turnSummary"),
+      footer: saving() === "turn_summary" ? t("miniCli.saving") : t(`miniCli.${props.settings().turn_summary}`),
       footerTone: saving() === "turn_summary" ? "running" : "selection",
       keywords: `turn summary agent model duration ${props.settings().turn_summary}`,
       key: "turn_summary",
     },
     {
-      category: "Terminal",
-      display: "Footer details",
-      footer: saving() === "footer" ? "saving" : props.settings().footer,
+      category: t("miniCli.category.terminal"),
+      display: t("miniCli.footer"),
+      footer: saving() === "footer" ? t("miniCli.saving") : t(`miniCli.${props.settings().footer}`),
       footerTone: saving() === "footer" ? "running" : "selection",
       keywords: `footer status activity model context usage ${props.settings().footer}`,
       key: "footer",
     },
     {
-      category: "Terminal",
-      display: "Splash",
-      footer: saving() === "splash" ? "saving" : props.settings().splash,
+      category: t("miniCli.category.terminal"),
+      display: t("miniCli.splash"),
+      footer: saving() === "splash" ? t("miniCli.saving") : t(`miniCli.${props.settings().splash}`),
       footerTone: saving() === "splash" ? "running" : "selection",
       keywords: `splash entry exit banner ${props.settings().splash}`,
       key: "splash",
     },
     {
-      category: "Terminal",
-      display: "Monochrome UI",
-      footer: saving() === "mono" ? "saving" : props.settings().mono ? "on" : "off",
+      category: t("miniCli.category.terminal"),
+      display: t("miniCli.mono"),
+      footer: t(saving() === "mono" ? "miniCli.saving" : props.settings().mono ? "miniCli.on" : "miniCli.off"),
       footerTone: saving() === "mono" ? "running" : "selection",
       keywords: `mono monochrome ascii legacy compat terminal ${props.settings().mono ? "on" : "off"}`,
       key: "mono",
     },
     {
-      category: "Terminal",
-      display: "Work spinner",
+      category: t("miniCli.category.terminal"),
+      display: t("miniCli.spinner"),
       icon: (color) => (
         <OneCellSpinner
           animation={props.mono ? SEED_MONO : WORK_SPINNERS[props.settings().work_spinner]}
@@ -781,7 +798,7 @@ export function RunSettingsBody(props: {
       ),
       footer:
         saving() === "work_spinner"
-          ? "saving"
+          ? t("miniCli.saving")
           : props.settings().work_spinner.replace("block-", "").replaceAll("-", " "),
       footerTone: saving() === "work_spinner" ? "running" : "selection",
       keywords: `work spinner animation ${props.settings().work_spinner}`,
@@ -827,17 +844,17 @@ export function RunSettingsBody(props: {
 
   return (
     <PanelShell
-      title="Settings"
+      title={t("miniCli.command.settings")}
       layout={controller.layout()}
       countVisible={false}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
-      hint="left/right change"
+      hint={t("miniCli.changeHint")}
       mono={props.mono}
     >
       <RunFooterMenu
@@ -848,7 +865,7 @@ export function RunSettingsBody(props: {
         rows={controller.menu.limit}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No settings found"
+        empty={t("miniCli.noSettings")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -862,6 +879,7 @@ export function RunSettingsBody(props: {
 }
 
 export function RunSubagentSelectBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   tabs: Accessor<FooterSubagentTab[]>
   current: Accessor<string | undefined>
@@ -870,6 +888,7 @@ export function RunSubagentSelectBody(props: {
   onRows?: (rows: number) => void
   mono?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const [active, setActive] = createSignal(true)
   const entries = createMemo<SubagentEntry[]>(() =>
     props
@@ -881,7 +900,7 @@ export function RunSubagentSelectBody(props: {
           category: "",
           display: title,
           description: title === item.label ? undefined : item.label,
-          footer: subagentStatusLabel(item.status),
+          footer: subagentStatusLabel(item.status, props.locale),
           footerTone:
             item.status === "running" || item.status === "error"
               ? item.status
@@ -912,16 +931,16 @@ export function RunSubagentSelectBody(props: {
 
   return (
     <PanelShell
-      title="Select subagent"
+      title={t("miniCli.selectSubagent")}
       layout={controller.layout()}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
-      hint={`tab show ${active() ? "inactive" : "active"}`}
+      hint={t(active() ? "miniCli.showInactive" : "miniCli.showActive")}
       mono={props.mono}
     >
       <RunFooterMenu
@@ -932,7 +951,7 @@ export function RunSubagentSelectBody(props: {
         rows={controller.menu.rows}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No subagents found"
+        empty={t("miniCli.noSubagents")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -945,6 +964,7 @@ export function RunSubagentSelectBody(props: {
 }
 
 export function RunQueuedPromptSelectBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   prompts: Accessor<FooterQueuedPrompt[]>
   onClose: () => void
@@ -953,11 +973,12 @@ export function RunQueuedPromptSelectBody(props: {
   onRows?: (rows: number) => void
   mono?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const entries = createMemo<QueuedPromptEntry[]>(() =>
     props.prompts().map((prompt) => ({
       category: "",
       display: prompt.prompt.text.replaceAll("\n", " "),
-      footer: prompt.delivery === "queue" ? "queued" : "steering",
+      footer: t(prompt.delivery === "queue" ? "miniCli.queued" : "miniCli.steering"),
       keywords: prompt.prompt.text,
       prompt,
     })),
@@ -976,8 +997,8 @@ export function RunQueuedPromptSelectBody(props: {
     commands: [
       {
         id: "queued_prompt.delete",
-        title: "Delete pending prompt",
-        group: "Prompt",
+        title: t("miniCli.deletePending"),
+        group: t("miniCli.group.prompt"),
         run() {
           const item = controller.items()[controller.menu.selected()]
           if (!item) return false
@@ -989,18 +1010,22 @@ export function RunQueuedPromptSelectBody(props: {
 
   return (
     <PanelShell
-      title="Pending prompts"
+      title={t("miniCli.pendingTitle")}
       layout={controller.layout()}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
       hint={[
-        controller.items()[controller.menu.selected()]?.prompt.delivery === "steer" ? "enter queue" : "enter steer",
-        deleteShortcut() ? `${deleteShortcut()} delete` : undefined,
+        t(
+          controller.items()[controller.menu.selected()]?.prompt.delivery === "steer"
+            ? "miniCli.queueHint"
+            : "miniCli.steerHint",
+        ),
+        deleteShortcut() ? `${deleteShortcut()} ${t("miniCli.delete")}` : undefined,
       ]
         .filter(Boolean)
         .join(" · ")}
@@ -1014,7 +1039,7 @@ export function RunQueuedPromptSelectBody(props: {
         rows={controller.menu.rows}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No pending prompts"
+        empty={t("miniCli.noPending")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -1027,6 +1052,7 @@ export function RunQueuedPromptSelectBody(props: {
 }
 
 export function RunVariantSelectBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   variants: Accessor<string[]>
   current: Accessor<string | undefined>
@@ -1034,11 +1060,12 @@ export function RunVariantSelectBody(props: {
   onSelect: (variant: string | undefined) => void
   mono?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const entries = createMemo<VariantEntry[]>(() => [
     {
       category: "",
-      display: "Default",
-      footer: props.current() === undefined ? "current" : undefined,
+      display: t("miniCli.default"),
+      footer: props.current() === undefined ? t("miniCli.current") : undefined,
       footerTone: "selection",
       keywords: "default",
       variant: undefined,
@@ -1047,7 +1074,7 @@ export function RunVariantSelectBody(props: {
     ...props.variants().map((variant) => ({
       category: "",
       display: variant,
-      footer: props.current() === variant ? "current" : undefined,
+      footer: props.current() === variant ? t("miniCli.current") : undefined,
       footerTone: "selection" as const,
       keywords: variant,
       variant,
@@ -1064,12 +1091,12 @@ export function RunVariantSelectBody(props: {
 
   return (
     <PanelShell
-      title="Select variant"
+      title={t("miniCli.selectVariant")}
       layout={controller.layout()}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
@@ -1083,7 +1110,7 @@ export function RunVariantSelectBody(props: {
         rows={controller.menu.limit}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty="No results found"
+        empty={t("miniCli.noResults")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}
@@ -1096,6 +1123,7 @@ export function RunVariantSelectBody(props: {
 }
 
 export function RunModelSelectBody(props: {
+  locale?: Locale
   theme: Accessor<RunFooterTheme>
   providers: Accessor<RunProvider[] | undefined>
   current: Accessor<RunInput["model"]>
@@ -1103,6 +1131,7 @@ export function RunModelSelectBody(props: {
   onSelect: (model: NonNullable<RunInput["model"]>) => void
   mono?: boolean
 }) {
+  const t = (key: Key) => translate(resolveLocale(props.locale), key)
   const entries = createMemo<ModelEntry[]>(() =>
     (props.providers() ?? [])
       .flatMap((provider) =>
@@ -1112,9 +1141,9 @@ export function RunModelSelectBody(props: {
             const title = model.name ?? modelID
             const current = props.current()?.providerID === provider.id && props.current()?.modelID === modelID
             const footer = current
-              ? "current"
+              ? t("miniCli.current")
               : model.cost?.input === 0 && provider.id === "opencode"
-                ? "Free"
+                ? t("miniCli.free")
                 : title !== modelID
                   ? modelID
                   : undefined
@@ -1155,12 +1184,12 @@ export function RunModelSelectBody(props: {
 
   return (
     <PanelShell
-      title="Select model"
+      title={t("miniCli.selectModel")}
       layout={controller.layout()}
       query={controller.query()}
       count={controller.items().length}
       total={entries().length}
-      placeholder="Search"
+      placeholder={t("miniCli.search")}
       theme={props.theme}
       inputRef={controller.inputRef}
       onQuery={controller.setQuery}
@@ -1180,7 +1209,7 @@ export function RunModelSelectBody(props: {
         rows={controller.menu.limit}
         limit={controller.menu.limit()}
         compact={controller.layout().compact}
-        empty={props.providers() ? "No results found" : "Models loading"}
+        empty={t(props.providers() ? "miniCli.noResults" : "miniCli.modelsLoading")}
         border={false}
         paddingLeft={panelPad(props.mono)}
         paddingRight={panelPad(props.mono)}

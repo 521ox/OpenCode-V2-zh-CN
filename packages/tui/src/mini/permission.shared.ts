@@ -1,5 +1,6 @@
 import type { MiniPermissionRequest, PermissionReply } from "./types"
 import { permissionAlwaysLines, permissionOptionLabel, permissionPresentation } from "../util/permission"
+import { DEFAULT_LOCALE, translate, type Locale } from "../i18n"
 import { toolPath } from "./tool"
 import { monoPrefix } from "./mono"
 
@@ -45,7 +46,12 @@ export function permissionOptions(stage: PermissionStage): PermissionOption[] {
   return []
 }
 
-export function permissionInfo(request: MiniPermissionRequest, directory?: string, mono = false) {
+export function permissionInfo(
+  request: MiniPermissionRequest,
+  directory?: string,
+  mono = false,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const state = request.tool?.state
   const info = permissionPresentation(
     {
@@ -55,6 +61,7 @@ export function permissionInfo(request: MiniPermissionRequest, directory?: strin
       input: state?.status === "streaming" ? undefined : state?.input,
       toolMetadata: state?.status === "streaming" ? undefined : state?.metadata,
     },
+    (key, params) => translate(locale, key, params),
     (value) => toolPath(value, { home: true, directory }),
   )
   if (!mono) return info
@@ -70,8 +77,8 @@ export function permissionInfo(request: MiniPermissionRequest, directory?: strin
   }
 }
 
-export function permissionLabel(option: PermissionOption): string {
-  return permissionOptionLabel(option)
+export function permissionLabel(option: PermissionOption, locale: Locale = DEFAULT_LOCALE): string {
+  return permissionOptionLabel(option, (key, params) => translate(locale, key, params))
 }
 
 export { permissionAlwaysLines }
