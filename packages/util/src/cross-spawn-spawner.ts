@@ -243,6 +243,10 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
       // Bun resumes stdio on exit; retain bytes before the lazy Effect reader attaches.
       const buffer = new PassThrough()
       readable.on("error", (cause) => buffer.destroy(toError(cause)))
+      // pipe() forwards end, but a source can close without end. Keep captured bytes readable.
+      readable.once("close", () => {
+        if (!buffer.destroyed && !buffer.writableEnded) buffer.end()
+      })
       readable.pipe(buffer)
       return NodeStream.fromReadable({
         evaluate: () => buffer,

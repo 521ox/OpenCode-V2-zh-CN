@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -48,6 +48,25 @@ async function gone(pid: number, timeout = 5_000) {
 }
 
 describe("cross-spawn spawner", () => {
+  // Bun module mocks survive mock.restore(); keep the synthetic launch in its own process.
+  for (const mode of ["end", "close", "error"] as const) {
+    for (const combined of [false, true]) {
+      test(`settles ${combined ? "combined" : "separate"} capture on source ${mode}`, async () => {
+        const child = Bun.spawn(
+          [process.execPath, "run", path.join(import.meta.dir, "../fixture/capture-close.ts"), mode, String(combined)],
+          { stdout: "pipe", stderr: "pipe", timeout: 8_000 },
+        )
+        const [code, stdout, stderr] = await Promise.all([
+          child.exited,
+          new Response(child.stdout).text(),
+          new Response(child.stderr).text(),
+        ])
+        expect({ code, stderr }).toEqual({ code: 0, stderr: "" })
+        expect(stdout).toContain("capture settled")
+      }, 10_000)
+    }
+  }
+
   describe("basic spawning", () => {
     fx.effect(
       "captures stdout",
@@ -197,7 +216,7 @@ describe("cross-spawn spawner", () => {
     fx.effect(
       "captures stdout via .all when no stderr",
       Effect.gen(function* () {
-        const handle = yield* ChildProcess.make("echo", ["hello from stdout"])
+        const handle = yield* js('process.stdout.write("hello from stdout")')
         const all = yield* decodeByteStream(handle.all)
         expect(all).toBe("hello from stdout")
       }),
@@ -215,6 +234,21 @@ describe("cross-spawn spawner", () => {
 
   describe("delayed output consumption", () => {
     for (const combined of [false, true]) {
+      fx.live(
+        `finishes empty ${combined ? "combined" : "separate"} output after process completion`,
+        Effect.gen(function* () {
+          const handle = yield* js("process.exit(0)")
+          expect(yield* handle.exitCode).toBe(ChildProcessSpawner.ExitCode(0))
+          const collect: Effect.Effect<string | [string, string], PlatformError.PlatformError> = combined
+            ? decodeByteStream(handle.all)
+            : Effect.all([decodeByteStream(handle.stdout), decodeByteStream(handle.stderr)], {
+                concurrency: "unbounded",
+              })
+          const output = yield* collect.pipe(Effect.timeout("3 seconds"))
+          expect(output).toEqual(combined ? "" : ["", ""])
+        }),
+      )
+
       fx.live(
         `retains ${combined ? "combined" : "separate"} output after process completion`,
         Effect.gen(function* () {
@@ -255,6 +289,71 @@ describe("cross-spawn spawner", () => {
   })
 
   describe("process control", () => {
+    for (const combined of [false, true]) {
+      for (const delayed of [false, true]) {
+        fx.live(
+          `retains late ${combined ? "combined" : "separate"} bytes during the exit grace with ${delayed ? "delayed" : "active"} readers`,
+          Effect.gen(function* () {
+            const tmp = yield* Effect.acquireRelease(
+              Effect.promise(() => tmpdir()),
+              (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+            )
+            const pidFile = path.join(tmp.path, "child.pid")
+            yield* Effect.addFinalizer(() =>
+              Effect.tryPromise(async () => process.kill(Number(await fs.readFile(pidFile, "utf8")), "SIGKILL")).pipe(
+                Effect.ignore,
+              ),
+            )
+            const started = Date.now()
+            const handle = yield* js(
+              `
+                const fs = require("node:fs")
+                const child = require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(`
+                  process.stdout.on("error", () => {})
+                  process.stderr.on("error", () => {})
+                  process.send("ready")
+                  setTimeout(() => {
+                    process.stdout.write("late-out\\n")
+                    process.stderr.write("late-err\\n")
+                  }, 150)
+                  setTimeout(() => process.exit(0), 4000)
+                `)}], { detached: true, stdio: ["ignore", "inherit", "inherit", "ipc"] })
+                fs.writeFileSync(${JSON.stringify(pidFile)}, String(child.pid))
+                child.once("message", () => {
+                  child.disconnect()
+                  child.unref()
+                  fs.writeSync(1, "foreground-out\\n")
+                  fs.writeSync(2, "foreground-err\\n")
+                  process.exit(0)
+                })
+              `,
+              { stdin: "ignore", forceKillAfter: 100 },
+            )
+            if (delayed) expect(yield* handle.exitCode).toBe(ChildProcessSpawner.ExitCode(0))
+            const collect: Effect.Effect<string | [string, string], PlatformError.PlatformError> = combined
+              ? decodeByteStream(handle.all)
+              : Effect.all([decodeByteStream(handle.stdout), decodeByteStream(handle.stderr)], {
+                  concurrency: "unbounded",
+                })
+            const output = yield* collect.pipe(Effect.timeout("3 seconds"))
+            if (typeof output === "string") {
+              expect(output).toContain("foreground-out")
+              expect(output).toContain("foreground-err")
+              expect(output).toContain("late-out")
+              expect(output).toContain("late-err")
+            } else {
+              expect(output).toEqual(["foreground-out\nlate-out", "foreground-err\nlate-err"])
+            }
+            expect(yield* handle.exitCode).toBe(ChildProcessSpawner.ExitCode(0))
+            expect(Date.now() - started).toBeGreaterThanOrEqual(900)
+            expect(Date.now() - started).toBeLessThan(3_000)
+            expect(yield* handle.isRunning).toBe(false)
+          }),
+          10_000,
+        )
+      }
+    }
+
     for (const mode of ["exit", "SIGKILL"] as const) {
       const test = mode === "SIGKILL" && process.platform === "win32" ? fx.live.skip : fx.live
       test(
@@ -326,6 +425,22 @@ describe("cross-spawn spawner", () => {
         )
         const done = yield* Effect.promise(() => gone(pid))
         expect(done).toBe(true)
+      }),
+    )
+
+    fx.live(
+      "releases the process after cancelling output consumption",
+      Effect.gen(function* () {
+        const pid = yield* Effect.scoped(
+          Effect.gen(function* () {
+            const handle = yield* js('process.stdout.write("ready"); setInterval(() => {}, 10_000)', {
+              forceKillAfter: 100,
+            })
+            expect(yield* decodeByteStream(handle.all.pipe(Stream.take(1)))).toBe("ready")
+            return Number(handle.pid)
+          }),
+        ).pipe(Effect.timeout("3 seconds"))
+        expect(yield* Effect.promise(() => gone(pid))).toBe(true)
       }),
     )
 
