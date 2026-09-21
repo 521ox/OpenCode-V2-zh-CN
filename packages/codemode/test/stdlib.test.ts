@@ -1267,6 +1267,39 @@ describe("built-in iterators", () => {
   })
 })
 
+describe("Object.prototype.toString", () => {
+  test("reports the built-in kind it is inherited by, as JS does through Symbol.toStringTag", async () => {
+    expect(
+      await value(`
+      return [
+        new Map().toString(), new Set().toString(), new Headers().toString(), Promise.resolve(1).toString(),
+        [1].values().toString(), ({}).toString(), String(new Map()), String(Promise.resolve(1)),
+        \`\${new Set([1])}\`, [new Map()] + "", new Map() == "[object Map]",
+      ]
+    `),
+    ).toEqual([
+      "[object Map]",
+      "[object Set]",
+      "[object Headers]",
+      "[object Promise]",
+      "[object Iterator]",
+      "[object Object]",
+      "[object Map]",
+      "[object Promise]",
+      "[object Set]",
+      "[object Map]",
+      true,
+    ])
+  })
+})
+
+describe("console.log of errors", () => {
+  test("prints name and message, nested too", async () => {
+    const result = await run(`console.log(new Error("boom"), { e: new RangeError("r") })`)
+    expect(result.logs).toEqual(['Error: boom {"e":RangeError: r}'])
+  })
+})
+
 describe("toLocaleString", () => {
   test("numbers and dates format as en-US in UTC; everything else falls back to toString", async () => {
     expect(

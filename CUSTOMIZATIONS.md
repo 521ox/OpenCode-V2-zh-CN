@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: candidate `2.0.11-custom-lite.20260921.1` integrates official V2 target `cbdd1f66da3a50e02d40a3198a6bc270d651327b` on the accepted `2.0.10-custom-lite.20260920.2` checkpoint, preserving the direct-execution collections described below. Focused checks, affected types, full Windows build and isolated default-old-database/API/WebUI smoke passed; independent integrated review approved the exact candidate with deferred risks. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for provenance and verification scope. Local acceptance does not activate the installed executable or change live state.
+Status: this branch integrates official V2 target `b8aa08f260130452dc87fbc20c2a4e2ff743e642` (2.0.12) on the accepted `2.0.11-custom-lite.20260921.1` checkpoint, preserving the selected behavior below and adding the separately requested temporary-artifact cleanup guidance. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for accepted candidate provenance and verification scope. Source integration alone does not establish artifact acceptance or activate the installed executable.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 
@@ -10,6 +10,25 @@ Jobs, managed-service defaults, and TUI interactions except for the selected
 additions below. It is not a port of the former full customization set.
 
 ## Selected behavior
+
+### Task-owned temporary-artifact cleanup guidance
+
+The existing built-in environment instruction still prefers OpenCode's prepared
+temporary directory. It now tells Agents to create only necessary temporary
+artifacts and remove their own task-created scripts, test data, private environments,
+redundant caches and intermediate builds once verification or the task ends and
+those artifacts are no longer needed, within existing permissions.
+
+Deliverables belong in the agreed destination. Only minimal still-needed failure
+or recovery evidence should remain, with retained temporary paths and reasons
+reported. Agents must not delete the temporary root, other people's or user files,
+shared caches or files still used by background processes; uncertainty about
+ownership or activity means do not delete and report the uncertainty.
+
+This is model-facing guidance in the existing environment fragment, not a deletion
+service, timer or guaranteed model-compliance mechanism. It does not change path
+permissions, rewrite historical instructions or clean up earlier tasks automatically.
+Repeated unchanged loads retain the existing instruction read/diff/render behavior.
 
 ### Protected Session rules location
 

@@ -3,6 +3,7 @@ import { AISDK } from "@opencode/core/aisdk"
 import { Command } from "@opencode/core/command"
 import { Config } from "@opencode/core/config"
 import { Credential } from "@opencode/core/credential"
+import { Database } from "@opencode/core/database/database"
 import { LayerNodePlatform } from "@opencode/util/effect/app-node-platform"
 import { AppProcess } from "@opencode/util/process"
 import { LayerNode } from "@opencode/util/effect/layer-node"
@@ -14,6 +15,7 @@ import { Generate } from "@opencode/core/generate"
 import { Integration } from "@opencode/core/integration"
 import { KV } from "@opencode/core/kv"
 import { Location } from "@opencode/core/location"
+import { ManagedPolicy } from "@opencode/core/managed-policy"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Model } from "@opencode/core/model"
 import { Npm } from "@opencode/util/npm"
@@ -26,6 +28,7 @@ import { PersistentPty } from "@opencode/core/persistent-pty"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Permission } from "@opencode/core/permission"
+import { PermissionSaved } from "@opencode/core/permission/saved"
 import { Reference } from "@opencode/core/reference"
 import { Rpc } from "@opencode/core/rpc"
 import { Skill } from "@opencode/core/skill"
@@ -75,6 +78,7 @@ export const PluginTestLayer = AppNodeBuilder.build(
     Location.node,
     Npm.node,
     Credential.node,
+    Database.node,
     Bus.node,
     Form.node,
     Generate.node,
@@ -87,12 +91,14 @@ export const PluginTestLayer = AppNodeBuilder.build(
     Command.node,
     Integration.node,
     KV.node,
+    ManagedPolicy.node,
     Mcp.node,
     Session.node,
     SessionStore.node,
     PersistentPty.node,
     LocationServiceMap.node,
     Permission.node,
+    PermissionSaved.node,
     PluginHooks.node,
     Reference.node,
     Rpc.node,

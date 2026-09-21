@@ -1,5 +1,58 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 22 synchronization and temporary cleanup guidance
+
+The integration branch `sync-v2-20260922` merges fixed official V2 target
+`b8aa08f260130452dc87fbc20c2a4e2ff743e642` into accepted custom checkpoint
+`9a9d71d11fba67a5b20a399c261a31b388344809`. The upstream increment from
+`cbdd1f66da3a50e02d40a3198a6bc270d651327b` contains 16 commits and moves source
+manifests to 2.0.12. The target is frozen for this integration, not a moving latest
+claim. The Bun 1.4.2 toolchain remains unchanged; the upstream Electron update is
+for the separate Desktop package, not the embedded CLI runtime.
+
+The user separately authorized adding task-owned temporary cleanup guidance to
+the official environment prompt. The addition preserves the temporary directory
+preference, scopes removal to no-longer-needed task artifacts and existing
+permissions, protects shared/user/active-process files, and requires explaining
+minimal retained evidence. It is not an automatic cleanup service and does not
+claim that every model will comply. The selected behavior is in `CUSTOMIZATIONS.md`.
+
+The Core policy conflict preserves both the official Console-managed policy
+authority and conservative hosted-search preauthorization. UI conflicts preserve
+Chinese/English presentation while adopting terminal-sized `/btw` and Mini exit
+completion updates. Existing direct-execution groups, tool detail interactions,
+child-title navigation, copy-session-ID action and protected Session rules remain
+selected contracts, not opportunities to restore the retired full fork.
+
+Verification uses private configuration, test database and runtime directories,
+but reuses the established Bun dependency cache instead of creating a complete
+package cache per task. The current task's scratch data is removed after accepted
+delivery and compact verification results are retained with the candidate metadata.
+Previous task directories, shared caches and running services are outside that
+cleanup scope. No installed activation, provider call or live database operation
+is part of this synchronization. Startup/default exit and later child-terminal
+notification repairs remain deferred.
+
+Candidate version: `2.0.12-custom-lite.20260922.1`, channel `latest`. Source
+integration, compiled artifact verification and final export remain distinct gates.
+
+Focused source verification passed 1,122 distinct cases across 46 files: 158 Core
+(including the environment instruction and managed-policy/hosted-search integration),
+706 Code Mode, 69 TUI, 33 CLI, 83 App, 36 Session UI and 37 browser-plugin cases.
+Eleven affected package typechecks and scoped format/lint checks passed. Final
+integrated policy and TUI runs passed all 93 and 69 respective cases. Earlier
+fixture failures were corrected by seeding the real saved-permission database and
+waiting for real Markdown rendering/selection-aware dismissal; production
+assertions were not weakened. This evidence includes English/Chinese `/btw`
+resize frames and existing native-tool collapse, execution groups, child-title
+navigation and copy-ID behavior.
+
+App tests use Happy DOM, not a live browser. HTML artifact previews retain the
+upstream sandbox without same-origin permission; this is origin isolation, not
+a no-network guarantee. The new CLI upgrade error formatter is source-reviewed
+but not directly exercised by the older error fixtures. No complete Test262/WPT
+certification, browser end-to-end suite or Electron runtime is claimed.
+
 ## September 21 synchronization
 
 The integration branch `sync-v2-20260921` merges fixed official V2 target
