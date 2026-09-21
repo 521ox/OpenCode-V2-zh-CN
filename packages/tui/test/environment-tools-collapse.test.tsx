@@ -267,8 +267,10 @@ test("collapsed execution groups retain active, failed, nonzero and permission c
     ],
   })
   await f.ready()
-  await f.setup.waitForFrame((frame) => frame.includes("visible-permission"))
-  const frame = f.setup.captureCharFrame()
+  // Tool rows can be visually idle while the following Markdown is still highlighting.
+  const frame = await f.setup.waitForFrame(
+    (frame) => frame.includes("visible-permission") && frame.includes("Following text boundary"),
+  )
   expect(frame).toContain("Executing — 8 calls")
   expect(frame).not.toContain("Executions finished")
   expect(frame).toContain("Following text boundary")

@@ -593,7 +593,7 @@ describe("SessionModelTransport", () => {
           Effect.forkChild({ startImmediately: true }),
         )
         yield* Effect.yieldNow
-        yield* TestClock.adjust("10 seconds")
+        yield* TestClock.adjust("15 seconds")
         expect(yield* Fiber.join(running)).toEqual(["fallback:slow"])
       }),
     )
@@ -727,6 +727,104 @@ describe("SessionModelTransport", () => {
         // One failed upgrade per Session, not one per step.
         expect(attempts).toBe(1)
         expect(fallbacks).toBe(2)
+      }),
+    )
+  })
+
+  test("keeps the Session on HTTP after repeated mid-stream socket losses", async () => {
+    let opens = 0
+    const connector: WebSocketConnector = {
+      open: () =>
+        Effect.gen(function* () {
+          opens++
+          const messages = yield* Queue.unbounded<string | Uint8Array, AIError>()
+          return {
+            sendText: () =>
+              Effect.sync(() => {
+                Queue.failCauseUnsafe(messages, Cause.fail(error("socket dropped")))
+              }),
+            messages: Stream.fromQueue(messages),
+            close: Queue.shutdown(messages).pipe(Effect.asVoid),
+          }
+        }),
+    }
+
+    await run(
+      connector,
+      Effect.gen(function* () {
+        const transport = yield* SessionModelTransport.Service
+        const executor = transport.bind(session)
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const result = yield* Effect.result(collect(executor, exchange(`attempt-${attempt}`)))
+          expect(result._tag).toBe("Failure")
+        }
+        expect(opens).toBe(5)
+        expect(yield* collect(executor, exchange("sixth"))).toEqual(["fallback:sixth"])
+        expect(opens).toBe(5)
+      }),
+    )
+  })
+
+  test("a clean terminal resets consecutive socket losses before HTTP fallback", async () => {
+    const sent: string[] = []
+    const fallbacks: string[] = []
+    const connector: WebSocketConnector = {
+      open: () =>
+        Effect.gen(function* () {
+          const messages = yield* Queue.unbounded<string | Uint8Array, AIError>()
+          return {
+            sendText: (message) =>
+              Effect.sync(() => {
+                sent.push(message)
+                if (message === "healthy") Queue.offerUnsafe(messages, "completed:healthy")
+                else Queue.failCauseUnsafe(messages, Cause.fail(error("socket dropped")))
+              }),
+            messages: Stream.fromQueue(messages),
+            close: Queue.shutdown(messages).pipe(Effect.asVoid),
+          }
+        }),
+    }
+    const item = (id: string) =>
+      exchange(id, {
+        fallback: () => {
+          fallbacks.push(id)
+          return Stream.make(`http:${id}`)
+        },
+      })
+
+    await run(
+      connector,
+      Effect.gen(function* () {
+        const transport = yield* SessionModelTransport.Service
+        const executor = transport.bind(session)
+        for (let attempt = 0; attempt < 4; attempt++) {
+          expect(yield* Effect.result(collect(executor, item(`before-${attempt}`)))).toMatchObject({
+            _tag: "Failure",
+            failure: { reason: { _tag: "Transport", delivery: "ambiguous" } },
+          })
+        }
+        expect(yield* collectComplete(executor, item("healthy"))).toEqual(["completed:healthy"])
+        for (let attempt = 0; attempt < 5; attempt++) {
+          expect(yield* Effect.result(collect(executor, item(`after-${attempt}`)))).toMatchObject({
+            _tag: "Failure",
+            failure: { reason: { _tag: "Transport", delivery: "ambiguous" } },
+          })
+          expect(fallbacks).toEqual([])
+        }
+        expect(yield* collect(executor, item("http"))).toEqual(["http:http"])
+        expect(fallbacks).toEqual(["http"])
+        expect(sent).toEqual([
+          "before-0",
+          "before-1",
+          "before-2",
+          "before-3",
+          "healthy",
+          "after-0",
+          "after-1",
+          "after-2",
+          "after-3",
+          "after-4",
+        ])
       }),
     )
   })

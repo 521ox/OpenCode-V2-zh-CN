@@ -1,8 +1,8 @@
 import { Effect } from "effect"
-import { constructor, type Method, methods } from "../interpreter/native.js"
+import { constructor, fn, type Method, methods } from "../interpreter/native.js"
 import { checkArrayLength, checkStringLength } from "../interpreter/limits.js"
-import { invalidData, rangeError, typeError } from "../interpreter/model.js"
-import { Arr, PromiseObj, RegExpObj, record } from "../interpreter/objects.js"
+import { invalidData, IteratorSymbol, rangeError, typeError } from "../interpreter/model.js"
+import { define, hidden, Arr, IteratorObj, PromiseObj, RegExpObj, record } from "../interpreter/objects.js"
 import { containsOpaqueReference, typeofValue } from "../interpreter/references.js"
 import { applyCollectionCallback, isSupportedCallback } from "../interpreter/callback.js"
 import type { Interpreter } from "../interpreter/interpreter.js"
@@ -150,6 +150,8 @@ export const stringGlobal = <R>(ctx: Interpreter<R>) => {
     simple("valueOf", 0, (value) => value),
     simple("toLowerCase", 0, (value) => value.toLowerCase()),
     simple("toUpperCase", 0, (value) => value.toUpperCase()),
+    simple("toLocaleLowerCase", 0, (value) => value.toLowerCase()),
+    simple("toLocaleUpperCase", 0, (value) => value.toUpperCase()),
     simple("trim", 0, (value) => value.trim()),
     simple("trimStart", 0, (value) => value.trimStart()),
     simple("trimLeft", 0, (value) => value.trimStart()),
@@ -258,5 +260,16 @@ export const stringGlobal = <R>(ctx: Interpreter<R>) => {
       return joined
     }),
   ])
+  define(
+    builtins.String,
+    IteratorSymbol,
+    fn(
+      builtins,
+      "[Symbol.iterator]",
+      0,
+      (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "[Symbol.iterator]")[Symbol.iterator]()),
+    ),
+    hidden,
+  )
   return string
 }

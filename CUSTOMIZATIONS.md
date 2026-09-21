@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: this branch builds on the accepted `2.0.10-custom-lite.20260920.1` synchronization of official V2 target `dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c`, with subsequent TUI-only direct-execution collections described below. See `UPSTREAM_SYNC.md` for synchronization provenance and the adjacent `.exe.build.json` for each Windows candidate's exact source and verification. Source changes and local acceptance do not activate the installed executable or change live state.
+Status: this branch integrates official V2 target `cbdd1f66da3a50e02d40a3198a6bc270d651327b` (2.0.11) on the accepted `2.0.10-custom-lite.20260920.2` checkpoint, preserving the direct-execution collections described below. See `UPSTREAM_SYNC.md` for synchronization provenance and the adjacent `.exe.build.json` for each accepted Windows candidate's exact source and verification. Source integration alone does not establish artifact acceptance, activate the installed executable or change live state.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 

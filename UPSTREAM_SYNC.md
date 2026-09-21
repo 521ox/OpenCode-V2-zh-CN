@@ -1,5 +1,56 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 21 synchronization
+
+The integration branch `sync-v2-20260921` merges fixed official V2 target
+`cbdd1f66da3a50e02d40a3198a6bc270d651327b` into custom checkpoint
+`965b7fd9ae843eef47894a12009287d44a1eccb5`. The official increment from
+`dfa44e94e8ed55a394c3f64eb9a7da56e69f2f3c` contains 39 commits, including 19 model
+snapshot refreshes and the 2.0.11 version update. The final two commits since the
+previous inspection add CLI fatal-cause stderr reporting and Code Mode submitted-
+source error locations. This freezes the fetched target rather than following a
+moving branch during verification.
+
+Integration preserves the accepted direct-execution collection and all selected
+custom behavior. The only textual conflicts were the TUI tab-menu component and
+its test: the official Copy session ID action now uses the existing reactive
+English/Chinese resources, clipboard and toast owners. No second clipboard or
+navigation mechanism was introduced. CLI startup reporting auto-merged with the
+existing localized failure banner; it does not change shared-service exit policy.
+
+The upstream transport now pins subsequent exchanges to HTTP after five counted
+consecutive socket losses, with a clean terminal resetting the counter. It does
+not replay an ambiguously delivered failed exchange immediately over HTTP. The
+counter is process-local, not a persisted transport preference. Promise plugin
+tools receive cancellation through AbortSignal; cancellation remains cooperative
+for arbitrary Promise implementations. Anthropic budget variants and the Code
+Mode iterator, standard-library and diagnostic updates retain their upstream owners.
+
+Desktop bootstrap/IPC changes are integrated as source. The Windows CLI embeds
+the App WebUI, not the Electron Desktop application; a CLI build does not certify
+Desktop startup performance or its native browser runtime. No new migration,
+compaction policy, provider protocol routing or child-followup notification repair
+is introduced by this synchronization. Startup-delay and default-exit changes
+remain deferred.
+
+The planned candidate is `2.0.11-custom-lite.20260921.1`, channel `latest`, built
+with the unchanged Bun 1.4.2 toolchain. Verification, exact artifact identity and
+local export are separate from source integration and must be recorded before
+delivery. The original accepted worktree and installed executable remain protected
+until the applicable acceptance/promotion boundary; installed activation is still
+user-managed.
+
+Focused verification passed 626 distinct cases: 132 Core, 376 Code Mode (including
+21 additional isolated fixtures), 112 TUI, two CLI startup-reporting and four
+Desktop bootstrap/IPC cases. Nine affected package typechecks and scoped style
+checks passed. Added boundary regressions cover the transport failure-counter
+reset, Promise update/list/get cancellation round trips and actual localized CLI
+fatal stderr output. An existing TUI fixture was corrected to wait for both its
+permission row and asynchronously rendered following Markdown in the same frame;
+its original visibility and ordering assertions remain intact. No execution-group
+production repair was needed. These checks do not claim full browser E2E,
+Desktop runtime/performance or complete Test262/WPT certification.
+
 ## September 20 synchronization
 
 The integration branch `sync-v2-20260920` merges official V2 commit

@@ -20,9 +20,9 @@ import { CodeMode, Tool } from "../src/index.js"
 
 // Standard-library value types: Date, RegExp, Map, Set. Programs use them as ordinary JS;
 // intra-CodeMode checkpoints (Object.* helpers, spread, coercion inputs) preserve the live
-// values, while at the host boundary (final result, tool arguments, JSON.stringify) they
-// serialize exactly as JSON.stringify would: Date -> ISO string (invalid -> null),
-// URL -> href, and RegExp/Map/Set/URLSearchParams -> {}.
+// values. JSON.stringify keeps Date -> ISO string (invalid -> null), URL -> href, and
+// RegExp/Map/Set/URLSearchParams -> {}. The host boundary matches that except URLSearchParams,
+// which cross as their query string, and Set, which crosses as an array.
 const run = (code: string) => Effect.runPromise(CodeMode.execute({ code, tools: {} }))
 const value = async (code: string) => {
   const result = await run(code)
@@ -655,9 +655,9 @@ describe("Headers", () => {
           copied: [headers.get("content-type"), copy.get("content-type")],
           pairs: [...new Headers([["b", "2"], ["A", "1"]])],
           map: [...new Headers(new Map([["k", "v"]]))],
-          keys: headers.keys(),
-          values: headers.values(),
-          entries: headers.entries(),
+          keys: [...headers.keys()],
+          values: [...headers.values()],
+          entries: [...headers.entries()],
         }
       `),
     ).toEqual({
@@ -816,18 +816,28 @@ describe("Map", () => {
     expect((await error(`return new Map(["flat"])`)).message).toMatch(/\[key, value\] pairs/)
   })
 
-  test("keys/values/entries return arrays", async () => {
+  test("keys/values/entries return live iterators", async () => {
     expect(
       await value(`
       const m = new Map([["a", 1], ["b", 2]])
-      return { keys: m.keys(), values: m.values(), entries: m.entries() }
+      const keys = m.keys()
+      const first = keys.next()
+      m.set("c", 3)
+      return { first, rest: [...keys], values: [...m.values()], entries: [...m.entries()], same: [...m[Symbol.iterator]()] }
     `),
     ).toEqual({
-      keys: ["a", "b"],
-      values: [1, 2],
+      first: { value: "a", done: false },
+      rest: ["b", "c"],
+      values: [1, 2, 3],
       entries: [
         ["a", 1],
         ["b", 2],
+        ["c", 3],
+      ],
+      same: [
+        ["a", 1],
+        ["b", 2],
+        ["c", 3],
       ],
     })
   })
@@ -886,6 +896,42 @@ describe("Map", () => {
       return Object.fromEntries(counts)
     `),
     ).toEqual({ a: 3, b: 1, c: 1 })
+  })
+
+  test("getOrInsert and getOrInsertComputed insert only when the key is missing", async () => {
+    expect(
+      await value(`
+      const groups = new Map()
+      groups.getOrInsert("a", []).push(1)
+      groups.getOrInsert("a", []).push(2)
+      let calls = 0
+      const computed = (key) => { calls++; return key + "!" }
+      const first = groups.getOrInsertComputed("b", computed)
+      const second = groups.getOrInsertComputed("b", computed)
+      const zero = groups.getOrInsertComputed(-0, (key) => 1 / key === Infinity)
+      return [[...groups], first, second, calls, zero]
+    `),
+    ).toEqual([
+      [
+        ["a", [1, 2]],
+        ["b", "b!"],
+        [0, true],
+      ],
+      "b!",
+      "b!",
+      1,
+      true,
+    ])
+    expect(
+      await value(`
+      const m = new Map()
+      const outer = m.getOrInsertComputed("k", () => { m.set("k", "inner"); return "outer" })
+      let thrown
+      try { m.getOrInsertComputed("j", () => { throw new Error("boom") }) } catch (error) { thrown = error.message }
+      return [outer, m.get("k"), thrown, m.has("j")]
+    `),
+    ).toEqual(["outer", "outer", "boom", false])
+    expect((await error(`new Map().getOrInsertComputed("k", 5)`)).message).toContain("expects a function callback")
   })
 
   test("maps serialize to {} at the boundary, like JSON", async () => {
@@ -1051,7 +1097,7 @@ describe("Uint8Array", () => {
       console.log(b, new Uint8Array())
       return [String(b), b + "", +new Uint8Array([5]), Number.isNaN(Number(b)), b == "1,2", JSON.stringify(b), b.toLocaleString(), typeof b, b instanceof Uint8Array]
     `),
-    ).toEqual(["1,2", "1,2", 5, true, true, '{"0":1,"1":2}', "[object Uint8Array]", "object", true])
+    ).toEqual(["1,2", "1,2", 5, true, true, '{"0":1,"1":2}', "1,2", "object", true])
     expect((await run(`console.log(new Uint8Array([1, 2]), new Uint8Array())`)).logs).toEqual([
       "Uint8Array(2) [1,2] Uint8Array(0) []",
     ])
@@ -1116,6 +1162,151 @@ describe("TextEncoder and TextDecoder", () => {
       ),
     ).toEqual([true, 16, true])
     expect((await error(`crypto.getRandomValues([1])`)).message).toContain("expects a Uint8Array, received an array")
+  })
+})
+
+describe("built-in iterators", () => {
+  test("keys/values/entries and [Symbol.iterator] step with next() and stay live", async () => {
+    expect(
+      await value(`
+        const items = ["a"]
+        const it = items.entries()
+        items.push("b")
+        const steps = [it.next(), it.next(), it.next()]
+        items.push("c")
+        return { steps, after: it.next(), same: items[Symbol.iterator] === items.values }
+      `),
+    ).toEqual({
+      steps: [{ value: [0, "a"], done: false }, { value: [1, "b"], done: false }, { done: true }],
+      after: { done: true },
+      same: true,
+    })
+    expect(
+      await value(`
+        const s = new Set([1, 2])
+        const u = new URLSearchParams("a=1&b=2")
+        const h = new Headers({ b: "2", a: "1" })
+        const bytes = new Uint8Array([7, 8])
+        return [
+          [...s.entries()], [...s[Symbol.iterator]()], s[Symbol.iterator] === s.values,
+          [...u.keys()], [...u[Symbol.iterator]()], u[Symbol.iterator] === u.entries,
+          [...h.values()], [...h[Symbol.iterator]()], h[Symbol.iterator] === h.entries,
+          [...bytes.entries()], [...bytes[Symbol.iterator]()], bytes[Symbol.iterator] === bytes.values,
+          [..."ab"[Symbol.iterator]()],
+        ]
+      `),
+    ).toEqual([
+      [
+        [1, 1],
+        [2, 2],
+      ],
+      [1, 2],
+      true,
+      ["a", "b"],
+      [
+        ["a", "1"],
+        ["b", "2"],
+      ],
+      true,
+      ["1", "2"],
+      [
+        ["a", "1"],
+        ["b", "2"],
+      ],
+      true,
+      [
+        [0, 7],
+        [1, 8],
+      ],
+      [7, 8],
+      true,
+      ["a", "b"],
+    ])
+  })
+
+  test("iterators are consumed once by every iteration site", async () => {
+    expect(
+      await value(`
+        const it = [1, 2, 3, 4].values()
+        const picked = []
+        for (const item of it) { picked.push(item); if (item === 2) break }
+        const [third] = it
+        return { picked, third, rest: [...it], spent: Array.from(it), again: it[Symbol.iterator]() === it }
+      `),
+    ).toEqual({ picked: [1, 2], third: 3, rest: [4], spent: [], again: true })
+    expect(
+      await value(`
+        const m = new Map([["a", 1], ["b", 2]])
+        return [
+          Object.fromEntries(m.entries()), Array.from(m.keys(), (k) => k + "!"), new Set(m.values()).size,
+          await Promise.all([Promise.resolve(1), 2].values()),
+        ]
+      `),
+    ).toEqual([{ a: 1, b: 2 }, ["a!", "b!"], 2, [1, 2]])
+    expect(await value(`let s = 0; for await (const v of [Promise.resolve(1), 2].values()) s += v; return s`)).toBe(3)
+    expect(
+      await value(`return new Set([1, 2]).union({ size: 1, has: () => false, keys: () => new Set([3]).keys() })`),
+    ).toEqual([1, 2, 3])
+  })
+
+  test("iterators are opaque references", async () => {
+    expect(await value(`return [1].keys()`)).toEqual({})
+    expect(await value(`return JSON.stringify({ it: [1].keys() })`)).toBe('{"it":{}}')
+    expect(await value(`return [typeof [1].keys(), Array.isArray([1].keys()), Object.keys([1].keys())]`)).toEqual([
+      "object",
+      false,
+      [],
+    ])
+    const logged = await run(`console.log([1].keys()); return null`)
+    expect(logged.logs?.[0]).toBe("[opaque reference]")
+    expect((await error(`return [1].keys() + ""`)).message).toContain("Binary operators require data values")
+    expect((await error(`return [1].keys().next.call({})`)).message).toContain("is not a function")
+    expect((await error(`const it = [1].keys(); const next = it.next; return next()`)).message).toContain(
+      "Iterator.prototype.next called on incompatible receiver undefined",
+    )
+  })
+})
+
+describe("toLocaleString", () => {
+  test("numbers and dates format as en-US in UTC; everything else falls back to toString", async () => {
+    expect(
+      await value(`
+      return [
+        (1234567.891).toLocaleString(), new Date(0).toLocaleString(), new Date(0).toLocaleDateString(),
+        new Date(0).toLocaleTimeString(), "a".toLocaleString(), true.toLocaleString(), ({}).toLocaleString(),
+        ({ toString: () => "custom" }).toLocaleString(), new Uint8Array([1, 2]).toLocaleString(),
+      ]
+    `),
+    ).toEqual([
+      "1,234,567.891",
+      "1/1/1970, 12:00:00 AM",
+      "1/1/1970",
+      "12:00:00 AM",
+      "a",
+      "true",
+      "[object Object]",
+      "custom",
+      "1,2",
+    ])
+  })
+
+  test("arrays join each element's toLocaleString, skipping holes and nullish elements", async () => {
+    expect(
+      await value(`
+      let calls = 0
+      const item = { toLocaleString() { calls++; return "o" } }
+      return [[1234.5, "x", null, undefined, item, new Date(0)].toLocaleString(), [, item, , item].toLocaleString(), calls]
+    `),
+    ).toEqual(["1,234.5,x,,,o,1/1/1970, 12:00:00 AM", ",o,,o", 3])
+    expect((await error(`const f = ({}).toLocaleString; f()`)).message).toContain(
+      "Object.prototype.toLocaleString called on null or undefined",
+    )
+  })
+
+  test("toLocaleLowerCase and toLocaleUpperCase ignore the locale argument", async () => {
+    expect(
+      await value(`return ["ABC".toLocaleLowerCase("tr"), "abc".toLocaleUpperCase(), "İ".toLocaleLowerCase()]`),
+    ).toEqual(["abc", "ABC", "i̇"])
   })
 })
 

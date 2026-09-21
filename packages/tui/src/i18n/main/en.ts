@@ -63,6 +63,8 @@ export default {
   "main.terminal.new": "New terminal",
   "main.tabs.closeMenu": "Close tab menu",
   "main.tabs.new": "New tab",
+  "main.tabs.copyID": "Copy session ID",
+  "main.tabs.idCopied": "Session ID copied to clipboard",
   "main.permission.edit": "Edit {{path}}",
   "main.permission.read": "Read {{path}}",
   "main.permission.list": "List {{path}}",

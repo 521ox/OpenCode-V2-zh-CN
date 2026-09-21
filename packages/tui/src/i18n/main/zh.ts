@@ -63,6 +63,8 @@ export default {
   "main.terminal.new": "新建终端",
   "main.tabs.closeMenu": "关闭标签菜单",
   "main.tabs.new": "新建标签页",
+  "main.tabs.copyID": "复制会话 ID",
+  "main.tabs.idCopied": "会话 ID 已复制到剪贴板",
   "main.permission.edit": "编辑 {{path}}",
   "main.permission.read": "读取 {{path}}",
   "main.permission.list": "列出 {{path}}",

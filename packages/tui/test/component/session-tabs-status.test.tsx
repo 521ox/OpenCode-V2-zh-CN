@@ -22,7 +22,7 @@ import { SessionTabsProvider } from "../../src/context/session-tabs"
 import { StorageProvider } from "../../src/context/storage"
 import { ThemeProvider, useTheme } from "../../src/context/theme"
 import { DialogProvider } from "../../src/ui/dialog"
-import { ToastProvider } from "../../src/ui/toast"
+import { Toast, ToastProvider, useToast } from "../../src/ui/toast"
 import { emptyThemeSource, tmpdir } from "../fixture/fixture"
 import { createApi, createEventStream, createFetch } from "../fixture/tui-client"
 import { TestTuiContexts } from "../fixture/tui-environment"
@@ -35,8 +35,14 @@ for (const orientation of ["horizontal", "vertical"] as const) {
     const [active, setActive] = createSignal("second")
     const [newTab, setNewTab] = createSignal(false)
     const settings: Info = { locale: "en", tabs: { enabled: true } }
+    const copied: string[] = []
     let config!: ReturnType<typeof useConfig>
     let theme!: ReturnType<typeof useTheme>
+    let toast!: ReturnType<typeof useToast>
+    function Feedback() {
+      toast = useToast()
+      return <Toast />
+    }
     function Colors() {
       config = useConfig()
       theme = orientation === "vertical" ? useTheme() : useTheme()
@@ -62,7 +68,10 @@ for (const orientation of ["horizontal", "vertical"] as const) {
     } satisfies SessionTabsController
     const app = await testRender(
       () => (
-        <TestTuiContexts paths={{ state: temporary.path }}>
+        <TestTuiContexts
+          paths={{ state: temporary.path }}
+          clipboard={{ read: async () => undefined, write: async (text) => void copied.push(text) }}
+        >
           <TuiAppProvider value={{ name: "test", version: "test", channel: "test" }}>
             <StorageProvider>
               <ConfigProvider
@@ -92,6 +101,7 @@ for (const orientation of ["horizontal", "vertical"] as const) {
                                         orientation={orientation}
                                         animations={false}
                                       />
+                                      <Feedback />
                                     </box>
                                   </DialogProvider>
                                 </ToastProvider>
@@ -209,11 +219,39 @@ for (const orientation of ["horizontal", "vertical"] as const) {
       await app.mockMouse.click(column, row, MouseButton.RIGHT)
       await app.waitForFrame((frame) => frame.includes("Rename"))
       expect(app.captureCharFrame().split("\n")[row + 1]!.indexOf("Rename")).toBe(column + 1)
+      expect(app.captureCharFrame()).toContain("Copy session ID")
       expect(app.captureCharFrame()).toContain("Close")
       expect(app.captureCharFrame()).not.toContain("Keep open")
       expect(active()).toBe("second")
-      app.mockInput.pressKey("c", { ctrl: true })
+      await app.mockMouse.click(column + 1, row + 2)
+      expect(copied).toEqual(["first"])
       await app.waitForFrame((frame) => !frame.includes("Rename"))
+      await app.waitForFrame((frame) => frame.includes("Session ID copied to clipboard"))
+      expect(toast.currentToast?.variant).toBe("info")
+      expect(active()).toBe("second")
+      toast.dismiss()
+      await app.renderOnce()
+
+      await app.mockMouse.click(column, row, MouseButton.RIGHT)
+      await app.waitForFrame((frame) => frame.includes("Copy session ID"))
+      await config.update((draft) => {
+        draft.locale = "zh"
+      })
+      await app.waitForFrame((frame) => frame.includes("复制会话 ID"))
+      expect(app.captureCharFrame().split("\n")[row + 1]!.indexOf("重命名")).toBe(column + 1)
+      expect(app.captureCharFrame()).toContain("关闭")
+      expect(app.captureCharFrame()).not.toContain("Copy session ID")
+      expect(active()).toBe("second")
+      await app.mockMouse.click(column + 1, row + 2)
+      expect(copied).toEqual(["first", "first"])
+      await app.waitForFrame((frame) => !frame.includes("重命名"))
+      await app.waitForFrame((frame) => frame.includes("会话 ID 已复制到剪贴板"))
+      expect(toast.currentToast?.variant).toBe("info")
+      expect(active()).toBe("second")
+      toast.dismiss()
+      await config.update((draft) => {
+        draft.locale = "en"
+      })
 
       setNewTab(true)
       await app.waitForFrame((frame) => frame.includes("+ New session"))
