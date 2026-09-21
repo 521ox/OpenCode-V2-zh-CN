@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: this branch integrates official V2 target `cbdd1f66da3a50e02d40a3198a6bc270d651327b` (2.0.11) on the accepted `2.0.10-custom-lite.20260920.2` checkpoint, preserving the direct-execution collections described below. See `UPSTREAM_SYNC.md` for synchronization provenance and the adjacent `.exe.build.json` for each accepted Windows candidate's exact source and verification. Source integration alone does not establish artifact acceptance, activate the installed executable or change live state.
+Status: candidate `2.0.11-custom-lite.20260921.1` integrates official V2 target `cbdd1f66da3a50e02d40a3198a6bc270d651327b` on the accepted `2.0.10-custom-lite.20260920.2` checkpoint, preserving the direct-execution collections described below. Focused checks, affected types, full Windows build and isolated default-old-database/API/WebUI smoke passed; independent integrated review approved the exact candidate with deferred risks. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for provenance and verification scope. Local acceptance does not activate the installed executable or change live state.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 

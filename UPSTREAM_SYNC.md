@@ -33,12 +33,20 @@ compaction policy, provider protocol routing or child-followup notification repa
 is introduced by this synchronization. Startup-delay and default-exit changes
 remain deferred.
 
-The planned candidate is `2.0.11-custom-lite.20260921.1`, channel `latest`, built
-with the unchanged Bun 1.4.2 toolchain. Verification, exact artifact identity and
-local export are separate from source integration and must be recorded before
-delivery. The original accepted worktree and installed executable remain protected
-until the applicable acceptance/promotion boundary; installed activation is still
-user-managed.
+Accepted candidate `2.0.11-custom-lite.20260921.1`, channel `latest`, was built from
+clean merge commit `ba7ea8a9a29998af7a32dd426fea52aa66b93a9d` with the unchanged
+Bun 1.4.2 toolchain and embedded revision `1.4.2+744846f84`. The full Windows
+bytecode/WebUI build and isolated populated-default-old-database/API/WebUI/owned-
+shutdown smoke passed. The executable is 205,157,888 bytes, SHA256
+`cb51501b6cd75e879770937a7a6a451f364093ab464492f73cbdec6ad2ff85b4`.
+Independent Material closure review approved this exact source and artifact with
+deferred risks; no repair/re-review cycle was required.
+
+The local acceptance tag `custom-lite-2.0.11-20260921.1` identifies the merge plus
+documentation-only acceptance updates. Export metadata distinguishes the binary
+source commit from that documentation tip. The original custom branch is promoted
+only after approval; the fixed-name installed executable, existing backup and live
+state remain protected. Installation and restart are user-managed.
 
 Focused verification passed 626 distinct cases: 132 Core, 376 Code Mode (including
 21 additional isolated fixtures), 112 TUI, two CLI startup-reporting and four
@@ -50,6 +58,14 @@ permission row and asynchronously rendered following Markdown in the same frame;
 its original visibility and ordering assertions remain intact. No execution-group
 production repair was needed. These checks do not claim full browser E2E,
 Desktop runtime/performance or complete Test262/WPT certification.
+
+Two upstream-only limitations remain outside this CLI delivery: the Desktop
+profiling helper `scripts/profile-by-source.ts` hard-codes a developer-machine
+module path, and that helper plus `src/main/windows/index.ts` retain upstream
+whitespace issues. Their blob identities match the fixed official target; the
+official diff itself fails whitespace checking. These files were not restyled or
+claimed runtime-verified. The scoped integration format/lint result is not a claim
+that the complete upstream diff passes every formatting check.
 
 ## September 20 synchronization
 
