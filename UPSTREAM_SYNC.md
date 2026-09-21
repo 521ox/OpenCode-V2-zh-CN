@@ -65,6 +65,17 @@ assertions). The earlier 1,122-case evidence plus those two cases totals 1,124
 distinct cases; repaired-source checks, rebuild and same-session re-review remain
 separate acceptance gates.
 
+The first re-review retained F1 as blocking: a late old-connection failure could
+still clear a newer connection's accepted deny. The user explicitly authorized
+one additional bounded repair/re-review cycle. All production policy completions
+now pass through the global owner's shared Effect permit, which re-reads the
+authoritative active connection before publication. Twelve controlled in-flight
+cases cover old 503/success/404 results after a new connection succeeds, fails,
+returns 404 or disconnects. Ten failed against the first repair; all twelve and
+the prior policy cases pass after the guard (107 cases, 573 assertions). The
+distinct focused total is now 1,136 cases across the same 46 files. This statement
+records source evidence, not approval of the rebuilt artifact.
+
 ## September 21 synchronization
 
 The integration branch `sync-v2-20260921` merges fixed official V2 target

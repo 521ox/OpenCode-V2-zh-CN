@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Deferred, Effect, Fiber, Layer, Schema } from "effect"
 import { Document, Event, Info } from "@opencode/schema/config"
 import { OpenAI } from "@opencode/ai/providers"
 import { ToolDefinition } from "@opencode/ai"
@@ -64,6 +64,95 @@ const setup = Effect.gen(function* () {
   }).pipe(Effect.provideService(Permission.Service, permission))
   return { input, permission, select }
 })
+
+for (const lateStatus of [503, 200, 404]) {
+  for (const nextStatus of [200, 503, 404, "disconnect"] as const) {
+    it.effect(`in-flight Console switch rejects old ${lateStatus} after ${nextStatus}`, () =>
+      Effect.gen(function* () {
+        const managed = yield* ManagedPolicy.Service
+        const credentials = yield* Credential.Service
+        const account = (key: string) =>
+          credentials.create({
+            integrationID: Integration.ID.make("opencode"),
+            value: Credential.Key.make({ type: "key", key, metadata: { orgName: key } }),
+          })
+        const old = yield* account("K1")
+        const entered = yield* Deferred.make<void>()
+        const release = yield* Deferred.make<void>()
+        const open = Effect.fn(function* (status: number, pending: boolean) {
+          const context = yield* Layer.build(
+            Layer.fresh(
+              pluginTestLayer([
+                ManagedPolicy.node.replace(Layer.succeed(ManagedPolicy.Service, managed)),
+                Credential.node.replace(Layer.succeed(Credential.Service, credentials)),
+              ]),
+            ),
+          )
+          const initialize = Effect.gen(function* () {
+            const plugin = yield* Plugin.Service
+            const host = yield* PluginHost.make(plugin)
+            const http = HttpClient.make((request) =>
+              Effect.gen(function* () {
+                if (pending) {
+                  yield* Deferred.succeed(entered, undefined)
+                  yield* Deferred.await(release)
+                }
+                return HttpClientResponse.fromWeb(
+                  request,
+                  status === 200
+                    ? Response.json({
+                        providers: {},
+                        experimental: {
+                          policies: [
+                            { action: "permission", resource: "websearch:*", effect: pending ? "allow" : "deny" },
+                          ],
+                        },
+                      })
+                    : new Response(null, { status }),
+                )
+              }),
+            )
+            yield* OpencodePlugin.effect(host).pipe(Effect.provideService(HttpClient.HttpClient, http))
+            return yield* setup
+          })
+          const state = yield* initialize.pipe(Effect.provide(context), Effect.provide(Config.testLayer([])))
+          return { ...state, context }
+        })
+        // Establish K1 policy through the real plugin before testing a genuine switch failure.
+        yield* open(200, false)
+        expect(managed.current().organization).toBe("K1")
+        const pending = yield* open(lateStatus, true).pipe(Effect.forkScoped)
+        yield* Deferred.await(entered)
+        if (nextStatus === "disconnect") yield* credentials.remove(old.id)
+        if (nextStatus !== "disconnect") yield* account("K2")
+        const b = yield* open(nextStatus === "disconnect" ? 200 : nextStatus, false)
+        const expected = managed.current()
+        expect(expected.statements).toEqual(
+          nextStatus === 200 ? [{ action: "permission", resource: "websearch:*", effect: "deny" }] : [],
+        )
+        yield* Deferred.succeed(release, undefined)
+        const a = yield* Fiber.join(pending)
+        expect(managed.current()).toEqual(expected)
+        expect(Context.get(a.context, PluginHooks.Service)).not.toBe(Context.get(b.context, PluginHooks.Service))
+        for (const location of [a, b]) {
+          expect(yield* location.permission.preauthorizeHostedSearch(location.input)).toBe(
+            nextStatus === 200 ? "ask" : "allow",
+          )
+          expect((yield* location.select.pipe(Effect.provide(location.context))).hosted?.name).toBe(
+            nextStatus === 200 ? undefined : "web_search",
+          )
+          const assertion = location.permission.assert({
+            ...location.input,
+            action: "websearch",
+            resources: ["query"],
+          })
+          if (nextStatus === 200) expect(yield* assertion.pipe(Effect.flip)).toBeInstanceOf(Permission.BlockedError)
+          if (nextStatus !== 200) yield* assertion
+        }
+      }),
+    )
+  }
+}
 
 for (const initialFailure of [true, false]) {
   it.effect(`shared Console policy survives Location failure without stale replay: initial=${initialFailure}`, () =>

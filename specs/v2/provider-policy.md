@@ -232,6 +232,8 @@ A config fetch or credential refresh that fails for the connection already in pl
 
 Policy retention belongs to the process-global owner: a newly opened Location's first failed fetch must preserve the same connection's last known statements from another Location. A later failed fetch must also preserve a successful empty-policy observation from another Location rather than restore an older deny from its private provider snapshot. Providers retain their existing Location-local fallback behavior.
 
+After asynchronous credential resolution or a config fetch, production policy publication re-reads the authoritative active connection under the global owner's shared commit permit. Results for an obsolete connection, including success, failure and 404, cannot overwrite a newer connection's accepted policy or restore policy after a disconnect. A failed observation for a genuinely new current connection still clears the previous connection's statements.
+
 ### Messages
 
 When the deciding `permission` statement is organization-managed, the denial reads `Blocked by <organization>'s policy`, or `Blocked by your organization's policy` when the connection has no organization name. Authored statements produce `Blocked by configuration policy`.

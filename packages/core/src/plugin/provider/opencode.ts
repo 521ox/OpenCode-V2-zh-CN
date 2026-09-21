@@ -134,8 +134,14 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
 
     const load = Effect.fn("OpencodePlugin.load")(function* () {
       const connection = yield* ctx.integration.connection.active("opencode")
+      const commit = (policy?: ManagedPolicy.State) =>
+        managed.commit({
+          connection: IntegrationConnection.key(connection),
+          active: ctx.integration.connection.active("opencode").pipe(Effect.map(IntegrationConnection.key)),
+          policy,
+        })
       if (!connection) {
-        yield* managed.set({ statements: [] })
+        yield* commit({ statements: [] })
         return { config: undefined, connection, organization: undefined }
       }
       return yield* ctx.integration.connection.resolve(connection).pipe(
@@ -152,14 +158,11 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
         // Policy is process-global: publish every successful observation even if this
         // Location's provider snapshot is unchanged. Failures never replay that snapshot.
         Effect.tap((next) =>
-          managed.set(
-            { statements: next.config?.experimental?.policies ?? [], organization: next.organization },
-            IntegrationConnection.key(connection),
-          ),
+          commit({ statements: next.config?.experimental?.policies ?? [], organization: next.organization }),
         ),
         Effect.catch((cause) =>
           Effect.logWarning("failed to load OpenCode provider config", { cause }).pipe(
-            Effect.andThen(managed.retain(IntegrationConnection.key(connection))),
+            Effect.andThen(commit()),
             // Keep this Location's provider config on same-connection failure;
             // managed policy retention above uses the process-global connection instead.
             Effect.as(

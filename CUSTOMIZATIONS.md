@@ -257,6 +257,9 @@ clearing it or replaying a Location-private snapshot. Successful observations,
 including empty policies and 404, still replace it; switching or disconnecting
 retains the documented behavior. This uses the existing global owner and Effect
 operations, without a persistent offline cache or a second policy system.
+Policy publication rechecks the active connection under the global owner's
+shared Effect permit, so late old-connection success or failure cannot overwrite
+the policy already accepted for a newer connection or undo a disconnect.
 
 The close-without-end regression uses a synthetic launch with real stream/capture
 owners; its natural frequency in current native child pipes is not established.
