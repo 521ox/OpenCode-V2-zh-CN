@@ -7,6 +7,10 @@ import { Agent } from "@opencode/core/agent"
 import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
 import { ConfigPolicyPlugin } from "@opencode/core/config/plugin/policy"
+import { Credential } from "@opencode/core/credential"
+import { Integration } from "@opencode/core/integration"
+import { OpencodePlugin } from "@opencode/core/plugin/provider/opencode"
+import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { Database } from "@opencode/core/database/database"
 import { Location } from "@opencode/core/location"
 import { ManagedPolicy } from "@opencode/core/managed-policy"
@@ -20,7 +24,8 @@ import { Session } from "@opencode/core/session"
 import { HostedWebSearch } from "@opencode/core/session/hosted-web-search"
 import { WebSearch } from "@opencode/core/websearch"
 import { testEffect } from "./lib/effect"
-import { PluginTestLayer } from "./plugin/fixture"
+import { drain } from "./lib/clock"
+import { PluginTestLayer, pluginTestLayer } from "./plugin/fixture"
 
 const it = testEffect(PluginTestLayer)
 const document = (policies: { action: "permission" | "provider.use"; resource: string; effect: "allow" | "deny" }[]) =>
@@ -59,6 +64,96 @@ const setup = Effect.gen(function* () {
   }).pipe(Effect.provideService(Permission.Service, permission))
   return { input, permission, select }
 })
+
+for (const initialFailure of [true, false]) {
+  it.effect(`shared Console policy survives Location failure without stale replay: initial=${initialFailure}`, () =>
+    Effect.gen(function* () {
+      const managed = yield* ManagedPolicy.Service
+      const credentials = yield* Credential.Service
+      const credential = yield* credentials.create({
+        integrationID: Integration.ID.make("opencode"),
+        value: Credential.Key.make({ type: "key", key: "fixture", metadata: { orgName: "Acme" } }),
+      })
+      const open = Effect.fn(function* (status: number) {
+        const response = { status, deny: true }
+        const context = yield* Layer.build(
+          Layer.fresh(
+            pluginTestLayer([
+              ManagedPolicy.node.replace(Layer.succeed(ManagedPolicy.Service, managed)),
+              Credential.node.replace(Layer.succeed(Credential.Service, credentials)),
+            ]),
+          ),
+        )
+        const http = HttpClient.make((request) =>
+          Effect.sync(() =>
+            HttpClientResponse.fromWeb(
+              request,
+              response.status === 200
+                ? Response.json({
+                    providers: {},
+                    experimental: {
+                      policies: response.deny
+                        ? [{ action: "permission", resource: "websearch:*", effect: "deny" }]
+                        : [],
+                    },
+                  })
+                : new Response(null, { status: response.status }),
+            ),
+          ),
+        )
+        const initialize = Effect.gen(function* () {
+          const plugin = yield* Plugin.Service
+          const host = yield* PluginHost.make(plugin)
+          yield* OpencodePlugin.effect(host).pipe(Effect.provideService(HttpClient.HttpClient, http))
+          return yield* setup
+        })
+        const state = yield* initialize.pipe(Effect.provide(context), Effect.provide(Config.testLayer([])))
+        const refresh = Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          yield* bus.publish(Credential.Event.Switched, {
+            integrationID: Integration.ID.make("opencode"),
+            credentialID: credential.id,
+          })
+          yield* drain
+        }).pipe(Effect.provide(context))
+        return { ...state, response, refresh, context }
+      })
+      const a = yield* open(200)
+      const b = yield* open(initialFailure ? 503 : 200)
+      expect(Context.get(a.context, PluginHooks.Service)).not.toBe(Context.get(b.context, PluginHooks.Service))
+      const check = (denied: boolean) =>
+        Effect.gen(function* () {
+          expect(managed.current().statements).toEqual(
+            denied ? [{ action: "permission", resource: "websearch:*", effect: "deny" }] : [],
+          )
+          for (const location of [a, b]) {
+            expect(yield* location.permission.preauthorizeHostedSearch(location.input)).toBe(denied ? "ask" : "allow")
+            expect((yield* location.select.pipe(Effect.provide(location.context))).hosted?.name).toBe(
+              denied ? undefined : "web_search",
+            )
+            const assertion = location.permission.assert({
+              ...location.input,
+              action: "websearch",
+              resources: ["query"],
+            })
+            if (denied) expect(yield* assertion.pipe(Effect.flip)).toBeInstanceOf(Permission.BlockedError)
+            if (!denied) yield* assertion
+          }
+        })
+      yield* check(true)
+      a.response.deny = false
+      yield* a.refresh
+      yield* check(false)
+      b.response.status = 503
+      yield* b.refresh
+      yield* check(false)
+      a.response.deny = true
+      yield* a.refresh
+      yield* b.refresh
+      yield* check(true)
+    }),
+  )
+}
 
 for (const policies of [
   [],

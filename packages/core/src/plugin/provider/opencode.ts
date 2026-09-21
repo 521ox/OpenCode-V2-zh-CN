@@ -134,7 +134,10 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
 
     const load = Effect.fn("OpencodePlugin.load")(function* () {
       const connection = yield* ctx.integration.connection.active("opencode")
-      if (!connection) return { config: undefined, connection, organization: undefined }
+      if (!connection) {
+        yield* managed.set({ statements: [] })
+        return { config: undefined, connection, organization: undefined }
+      }
       return yield* ctx.integration.connection.resolve(connection).pipe(
         Effect.flatMap((credential) => {
           if (!credential) return Effect.succeed({ config: undefined, connection, organization: undefined })
@@ -146,10 +149,19 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
             })),
           )
         }),
+        // Policy is process-global: publish every successful observation even if this
+        // Location's provider snapshot is unchanged. Failures never replay that snapshot.
+        Effect.tap((next) =>
+          managed.set(
+            { statements: next.config?.experimental?.policies ?? [], organization: next.organization },
+            IntegrationConnection.key(connection),
+          ),
+        ),
         Effect.catch((cause) =>
           Effect.logWarning("failed to load OpenCode provider config", { cause }).pipe(
-            // A load that fails for the connection already in place keeps its last config: dropping it
-            // would lift organization policy while personal credentials keep working.
+            Effect.andThen(managed.retain(IntegrationConnection.key(connection))),
+            // Keep this Location's provider config on same-connection failure;
+            // managed policy retention above uses the process-global connection instead.
             Effect.as(
               IntegrationConnection.key(connection) === IntegrationConnection.key(snapshot.connection)
                 ? { config: snapshot.config, connection, organization: snapshot.organization }
@@ -159,10 +171,6 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
         ),
       )
     })
-    // Statements ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
-    const publish = (next: typeof snapshot) =>
-      managed.set({ statements: next.config?.experimental?.policies ?? [], organization: next.organization })
-
     yield* ctx.integration.transform((editor) => {
       editor.update("opencode", (integration) => {
         integration.name = "OpenCode"
@@ -172,7 +180,6 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
     })
 
     snapshot = yield* load()
-    yield* publish(snapshot)
     yield* ctx.provider.transform((providers) => {
       for (const [providerID, item] of Object.entries(snapshot.config?.providers ?? {})) {
         const source = providers.get(item.canonical ?? providerID)
@@ -335,7 +342,6 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
 
     const apply = Effect.fn("OpencodePlugin.apply")(function* (next: typeof snapshot) {
       snapshot = next
-      yield* publish(next)
       yield* Effect.all([ctx.provider.reload(), ctx.websearch.reload()], { concurrency: 2, discard: true })
     })
     const refresh = () => loading.withPermit(load().pipe(Effect.andThen(apply)))

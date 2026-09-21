@@ -53,6 +53,18 @@ a no-network guarantee. The new CLI upgrade error formatter is source-reviewed
 but not directly exercised by the older error fixtures. No complete Test262/WPT
 certification, browser end-to-end suite or Electron runtime is claimed.
 
+The initial closure review rejected the first candidate for a Console-policy
+cross-Location failure: a new Location's first failed fetch could clear another
+Location's process-global organization deny, and a later failure could replay a
+stale private snapshot. The bounded repair makes `ManagedPolicy` retain the last
+known statements for the same connection and publishes every successful Console
+observation, including empty policies and 404. Different connections still never
+merge. Two real-plugin, shared-owner regressions first failed on the initial
+implementation and then passed with the existing policy suite (95 cases, 471
+assertions). The earlier 1,122-case evidence plus those two cases totals 1,124
+distinct cases; repaired-source checks, rebuild and same-session re-review remain
+separate acceptance gates.
+
 ## September 21 synchronization
 
 The integration branch `sync-v2-20260921` merges fixed official V2 target

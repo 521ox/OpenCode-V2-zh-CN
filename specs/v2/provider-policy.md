@@ -222,13 +222,15 @@ The OpenCode Console compiles a workspace's Providers and Tools policies into st
 
 - `experimental` is omitted when the caller has no statements; omission and an empty array are equivalent.
 - The list is per caller and its order is significant. The client stores it exactly as received; it never reorders, dedupes, or normalizes statements.
-- `ManagedPolicy` (`packages/core/src/managed-policy.ts`) is the process-global home for the current statements and the organization name. The Console plugin (`opencode.provider.opencode`) writes it whenever its config snapshot is applied; the policy plugin reads it synchronously when evaluating.
-- Statements ride on the Console plugin's snapshot, so they follow the connection: a credential switch replaces them, and a disconnect or a 404 from the Console clears them. Statements from different connections never merge.
+- `ManagedPolicy` (`packages/core/src/managed-policy.ts`) is the process-global home for the current statements, organization name and connection identity. The Console plugin (`opencode.provider.opencode`) publishes each successful config observation even when its Location-local provider snapshot has not changed; the policy plugin reads it synchronously when evaluating.
+- Statements follow the connection: a credential switch replaces them, and a disconnect or a 404 from the Console clears them. Statements from different connections never merge. A Location-local failure never republishes that Location's older statements over the process-global policy.
 - Freshness is the snapshot's freshness: the next poll (about one minute) or the next credential switch.
 
 ### Failure
 
 A config fetch or credential refresh that fails for the connection already in place keeps that connection's last config, providers and statements alike, and logs a warning. Dropping the config would fail closed for managed providers but open for policy, because a member's personal credentials keep working while the organization's restrictions vanish. A disconnect, a credential switch, or a 404 still replaces the snapshot. There is no durable offline cache.
+
+Policy retention belongs to the process-global owner: a newly opened Location's first failed fetch must preserve the same connection's last known statements from another Location. A later failed fetch must also preserve a successful empty-policy observation from another Location rather than restore an older deny from its private provider snapshot. Providers retain their existing Location-local fallback behavior.
 
 ### Messages
 

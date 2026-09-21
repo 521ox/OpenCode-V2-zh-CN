@@ -15,18 +15,27 @@ export interface Interface {
   /** Synchronous so catalog transforms can consult the statements while they run. */
   readonly current: () => State
   /** Replaces the whole state; statements never merge across connections. */
-  readonly set: (state: State) => Effect.Effect<void>
+  readonly set: (state: State, connection?: string) => Effect.Effect<void>
+  /** A failed fetch retains only the current connection's last successful policy. */
+  readonly retain: (connection: string | undefined) => Effect.Effect<void>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ManagedPolicy") {}
 
 const layer = Layer.sync(Service, () => {
-  const state: { current: State } = { current: { statements: [] } }
+  const state: { current: State; connection?: string } = { current: { statements: [] } }
   return Service.of({
     current: () => state.current,
-    set: (next) =>
+    set: (next, connection) =>
       Effect.sync(() => {
         state.current = next
+        state.connection = connection
+      }),
+    retain: (connection) =>
+      Effect.sync(() => {
+        if (state.connection === connection) return
+        state.current = { statements: [] }
+        state.connection = connection
       }),
   })
 })

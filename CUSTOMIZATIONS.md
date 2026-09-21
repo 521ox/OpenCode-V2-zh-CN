@@ -244,11 +244,19 @@ switch or second process/cache manager was added.
 | Reject late publication after transcript/pending eviction or deletion         | Reuse current request identity and existing sync entries. Distinguish ordinary refresh invalidation from publication revocation so reconnects still hydrate valid pending prompts. Keep optimistic state, background events, metadata and the official recent-three-family policy. | `packages/client/src/solid/data.ts`; Client eviction/inbox/refresh/page controls and real TUI retention tests.                                   |
 | Prevent retained/background tabs from implicitly activating foreign Locations | Filter only Location/VCS/Location-scoped permission/form prefetch. Keep lightweight global Session/message/inbox reads, explicit Location selection and viewed-session moves. Do not stop legitimate background execution or already-running MCP servers.                          | `packages/tui/src/context/session-tabs.tsx`; request-admission/move regressions and the global-read versus Location-acquisition call-path check. |
 
-The production changes remain limited to those three existing files. The tests
+The original maintenance changes remain limited to those three existing files. The tests
 describe the required behavior independently of the old implementation, so an
 equivalent upstream replacement can supersede the local delta during a later sync.
 Broad performance rewrites, Job byte-budget changes, old compaction estimators,
 leases, ledgers and root-scope MCP teardown redesign are not included.
+
+The September 22 synchronization additionally repairs the new upstream Console
+policy failure path in `managed-policy.ts` and `plugin/provider/opencode.ts`.
+Same-connection fetch failures retain the process-global policy instead of
+clearing it or replaying a Location-private snapshot. Successful observations,
+including empty policies and 404, still replace it; switching or disconnecting
+retains the documented behavior. This uses the existing global owner and Effect
+operations, without a persistent offline cache or a second policy system.
 
 The close-without-end regression uses a synthetic launch with real stream/capture
 owners; its natural frequency in current native child pipes is not established.
