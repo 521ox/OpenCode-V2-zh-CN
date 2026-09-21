@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: this branch integrates official V2 target `b8aa08f260130452dc87fbc20c2a4e2ff743e642` (2.0.12) on the accepted `2.0.11-custom-lite.20260921.1` checkpoint, preserving the selected behavior below and adding the separately requested temporary-artifact cleanup guidance. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for accepted candidate provenance and verification scope. Source integration alone does not establish artifact acceptance or activate the installed executable.
+Status: accepted candidate `2.0.12-custom-lite.20260922.1` integrates official V2 target `b8aa08f260130452dc87fbc20c2a4e2ff743e642` (2.0.12), preserves the selected behavior below and adds task-owned temporary-artifact cleanup guidance plus the bounded Console-policy repairs. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for exact accepted source, artifact identity, verification scope and delivery state. Acceptance does not activate the installed executable; replacement and restart remain user-managed.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 

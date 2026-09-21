@@ -73,8 +73,37 @@ authoritative active connection before publication. Twelve controlled in-flight
 cases cover old 503/success/404 results after a new connection succeeds, fails,
 returns 404 or disconnects. Ten failed against the first repair; all twelve and
 the prior policy cases pass after the guard (107 cases, 573 assertions). The
-distinct focused total is now 1,136 cases across the same 46 files. This statement
-records source evidence, not approval of the rebuilt artifact.
+distinct focused total is now 1,136 cases across the same 46 files.
+
+Final independent review in `ses_f3ae605b0ffel534wwrpuTVNz7` returned
+`APPROVE WITH DEFERRED RISKS` and closed F1 for clean source commit
+`ed408935467b426e2c8eae1b51be5b7b6bfa9d7d`. The original merge is
+`6212edadda282cae5ebeb61e0e2765ff2760aac9`; repair commits are
+`66850902b576f68799a79781c0a925bc06d5fc18` and the final source commit above.
+The two rejected candidates remain in Git history; the original review budget
+and the user's explicit additional bounded authorization are not erased.
+
+The accepted Windows artifact is `2.0.12-custom-lite.20260922.1`, channel `latest`,
+205,199,360 bytes, SHA256
+`fbc8b717fd323bb7741cbcc4d918fa75ffe721b6df4b869ee8a2a3efd14e06da`.
+It was built from the clean final source using Bun 1.4.2 with embedded revision
+`1.4.2+744846f84`, bytecode and the full WebUI. Exact version/runtime probes and
+the isolated populated-default-old-database/API/WebUI/owned-service shutdown
+smoke passed on these bytes. Source verification totals 1,136 distinct cases,
+46 files and 3,146 assertions; eleven package typechecks and scoped style checks
+passed, reusing unaffected evidence and rerunning the repaired Core/CLI scope.
+
+The local acceptance tag `custom-lite-2.0.12-20260922.1` identifies the final
+source plus documentation-only acceptance updates. The permanent worktree remains
+`D:\opencode-local-build\opencode-v2-custom-lite`; this document is tracked there,
+not retained only in the disposable integration worktree. Promotion brings code
+and maintenance documents together. Package output and root mirror belong in
+that permanent worktree; the timestamped export belongs in the agreed delivery
+directory. Adjacent metadata records actual copy verification and removal of
+this task's temporary worktree and scratch after accepted export. Other worktrees,
+older task directories, the shared Bun cache, installed executable and existing
+backup remain outside cleanup. No activation, live migration or remote push is
+part of this acceptance.
 
 ## September 21 synchronization
 
