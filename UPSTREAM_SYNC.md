@@ -19,8 +19,8 @@ selected product contract or restore retired functionality.
 
 `README.md` and `README.zh.md` describe the current fork rather than advertising
 official packages or legacy six-platform releases as this distribution. The old
-`release-cli.yml` workflow is to be disabled by its exact GitHub workflow identity,
-without deleting its historical source or runs. The new branch excludes 23
+`release-cli.yml` workflow was explicitly disabled by its exact GitHub workflow identity
+before publication, without deleting its historical source or runs. The new branch excludes 23
 upstream deployment, publication, scheduled maintenance and community-automation
 workflows. Four upstream validation definitions remain: `check.yml`, `test.yml`,
 `nix-eval.yml` and `storybook.yml`. Their upstream branch filters, Blacksmith runner
@@ -40,6 +40,33 @@ remote state first. Local checks include scoped documentation formatting, unchan
 runtime and validation-workflow blobs, and an offline Gitleaks scan of the custom
 history relative to the public upstream, including merge diffs. A clean scan is
 bounded evidence, not a guarantee that all possible sensitive data is absent.
+
+The source transition completed on September 22, 2026. Initial public tip
+`425c01f849c7ae4eb2f3577430d03d7b91a90696` was pushed without force or tags;
+GitHub then reported `v2-custom-lite` as the default branch of the same public
+repository (ID `1336715241`). The Chinese enhancement description and both README
+blob identities were read back successfully. Legacy `main`, both legacy tags,
+the two existing Releases and their 28 asset identities were unchanged. The
+repository-wide Actions policy and selected-action allowlist were also unchanged,
+and no workflow run was added during the switch.
+
+Legacy workflow `350726046` first reported `disabled_manually`. After switching
+to a default branch without its file, GitHub reported it as `deleted` and omitted
+it from the active workflow list; its source still exists in unchanged legacy
+`main`. Verification accepts this retired state only with the prior explicit-
+disable evidence, preserved legacy source and absence from the new default branch.
+No binary Release or new public tag was created. The local branch tracks
+`fork/v2-custom-lite`; `origin` remains the official upstream.
+
+Independent publication-readiness review approved `f5484cbc66fa752121c8b34c0ec8c1cf1e2e49e4`
+with deferred risks. The owner's subsequent enhancement-positioning wording and
+this completion record are documentation-only changes, checked directly; they do
+not change runtime behavior or claim a new binary review. Gitleaks 8.30.1's default
+rules found no secret matches in the newly published custom history, including
+merge differences. Scoped formatting, local links, runtime/dependency/LICENSE
+preservation and the four retained CI definitions were verified. Temporary scan
+tools, private check environments and raw task logs are disposable after remote
+read-back; this tracked record retains the material result and recovery refs.
 
 ## September 22 synchronization and temporary cleanup guidance
 
