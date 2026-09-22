@@ -50,6 +50,7 @@
     "ws": "8.21.0"
   },
   "devDependencies": {
+    "@types/archiver": "7.0.0",
     "@opencode/script": "workspace:*",
     "@opencode/protocol": "workspace:*",
     "@tsconfig/bun": "catalog:",
@@ -76,6 +77,7 @@
     "@parcel/watcher-linux-x64-glibc": "2.5.1",
     "@parcel/watcher-win32-arm64": "2.5.1",
     "@parcel/watcher-win32-x64": "2.5.1",
+    "archiver": "7.0.1",
     "solid-refresh": "0.6.3",
     "vite": "catalog:",
     "vite-plugin-solid": "catalog:"
