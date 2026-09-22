@@ -181,13 +181,47 @@ This does not restore the old heading-to-parent-tool jump behavior.
 - No old complex Session-ID controls, MCP-gesture or parent-tool dual-navigation
   framework. Only the explicitly selected identity, close-control and completion-
   title presentation above are restored.
-- No session-memory plugin or previous six-platform fork release workflow.
+- No session-memory plugin or wholesale restoration of the previous fork's release machinery. The separately authorized native release workflow below uses the current build contract.
 - No custom Windows build wrapper or installed-binary replacement.
 - No change to the official updater policy. Installing a custom binary and later
   accepting official updates may replace custom additions; decide release/update
   policy separately before an actual rollout.
 
 ## Verification and operation boundary
+
+### Native GitHub prereleases
+
+`release-custom-cli.yml` is a manual-only workflow for this repository's
+`v2-custom-lite` branch. Release versions follow the current root source version
+plus `-zhcn.N`; the first selected version is `2.0.12-zhcn.1`. Internal executable
+names stay `opencode` / `opencode.exe`, with storage channel `latest`, Bun 1.4.2,
+bytecode and the embedded WebUI. The workflow uses native Windows, Linux glibc
+and macOS runners for x64 and ARM64 rather than treating cross-compilation as
+native verification. Existing local acceptance tags and binaries are not replaced.
+
+All six builds must pass source/native identity, executable version/help/runtime,
+isolated service/default-database/WebUI and archive round-trip checks. The
+application-specific manifest binds each archive to its source, target and
+SHA256. ZIP and tar.gz creation use Archiver; extraction uses the platform's tar
+tool. No custom archive codec is maintained. Fourteen assets are uploaded to a
+new draft, downloaded and checked before the draft becomes a prerelease.
+Existing tags, Releases and assets are never overwritten. An uncertain or failed
+publication retains the draft for inspection; it does not automatically delete
+remote state or retry with clobber. Build artifacts have one-day Actions retention.
+
+Service validation uses two contenders on one privately selected loopback port,
+matching the official same-port managed-service election without touching the
+installed service's default port. It follows the existing lifecycle: `Service.ensure`
+accepts a compatible, registered ready winner before considering failed competing
+starters. A losing starter must terminate; a nonzero result is reported with a
+sanitized diagnostic, not represented as a successful startup. Without a healthy
+owned winner, startup remains a failure. The official stop operation owns signal
+termination. The test verifies ownership, application health, termination and
+registration removal; it does not impose a new all-zero or graceful-shutdown
+contract. Forced cleanup by the test itself is a failure.
+This release workflow does not change default TUI exit behavior or the official
+updater policy, and does not publish npm packages, a custom update feed or Desktop
+installers. Binaries are unsigned and macOS archives are not notarized.
 
 ### Local Windows candidate delivery
 

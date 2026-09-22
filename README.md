@@ -9,12 +9,18 @@ A community-maintained fork of [OpenCode](https://github.com/anomalyco/opencode)
 The maintained default branch is **`v2-custom-lite`** in the existing [521ox/opencode2-zh-CN repository](https://github.com/521ox/opencode2-zh-CN).
 
 - The former `main` branch, old tags and `v1.18.4-zhcn.*` releases remain legacy history. Those binaries are **not** packages of the current enhanced V2 branch.
-- This source transition does **not** publish a new public binary release. Build from source below for this customization.
+- Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages. The initial six-target run is being validated; a workflow definition alone does not establish that a release exists.
 - Official installers, npm packages and the official updater deliver official builds, not this custom distribution. Accepting an official update can replace the custom additions; the upstream updater policy is unchanged.
 
 This branch follows official V2 while adding substantial enhancements across localization, native tools, Session and subagent interaction, search authorization and execution reliability. Its maintenance approach keeps changes clearly bounded and aligned with upstream owners rather than restoring the former complex fork wholesale. The internal `v2-custom-lite` name describes that maintenance approach, not a localization-only build or a claim that the feature set is small.
 
-The legacy binary-release workflow is disabled. Upstream deployment, publishing and community-maintenance workflows are excluded from this branch. Four upstream validation workflows remain as source references; their branch filters, runners and allowed actions have not been adapted or certified as this fork's CI. No new release pipeline is provided by this transition.
+The legacy binary-release workflow remains retired. The new release workflow reuses the current official build entry, pinned setup/artifact actions and GitHub CLI; it does not restore upstream deployment or community-maintenance automation. Four other upstream validation workflows remain as source references; their branch filters, runners and allowed actions have not been adapted or certified as this fork's CI.
+
+### Native downloads and verification
+
+Each new release contains `opencode-windows-{x64,arm64}.zip`, `opencode-linux-{x64,arm64}.tar.gz` and `opencode-darwin-{x64,arm64}.tar.gz`, six JSON sidecars, `release-manifest.json` and `SHA256SUMS`. Extract the complete archive and use `cli-<platform>-<arch>/bin/opencode` (`opencode.exe` on Windows). Linux packages target glibc, not musl. These are CLI bundles with an embedded WebUI, not Electron Desktop installers.
+
+Compare the downloaded archive with `SHA256SUMS` before running it: use `Get-FileHash -Algorithm SHA256 <archive>` on Windows, `sha256sum <archive>` on Linux, or `shasum -a 256 <archive>` on macOS. The manifest identifies the exact source commit, Bun runtime, native target and actual file digests. Binaries are unsigned and macOS packages are not notarized; operating-system security prompts may appear. Native release checks are not full feature-suite or real-user-data migration certification.
 
 ## What is customized
 

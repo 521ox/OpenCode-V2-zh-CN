@@ -1,0 +1,299 @@
+name: Release enhanced V2 CLI
+run-name: Release enhanced V2 CLI ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Current source version followed by -zhcn.N
+        required: true
+        type: string
+        default: 2.0.12-zhcn.1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enhanced-cli-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+  HUSKY: "0"
+
+jobs:
+  preflight:
+    name: Validate source and unused release identity
+    if: github.repository == '521ox/opencode2-zh-CN' && github.ref == 'refs/heads/v2-custom-lite'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the exact dispatched source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up exact Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+      - name: Install frozen verification dependencies
+        run: bun install --frozen-lockfile --linker hoisted --ignore-scripts
+      - name: Run release contract and archive regressions
+        working-directory: packages/cli
+        run: >-
+          bun --no-env-file run test
+          test/release-artifact.test.ts
+          test/release-manifest.test.ts
+          test/service-smoke.test.ts
+      - name: Validate the release contract
+        run: >-
+          bun --no-env-file packages/cli/script/release-artifact.ts validate
+          --version "$RELEASE_VERSION"
+          --repository "$GITHUB_REPOSITORY"
+          --ref "$GITHUB_REF"
+          --source-sha "$GITHUB_SHA"
+          --target opencode-linux-x64
+      - name: Require a new tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for endpoint in "git/ref/tags/v$RELEASE_VERSION" "releases/tags/v$RELEASE_VERSION"; do
+            set +e
+            response="$(gh api --include "repos/$GITHUB_REPOSITORY/$endpoint" 2>&1)"
+            status=$?
+            set -e
+            if [ "$status" -eq 0 ] || ! grep -Eq '^HTTP/[0-9.]+ 404 ' <<<"$response"; then
+              echo "Release identity exists or its absence could not be verified: $endpoint" >&2
+              exit 1
+            fi
+          done
+
+  build:
+    name: Build and verify ${{ matrix.target }}
+    needs: [preflight]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            target: opencode-windows-x64
+            dist: cli-windows-x64
+          - runner: windows-11-arm
+            target: opencode-windows-arm64
+            dist: cli-windows-arm64
+          - runner: ubuntu-24.04
+            target: opencode-linux-x64
+            dist: cli-linux-x64
+          - runner: ubuntu-24.04-arm
+            target: opencode-linux-arm64
+            dist: cli-linux-arm64
+          - runner: macos-15-intel
+            target: opencode-darwin-x64
+            dist: cli-darwin-x64
+          - runner: macos-15
+            target: opencode-darwin-arm64
+            dist: cli-darwin-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      RELEASE_TARGET: ${{ matrix.target }}
+      RELEASE_DIST: ${{ matrix.dist }}
+      OPENCODE_VERSION: ${{ inputs.version }}
+      OPENCODE_CHANNEL: latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Enable Windows symlinks and long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git config --global core.symlinks true
+          git config --global core.longpaths true
+      - name: Check out the exact dispatched source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node for the embedded WebUI build
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - name: Set up exact Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+      - name: Install frozen native dependencies
+        run: bun install --frozen-lockfile --linker hoisted
+      - name: Validate source and actual native architecture
+        run: >-
+          bun --no-env-file packages/cli/script/release-artifact.ts validate
+          --version "$RELEASE_VERSION"
+          --repository "$GITHUB_REPOSITORY"
+          --ref "$GITHUB_REF"
+          --source-sha "$GITHUB_SHA"
+          --target "$RELEASE_TARGET"
+      - name: Build one native target with bytecode and embedded WebUI
+        run: bun --no-env-file packages/cli/script/build.ts --target="$RELEASE_TARGET" --skip-install
+      - name: Verify artifact payload
+        run: bun --no-env-file packages/cli/script/verify-artifact.ts "packages/cli/dist/$RELEASE_DIST"
+      - name: Verify Windows executable version, runtime and help
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $binary = "packages/cli/dist/$env:RELEASE_DIST/bin/opencode.exe"
+          $compiler = (& bun --revision | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler identity probe failed' }
+          $native = (& bun --no-env-file --print 'process.platform + "/" + process.arch' | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler architecture probe failed' }
+          try {
+            $env:BUN_BE_BUN = '1'
+            $runtime = (& $binary --revision | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or $runtime -ne $compiler) { throw 'Embedded Bun revision differs' }
+            $embedded = (& $binary --no-env-file --print 'process.platform + "/" + process.arch' | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or $embedded -ne $native) { throw 'Embedded native architecture differs' }
+          } finally {
+            Remove-Item Env:BUN_BE_BUN -ErrorAction SilentlyContinue
+          }
+          $version = (& $binary --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -ne "opencode v$env:RELEASE_VERSION") { throw 'Compiled version differs' }
+          & $binary --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Compiled help failed' }
+      - name: Verify Unix executable version, runtime and help
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          binary="packages/cli/dist/$RELEASE_DIST/bin/opencode"
+          test "$(BUN_BE_BUN=1 "$binary" --revision)" = "$(bun --revision)"
+          test "$(BUN_BE_BUN=1 "$binary" --no-env-file --print 'process.platform + "/" + process.arch')" = "$(bun --no-env-file --print 'process.platform + "/" + process.arch')"
+          test "$("$binary" --version)" = "opencode v$RELEASE_VERSION"
+          "$binary" --help >/dev/null
+      - name: Verify isolated default-channel service and embedded WebUI
+        working-directory: packages/cli
+        run: bun --no-env-file script/service-smoke.ts
+      - name: Package and verify the archive round trip
+        run: >-
+          bun --no-env-file packages/cli/script/release-artifact.ts package
+          --version "$RELEASE_VERSION"
+          --source-sha "$GITHUB_SHA"
+          --target "$RELEASE_TARGET"
+          --dist "packages/cli/dist/$RELEASE_DIST"
+          --output "$RUNNER_TEMP/release"
+      - name: Reject source changes during the build
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          git diff --cached --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload the verified native artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-${{ matrix.target }}
+          path: ${{ runner.temp }}/release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  release:
+    name: Verify all six artifacts and publish one prerelease
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the exact built source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up exact Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+      - name: Install frozen manifest dependencies without lifecycle scripts
+        run: bun install --frozen-lockfile --linker hoisted --ignore-scripts
+      - name: Download this run's six native artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          path: ${{ runner.temp }}/release-downloads
+          merge-multiple: false
+      - name: Verify the complete six-target set and generate checksums
+        run: >-
+          bun --no-env-file packages/cli/script/release-manifest.ts
+          --version "$RELEASE_VERSION"
+          --source-sha "$GITHUB_SHA"
+          --artifacts "$RUNNER_TEMP/release-downloads"
+          --output "$RUNNER_TEMP/release-assets"
+      - name: Publish only after draft assets have been downloaded and verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+          for endpoint in "git/ref/tags/$tag" "releases/tags/$tag"; do
+            set +e
+            response="$(gh api --include "repos/$GITHUB_REPOSITORY/$endpoint" 2>&1)"
+            status=$?
+            set -e
+            if [ "$status" -eq 0 ] || ! grep -Eq '^HTTP/[0-9.]+ 404 ' <<<"$response"; then
+              echo "Refusing to replace an existing or unverified release identity: $endpoint" >&2
+              exit 1
+            fi
+          done
+
+          cat >"$RUNNER_TEMP/release-notes.md" <<EOF
+          ## OpenCode V2 zh-CN enhanced CLI $RELEASE_VERSION
+
+          An independent community-enhanced edition of OpenCode, not an official
+          OpenCode release. Source commit: \`$GITHUB_SHA\`.
+
+          Six unsigned native CLI packages are included: Windows x64/ARM64,
+          Linux glibc x64/ARM64, and macOS Intel/Apple Silicon. These are not
+          Electron Desktop installers. SmartScreen or Gatekeeper may warn because
+          these binaries are not code-signed or notarized.
+
+          Built with Bun 1.4.2, bytecode and the embedded WebUI. Every native
+          executable passed version/help, embedded runtime and isolated service
+          checks; every archive passed an extraction/hash round trip. These checks
+          do not certify every feature on every machine or migrate legacy data.
+
+          Verify downloads against \`SHA256SUMS\`. Per-platform JSON sidecars and
+          \`release-manifest.json\` bind the actual files to their source, target,
+          runtime, byte lengths and SHA256 digests. Unpack the complete archive
+          and use \`cli-<platform>-<arch>/bin/opencode\` (\`opencode.exe\` on Windows).
+
+          The storage channel is \`latest\`, matching the current custom branch's
+          default database and service names. Keep a consistent executable and
+          user-data backup before replacement. This release does not automatically
+          convert unfinished state from the retired fork.
+
+          The official updater policy remains unchanged: accepting an official
+          update may replace community additions. Obtain this edition's downloads
+          from this repository, not from the official npm package or installer.
+          EOF
+
+          echo 'If any following operation fails, inspect the draft/tag before retrying. No automatic deletion or clobber is performed.'
+          gh release create "$tag" "$RUNNER_TEMP/release-assets"/* \
+            --repo "$GITHUB_REPOSITORY" --draft --prerelease --latest=false \
+            --target "$GITHUB_SHA" --title "OpenCode V2 zh-CN $RELEASE_VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')" = true
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')" = true
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json targetCommitish --jq '.targetCommitish')" = "$GITHUB_SHA"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-downloaded"
+          find "$RUNNER_TEMP/release-assets" -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort >"$RUNNER_TEMP/expected-assets.txt"
+          find "$RUNNER_TEMP/release-downloaded" -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort >"$RUNNER_TEMP/downloaded-assets.txt"
+          diff -u "$RUNNER_TEMP/expected-assets.txt" "$RUNNER_TEMP/downloaded-assets.txt"
+          test "$(wc -l <"$RUNNER_TEMP/downloaded-assets.txt")" -eq 14
+          cmp "$RUNNER_TEMP/release-assets/SHA256SUMS" "$RUNNER_TEMP/release-downloaded/SHA256SUMS"
+          (cd "$RUNNER_TEMP/release-downloaded" && sha256sum -c "$RUNNER_TEMP/release-assets/SHA256SUMS")
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')" = false
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')" = true
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url --jq '.url'

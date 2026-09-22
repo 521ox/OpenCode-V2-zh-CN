@@ -9,12 +9,18 @@
 本项目在现有 [521ox/opencode2-zh-CN 仓库](https://github.com/521ox/opencode2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
 - 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
-- 本次源码切换**不发布新的公开二进制 Release**。需要此二开版本时，请按下文从源码构建。
+- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。首次六目标运行正在验证；仅有工作流文件不代表 Release 已生成。
 - 官方安装器、npm 包和官方更新器提供的是官方构建，不是此二开发行版。接受官方更新可能覆盖二开功能；本分支没有改变上游更新策略。
 
 本分支持续同步官方 V2，围绕界面本地化、原生工具、会话与子代理交互、搜索权限和执行可靠性进行了多项实质增强。维护上强调改动边界清晰、沿用官方模块职责，不整体恢复旧二开的复杂实现。内部名称 `v2-custom-lite` 表达的是这种维护方式，并不意味着只做汉化或功能很少。
 
-旧版二进制发布工作流已停用。本分支移除了官方部署、发布及社区运维工作流。四个上游验证工作流保留为源码参考，其分支过滤、运行器及允许使用的 Actions 尚未适配或验收为本仓库的 CI。本次切换不提供新的自动发布流程。
+旧版二进制发布工作流继续停用。新发布流程复用当前官方构建入口、固定版本的环境／产物 Actions 和 GitHub CLI，不恢复官方部署或社区运维自动化。另外四个上游验证工作流仍保留为源码参考，其分支过滤、运行器及允许使用的 Actions 尚未适配或验收为本仓库的 CI。
+
+### 原生下载包与校验
+
+每个新 Release 包含 `opencode-windows-{x64,arm64}.zip`、`opencode-linux-{x64,arm64}.tar.gz`、`opencode-darwin-{x64,arm64}.tar.gz`，以及六个 JSON 元数据文件、`release-manifest.json` 和 `SHA256SUMS`。完整解压后运行 `cli-<platform>-<arch>/bin/opencode`，Windows 使用 `opencode.exe`。Linux 包适用于 glibc，不是 musl。这些是内嵌 WebUI 的 CLI 包，不是 Electron 桌面安装器。
+
+运行前请将下载包与 `SHA256SUMS` 对照：Windows 使用 `Get-FileHash -Algorithm SHA256 <archive>`，Linux 使用 `sha256sum <archive>`，macOS 使用 `shasum -a 256 <archive>`。清单记录精确源码提交、Bun 运行时、原生目标和实际文件摘要。二进制尚未代码签名，macOS 包也未经公证，系统可能显示安全提示。原生发布检查不等于完整功能测试或真实用户数据迁移认证。
 
 ## 定制内容
 

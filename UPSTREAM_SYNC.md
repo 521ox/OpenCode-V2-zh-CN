@@ -1,5 +1,69 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## Native release workflow restoration on September 22
+
+After the source-only transition below, the owner explicitly requested and
+authorized restoring manual online builds for all six former target combinations:
+Windows, Linux glibc and macOS, each x64/ARM64. The new workflow is
+`.github/workflows/release-custom-cli.yml`, not the retired legacy workflow.
+It follows the current `opencode` executable / `latest` storage-channel contract
+and selects `2.0.12-zhcn.1` for its first public prerelease. The existing local
+`2.0.12-custom-lite.20260922.1` binary remains a separately identified artifact.
+
+The implementation reuses official `build.ts`, artifact scanning and service
+lifecycle owners, existing pinned GitHub setup/artifact actions, and `gh` for
+draft publication. Old handwritten archive codecs and fixed legacy version/channel
+validators are not restored. Archiver 7.0.1 and matching types are explicit build-
+time dependencies; the existing dependency was already in the lockfile transitively.
+The lockfile update also synchronizes the already-present `opencode` bin entry,
+which had been absent from the previous workspace lock metadata.
+
+Native smoke development exposed an over-strict agent-derived requirement that
+every losing starter exit with 0. The official `Service.ensure` owner accepts a
+healthy ready service before examining contender failures; explicit `Service.stop`
+also owns signal termination rather than promising an exit code. The test was
+aligned with that existing contract, without changing production startup/exit.
+A Windows cold contender was observed exiting 1 during registration-file rename
+while the other contender remained healthy. The underlying OS errno was not
+established, and the runtime issue is not claimed fixed. Nonzero losing outcomes
+remain visible diagnostics; healthy winner, authenticated APIs, default storage,
+embedded WebUI, stopped processes and registration cleanup remain required.
+
+Further diagnosis found a test-induced departure from the upstream smoke: giving
+each contender `--port 0` bypassed the official shared-port election and allowed
+both processes to bootstrap the same empty database. One captured failure was
+`SQLiteError: table account_state already exists`, surfaced as failed service
+readiness (HTTP 500). The probe is corrected to share one privately selected
+nonzero loopback port, not to ignore failed readiness. This restores the upstream
+test's election semantics without contacting the live default port. Production
+database concurrency, startup and exit code are unchanged; cross-port concurrent
+bootstrap is not certified or claimed fixed by this release work.
+
+Integrated local release checks passed 48 cases (310 assertions) across three
+files, with one Windows-inapplicable POSIX-permission case skipped for the Linux
+preflight to run. CLI typechecking, changed-file formatting, repository lint and
+Actionlint 1.7.12 passed. The corrected Windows smoke passed on the existing
+accepted local binary: authenticated API/WebUI, default database, loser termination
+(code 0), official owned stop (actual code 1) and registration cleanup. This is
+probe evidence, not acceptance of a newly built public-version executable.
+
+The canonical full `bun run check` was attempted. Its initial Turbo global-config
+lookup failed in the private Windows environment; using Turbo 2.10.2's explicit
+private config-directory overrides resolved that launcher failure. The full check
+then stopped on App/Desktop's unchanged `markdown-cache.tsx` import because the
+local dependency tree resolves two nominal `@types/trusted-types` declarations
+(hoisted and `.bun` paths). No application source was changed to conceal it, and
+the full monorepo typecheck is not claimed passed. The affected CLI typecheck was
+run separately and passed; clean native CI builds remain mandatory below.
+
+Local checks and the six native GitHub jobs are separate evidence. Native CI must
+validate all six outputs before any public release is claimed. No live local
+configuration, user database, installed executable or existing local delivery
+mirror is part of CI validation. Temporary local implementation/check tools are
+removed after accepted delivery; failed publication evidence is retained only
+when needed for recovery. The previous source-only statements below describe that
+completed earlier milestone and do not prohibit this newly authorized release work.
+
 ## Public source transition on September 22
 
 The owner authorized retaining `521ox/opencode2-zh-CN` and publishing the accepted
