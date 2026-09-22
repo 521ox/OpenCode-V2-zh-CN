@@ -3,13 +3,19 @@
 ## Public source transition on September 22
 
 The owner authorized retaining `521ox/opencode2-zh-CN` and publishing the accepted
-minimal customization as `v2-custom-lite`, with that branch as the default source
+maintained enhancement branch as `v2-custom-lite`, with that branch as the default source
 entry point. The previous `main` at
 `79a88075fc37be57c202400ac6aecffbaf4b0783`, existing tags and legacy Releases are
 preserved. Do not force-push, rewrite the legacy branch or publish binaries as
 part of this source-only transition. The accepted local binary and its immutable
 acceptance tag remain tied to their existing build provenance; README and workflow
 changes do not constitute a new runtime build.
+
+Public presentation calls this the community-enhanced Chinese/English edition.
+The internal `custom-lite` label describes bounded, upstream-aligned maintenance,
+not a claim that the tool, Session, subagent, permission and reliability changes
+are merely localization or a small feature set. This wording does not expand the
+selected product contract or restore retired functionality.
 
 `README.md` and `README.zh.md` describe the current fork rather than advertising
 official packages or legacy six-platform releases as this distribution. The old
