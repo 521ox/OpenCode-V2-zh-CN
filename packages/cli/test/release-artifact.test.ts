@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
+import { pathToFileURL } from "node:url"
 import path from "node:path"
 import {
   archiveExtraction,
@@ -168,19 +170,90 @@ describe("real archive roundtrip", () => {
     test(`${platform}: selects a format-capable extraction tool with separate path arguments`, () => {
       const archive = path.join(temporary, "archive with spaces.zip")
       const destination = path.join(temporary, "extracted with spaces")
-      expect(archiveExtraction("zip", archive, destination, platform)).toEqual({
-        command: platform === "win32" ? "tar" : "unzip",
+      const systemRoot = "E:\\OS fixture\\Windows"
+      expect(archiveExtraction("zip", archive, destination, platform, systemRoot)).toEqual({
+        command: platform === "win32" ? "E:\\OS fixture\\Windows\\System32\\tar.exe" : "unzip",
         args:
           platform === "win32"
             ? ["-xf", path.resolve(archive), "-C", path.resolve(destination)]
             : ["-q", path.resolve(archive), "-d", path.resolve(destination)],
       })
-      expect(archiveExtraction("tar.gz", `${archive}.tar.gz`, destination, platform)).toEqual({
-        command: "tar",
+      expect(archiveExtraction("tar.gz", `${archive}.tar.gz`, destination, platform, systemRoot)).toEqual({
+        command: platform === "win32" ? "E:\\OS fixture\\Windows\\System32\\tar.exe" : "tar",
         args: ["-xf", path.resolve(`${archive}.tar.gz`), "-C", path.resolve(destination)],
       })
     })
   }
+
+  test("Windows extraction rejects missing or relative SystemRoot instead of searching PATH", () => {
+    for (const systemRoot of ["", "Windows"]) {
+      expect(() => archiveExtraction("zip", "archive.zip", "destination", "win32", systemRoot)).toThrow(
+        "requires an absolute SystemRoot",
+      )
+    }
+  })
+
+  test.skipIf(process.platform !== "win32")(
+    "system bsdtar roundtrip survives Git GNU tar first on child PATH",
+    async () => {
+      await mkdir(temporary, { recursive: true })
+      const directory = await mkdtemp(path.join(temporary, "git-tar-path-"))
+      try {
+        const git = Bun.which("git")
+        if (!git) throw new Error("This Windows regression requires Git for Windows")
+        const gitExecPath = execFileSync(git, ["--exec-path"], { encoding: "utf8" }).trim()
+        const gitTools = path.resolve(gitExecPath, "../../../usr/bin")
+        const dist = path.join(directory, "cli-windows-x64")
+        await mkdir(path.join(dist, "bin"), { recursive: true })
+        await writeFile(path.join(dist, "package.json"), JSON.stringify({ name: "@opencode/cli-windows-x64" }))
+        await writeFile(path.join(dist, "bin", "opencode.exe"), "synthetic archive payload")
+        const archive = path.join(directory, "opencode-windows-x64.zip")
+        const legacyDestination = path.join(directory, "legacy-extraction")
+        await mkdir(legacyDestination)
+        const module = pathToFileURL(path.resolve(import.meta.dirname, "../script/release-artifact.ts")).href
+        const result = execFileSync(
+          process.execPath,
+          [
+            "--no-env-file",
+            "--eval",
+            `
+        import { execFileSync, spawnSync } from "node:child_process"
+        import { createArchive } from ${JSON.stringify(module)}
+        const tarVersion = execFileSync("tar", ["--version"], { encoding: "utf8" }).trim()
+        await createArchive(${JSON.stringify(dist)}, "opencode-windows-x64", ${JSON.stringify(archive)})
+        const legacy = spawnSync("tar", ["-xf", ${JSON.stringify(archive)}, "-C", ${JSON.stringify(legacyDestination)}], { encoding: "utf8" })
+        console.log(JSON.stringify({ tarVersion, legacyExit: legacy.status, legacyError: legacy.stderr }))
+      `,
+          ],
+          {
+            cwd: directory,
+            env: {
+              SystemRoot: process.env.SystemRoot,
+              PATH: `${gitTools}${path.delimiter}${process.env.PATH ?? ""}`,
+              HOME: directory,
+              TEMP: directory,
+              TMP: directory,
+            },
+            encoding: "utf8",
+            timeout: 30_000,
+          },
+        )
+        const evidence = JSON.parse(result)
+        expect(evidence.tarVersion).toContain("GNU tar")
+        expect(evidence.legacyExit).toBe(128)
+        expect(evidence.legacyError).toContain("Cannot connect to")
+        expect(evidence.legacyError).toContain("resolve failed")
+        expect((await Bun.file(archive).bytes()).length).toBeGreaterThan(0)
+        expect(await readdir(legacyDestination)).toEqual([])
+        expect((await readdir(directory)).some((name) => name.startsWith(".verify-"))).toBe(false)
+        console.log(
+          `PATH regression: ${evidence.tarVersion.split("\n")[0]}; legacy exit ${evidence.legacyExit}; system bsdtar roundtrip passed`,
+        )
+      } finally {
+        await rm(directory, { recursive: true, force: true })
+      }
+    },
+  )
 
   for (const target of ["opencode-windows-x64", "opencode-linux-x64"] satisfies Target[]) {
     test(`${target}: full tree, empty directories, content and exclusive output`, async () => {

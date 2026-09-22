@@ -88,9 +88,20 @@ export function archiveExtraction(
   archive: string,
   destination: string,
   platform: NodeJS.Platform = process.platform,
+  systemRoot = process.env.SystemRoot,
 ) {
-  // Windows ships bsdtar; Unix tar implementations do not uniformly support ZIP.
-  if (format === "zip" && platform !== "win32") {
+  // Git Bash can put GNU tar first on PATH; Windows archives require the system bsdtar.
+  if (platform === "win32") {
+    if (!systemRoot || !path.win32.isAbsolute(systemRoot)) {
+      throw new Error("Windows archive extraction requires an absolute SystemRoot")
+    }
+    return {
+      command: path.win32.join(systemRoot, "System32", "tar.exe"),
+      args: ["-xf", path.resolve(archive), "-C", path.resolve(destination)],
+    }
+  }
+  // Unix tar implementations do not uniformly support ZIP.
+  if (format === "zip") {
     return { command: "unzip", args: ["-q", path.resolve(archive), "-d", path.resolve(destination)] }
   }
   return { command: "tar", args: ["-xf", path.resolve(archive), "-C", path.resolve(destination)] }

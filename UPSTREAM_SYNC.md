@@ -56,6 +56,32 @@ local dependency tree resolves two nominal `@types/trusted-types` declarations
 the full monorepo typecheck is not claimed passed. The affected CLI typecheck was
 run separately and passed; clean native CI builds remain mandatory below.
 
+Independent integrated review `ses_f3850e61effeVo01DhMmAIMOh6` approved source
+`7c454b174e0ddbdff506f6d086affede33a5e7bb` with deferred risks before the first
+dispatch. Its P2 recovery observation is retained: the REST published-release-by-tag
+404 check alone cannot exclude an unpublished draft. Inspect the authenticated
+complete Release list and any draft identity before retrying an uncertain
+publication; never infer that two 404 responses authorize replay. The first
+dispatch separately confirmed the new version had neither a draft nor a tag.
+
+GitHub run `35693524080` completed with failure before publication. Its Linux
+preflight passed all 49 tests (311 assertions), including POSIX permissions.
+All six native compilation, executable/runtime and isolated service/WebUI steps
+passed. The four Linux/macOS jobs also packaged and uploaded successfully, but
+both Windows jobs failed archive extraction because Git Bash's GNU `tar` preceded
+Windows bsdtar on PATH and interpreted the drive letter as a remote host. The
+release job was skipped and no new draft, public Release or tag was created.
+The bounded repair selects the Windows system archive tool explicitly; it does
+not weaken archive verification or change the executable. A new complete run
+must use one repaired source SHA rather than mixing artifacts from different runs.
+
+The Windows repair's real child-process regression puts Git GNU tar first on PATH:
+legacy extraction of the same ZIP fails with exit 128, while the explicit system
+bsdtar completes the unchanged full round-trip checks. Integrated Windows tests
+then passed 50 cases (319 assertions; one POSIX-only skip), with CLI typechecking,
+focused lint and formatting passing. The GNU-PATH regression is Windows-only;
+the Linux preflight independently covers the POSIX permission case.
+
 Local checks and the six native GitHub jobs are separate evidence. Native CI must
 validate all six outputs before any public release is claimed. No live local
 configuration, user database, installed executable or existing local delivery
