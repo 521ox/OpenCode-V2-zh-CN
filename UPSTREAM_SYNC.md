@@ -82,6 +82,58 @@ then passed 50 cases (319 assertions; one POSIX-only skip), with CLI typecheckin
 focused lint and formatting passing. The GNU-PATH regression is Windows-only;
 the Linux preflight independently covers the POSIX permission case.
 
+The same reviewer approved repaired source
+`eb86797f373865406f415a3123e1b26e0fb11fd0` with deferred risks. This used the one
+bounded blocking repair/re-review in the integrated review; F1 remains a recovery
+residual, not a claim that the incomplete draft lookup was repaired.
+
+The complete second run, `35694917252`, succeeded on that source: preflight, all
+six native build/verification jobs, and the final publication job (eight jobs).
+Linux preflight passed 50 tests / 313 assertions with only the Windows GNU-PATH
+case skipped; the local Windows run covers that case. Every native executable
+passed version/help, Bun runtime and architecture identity, authenticated service,
+default database and embedded WebUI checks. Every archive passed extraction and
+content verification. Publication downloaded all 14 draft attachments, checked the
+exact file set and all contents, then made the prerelease public.
+
+Public release `393500723`, tag `v2.0.12-zhcn.1`, was published at
+`2026-09-22T06:36:40Z`. Its tag resolves to the repaired source above. Authenticated
+post-publication reads confirmed 14 uploaded assets with SHA256 digests and a
+non-draft prerelease state. The Windows x64 ZIP is 118,951,798 bytes, SHA256
+`6ef4075dd5f6bb9d7477a7d2e1c393be2bc4aa38daf47545612722fa55f78eaf`.
+The public manifest digest is
+`24bcb264781cda044ed42d2b4fd61dd50c6d454c64ff008bd636e1dffcb5e953`.
+Legacy `main`, both legacy tags, both Releases and all 28 legacy asset identities,
+names, lengths and digests were unchanged. Repository identity, default branch,
+Actions policy and the five-action SHA allowlist also remained unchanged.
+
+The retained upstream actions emit Node 20 deprecation notices and are executed
+by GitHub under Node 24; all jobs succeeded. Action pin modernization is deferred
+because it requires a separate coordinated allowlist change, not because those
+notices were hidden. These results do not claim full feature-suite, code-signing,
+notarization or real-user-database migration certification. The earlier local
+full-monorepo typecheck limitation also remains accurately recorded above.
+
+An independent post-publication Windows x64 download also passed: ZIP and
+executable lengths/digests matched the public API, checksum file, sidecar and
+manifest before execution. The extracted executable is 205,295,616 bytes, SHA256
+`940c7c5eaacc5de20d737cf44ade5dfbeb8b03383ca507e382674e1abb56ae09`.
+Isolated version, help and embedded-runtime probes returned exit 0, respectively
+confirming `opencode v2.0.12-zhcn.1`, working help and `1.4.2+744846f84`.
+No live service or user database was used. Final hash checks confirmed all six
+protected local binary/metadata/backup objects remained unchanged, including the
+installed `fbc8b717...` executable. This online release does not activate or replace
+that local installation.
+
+After all verification processes finished, the task-owned
+`release-v2-20260922` scratch directory was removed and its absence confirmed
+(9,855 remaining files; 377,368,170 logical bytes). The downloaded Windows archive,
+executable and probe environment had already been removed by the download check.
+No shared Bun dependency cache, other task directory or installed file was deleted.
+Temporary Actionlint catalog registration was invalidated after removing its file.
+This tracked record and GitHub run/release identities retain the necessary outcome
+and recovery evidence; no separate Session-rules narrative was created.
+
 Local checks and the six native GitHub jobs are separate evidence. Native CI must
 validate all six outputs before any public release is claimed. No live local
 configuration, user database, installed executable or existing local delivery
