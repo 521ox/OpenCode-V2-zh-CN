@@ -2,9 +2,9 @@
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - Current implementation changes belong in `packages/core`, `packages/cli`, `packages/server`, `packages/protocol`, `packages/schema`, and related generated client surfaces when required.
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.
-- The default branch in this repo is `v2`.
-- Default new branches and worktrees to `v2`, or `origin/v2` when the local `v2` ref is unavailable, and default pull requests to target `v2`. Use another base or target branch when the requester explicitly instructs it.
-- Local `main` ref may not exist; use `v2` or `origin/v2` for diffs.
+- This community repository maintains `v2-custom-lite` as its default branch; official upstream development remains on `v2`.
+- Default local changes and pull requests for this fork to `v2-custom-lite`. Keep official upstream synchronization separate and follow `UPSTREAM_SYNC.md`; use another base or target only when explicitly requested.
+- The remote `main` branch is legacy history, not the current custom baseline. Use `v2-custom-lite` for fork diffs and the fixed official target for upstream comparisons.
 
 ## Live V2 TUI Testing
 

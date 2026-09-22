@@ -1,5 +1,40 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## Public source transition on September 22
+
+The owner authorized retaining `521ox/opencode2-zh-CN` and publishing the accepted
+minimal customization as `v2-custom-lite`, with that branch as the default source
+entry point. The previous `main` at
+`79a88075fc37be57c202400ac6aecffbaf4b0783`, existing tags and legacy Releases are
+preserved. Do not force-push, rewrite the legacy branch or publish binaries as
+part of this source-only transition. The accepted local binary and its immutable
+acceptance tag remain tied to their existing build provenance; README and workflow
+changes do not constitute a new runtime build.
+
+`README.md` and `README.zh.md` describe the current fork rather than advertising
+official packages or legacy six-platform releases as this distribution. The old
+`release-cli.yml` workflow is to be disabled by its exact GitHub workflow identity,
+without deleting its historical source or runs. The new branch excludes 23
+upstream deployment, publication, scheduled maintenance and community-automation
+workflows. Four upstream validation definitions remain: `check.yml`, `test.yml`,
+`nix-eval.yml` and `storybook.yml`. Their upstream branch filters, Blacksmith runner
+requirements and the repository's existing action allowlist are not reconfigured
+or claimed validated for this fork. Repository-wide Actions settings stay intact.
+Future upstream merges must review newly added or resurrected workflows before
+publication; preserving runtime changes does not authorize upstream infrastructure
+to operate in this repository.
+
+The publication boundary is the explicit `v2-custom-lite` branch ref only, not
+`--mirror`, `--all` or automatic tag pushing. Verify the remote branch SHA before
+changing the default, then verify the default, bilingual entry points, preserved
+legacy refs/releases, unchanged Actions policy and disabled legacy release
+workflow. If publication or verification fails, retain the old default or restore
+it to `main`; do not replay an uncertain push or settings mutation without reading
+remote state first. Local checks include scoped documentation formatting, unchanged
+runtime and validation-workflow blobs, and an offline Gitleaks scan of the custom
+history relative to the public upstream, including merge diffs. A clean scan is
+bounded evidence, not a guarantee that all possible sensitive data is absent.
+
 ## September 22 synchronization and temporary cleanup guidance
 
 The integration branch `sync-v2-20260922` merges fixed official V2 target

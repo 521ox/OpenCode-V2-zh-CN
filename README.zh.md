@@ -1,128 +1,66 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">开源的 AI Coding Agent。</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# OpenCode V2 zh-CN（最小二开分支）
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
+[English](README.md) | [简体中文](README.zh.md)
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+这是基于开源 AI 编程工具 [OpenCode](https://github.com/anomalyco/opencode) 的社区维护分支。本项目并非 OpenCode 团队开发，与官方团队没有隶属关系，也不代表官方认可。
 
----
+## 源码与发布状态
 
-### 安装
+本项目在现有 [521ox/opencode2-zh-CN 仓库](https://github.com/521ox/opencode2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
-```bash
-# 直接安装 (YOLO)
-curl -fsSL https://opencode.ai/install | bash
+- 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前最小 V2 分支的安装包。
+- 本次源码切换**不发布新的公开二进制 Release**。需要此二开版本时，请按下文从源码构建。
+- 官方安装器、npm 包和官方更新器提供的是官方构建，不是此二开发行版。接受官方更新可能覆盖二开功能；本分支没有改变上游更新策略。
 
-# 软件包管理器
-npm i -g opencode-ai@latest        # 也可使用 bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS 和 Linux（推荐，始终保持最新）
-brew install opencode              # macOS 和 Linux（官方 brew formula，更新频率较低）
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # 任意系统
-nix run nixpkgs#opencode           # 或用 github:anomalyco/opencode 获取最新 dev 分支
+本分支跟随官方 V2，仅保留少量明确的定制功能，不整体恢复原复杂二开。
+
+旧版二进制发布工作流已停用。本分支移除了官方部署、发布及社区运维工作流。四个上游验证工作流保留为源码参考，其分支过滤、运行器及允许使用的 Actions 尚未适配或验收为本仓库的 CI。本次切换不提供新的自动发布流程。
+
+## 定制内容
+
+- **简体中文 / English 界面文字。** TUI、Mini 和 CLI-run 的界面默认使用简体中文，可选择 English，并保留英文回退。通过现有设置对话框选择语言。模型和工具输出、标识符及协议数据不翻译；Mini 在启动时读取语言。早期帮助、启动输出和原生参数解析输出的翻译范围更窄，详见下方功能文档。
+- **环境目录与原生执行。** `environment_tools` 记录并重新验证已知程序；目录中没有记录不代表程序不存在。`direct_exec` 使用目录 ID 和参数数组执行已验证的原生 EXE/COM，仍受执行权限约束。Shell 语法、自定义环境、stdin 和后台执行仍由 Shell 工具处理。两者复用官方可折叠工具块；自动分组时，相邻 `direct_exec` 调用合并为执行集合，同时保留审批和失败状态的可见性。
+- **子代理结果与导航。** 已完成且可信的结果保留完整最终回复及官方子会话身份信息，仍受提供方上下文限制。管理列表显示子会话 ID，完成通知中的任务标题可打开既有子会话。可见的 `×` 关闭控件复用官方动作。这些功能不代表已修复子代理后续通知恢复。
+- **受保护的会话规则上下文。** 普通 Agent 请求获得根会话的规则目录位置，后代会话通过持久化父子关系共享该位置。解析过程不创建文件；用户指令和权威项目路径优先。
+- **权限控制的原生托管搜索。** 受支持的原生 OpenAI 和 xAI Responses 路由仅在有效授权不受限制时声明托管搜索能力。限制性或无法确认的权限策略会阻止该能力；已禁用的搜索不会被重新加入。这不表示所有提供方都默认启用，也不保证账户或模型有使用资格。原生压缩及恢复机制沿用官方实现，没有自定义覆盖，也不声称所有提供方都支持原生压缩。
+- **任务临时产物清理指引。** 提示 Agent 在现有权限内清理自己创建且不再需要的临时产物，并解释需要保留的证据。这是提示词指引，不是自动清理服务，也不保证模型一定执行。
+- **少量上游缺陷修复。** 在既有模块内修复流捕获结束、客户端过期结果发布、后台标签的 Location 请求准入及 Console 策略失败与发布处理，不引入第二套策略或生命周期系统。
+
+精确行为、搜索授权、非目标和操作边界见 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)；源码来源与维护历史见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+
+## 从源码构建（Windows x64）
+
+使用 **Bun 1.4.2** 和 Git。在自行选择的开发目录中打开 PowerShell，执行以下命令：
+
+```powershell
+git clone --branch v2-custom-lite https://github.com/521ox/opencode2-zh-CN.git
+cd opencode2-zh-CN
+bun install --linker hoisted --frozen-lockfile
+cd packages/cli
+$env:OPENCODE_VERSION = "2.0.12-custom-lite.20260922.1"
+$env:OPENCODE_CHANNEL = "latest"
+bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
 
-> [!TIP]
-> 安装前请先移除 0.1.x 之前的旧版本。
+示例版本标识已验收的源码基线；修改源码后构建应使用不同的自定义版本号。该命令使用现有构建脚本生成包含字节码和内嵌 WebUI 的 Windows x64 CLI。可执行文件位于相对仓库根目录的 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`。构建会重新创建 CLI 的 `dist` 目录。`--skip-install` 跳过构建脚本额外安装依赖的步骤，因此需要先完成根目录的依赖安装。
 
-### 桌面应用程序 (BETA)
+保留明确的自定义 `OPENCODE_VERSION` 和 **`OPENCODE_CHANNEL=latest`**。频道决定数据库、服务和 TUI 的存储身份；`local` 使用另一套状态，不适合直接替换现有版本。这里的 `latest` 不表示已公开发布，也不是自定义更新源。构建不会自动安装、启用或验证新程序对你个人数据的兼容性。
 
-OpenCode 也提供桌面版应用。可直接从 [发布页 (releases page)](https://github.com/anomalyco/opencode/releases) 或 [opencode.ai/download](https://opencode.ai/download) 下载。
+## 验证范围与已知限制
 
-| 平台                  | 下载文件                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`、`.rpm` 或 AppImage         |
+2026 年 9 月 22 日本地 Windows x64 候选版本 `2.0.12-custom-lite.20260922.1` 基于官方 V2 `b8aa08f260130452dc87fbc20c2a4e2ff743e642`。已有验收记录覆盖 1,136 项聚焦用例、11 个包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的已填充旧格式合成数据库冒烟验证。这些是此前已有且有范围的结果，不是此次 README 更新产生的新运行验证，也不代表六平台发布认证或 Electron Desktop 验证。
 
-```bash
-# macOS (Homebrew Cask)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
-```
+- 启动延迟和默认共享服务退出/生命周期调整仍然延期。
+- 子会话被后续后台 Shell 工作重新激活后，继续向父会话发送通知的问题仍未解决。
+- 已知上游测试限制及更细的验证范围继续记录在维护文档中。
+- 已完成并物化的历史记录可读，不代表未完成的旧二开 sidecar 状态、已退休执行状态或迁移后的回滚完全兼容。
 
-#### 安装目录
+替换已安装程序或在真实数据上启用前，请保留旧可执行文件与用户状态的一致备份。个人配置、凭据和真实数据库不应进入源码提交或验证夹具。本次源码切换不提供迁移或转换工具。
 
-安装脚本按照以下优先级决定安装路径：
+## 文档与致谢
 
-1. `$OPENCODE_INSTALL_DIR` - 自定义安装目录
-2. `$XDG_BIN_DIR` - 符合 XDG 基础目录规范的路径
-3. `$HOME/bin` - 如果存在或可创建的用户二进制目录
-4. `$HOME/.opencode/bin` - 默认备用路径
+- [OpenCode 官方 V2 文档](https://opencode.ai/v2/docs/) 说明上游用法；本分支差异以 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) 为准。
+- [上游同步说明](UPSTREAM_SYNC.md) 记录如何维护有边界的定制功能。
+- English 和简体中文是此二开分支的 README 入口。其他语言 README 保留为上游资料，不是此二开发行版的功能规范。
 
-```bash
-# 示例
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
-```
-
-### Agents
-
-OpenCode 内置两种 Agent，可用 `Tab` 键快速切换：
-
-- **build** - 默认模式，具备完整权限，适合开发工作
-- **plan** - 只读模式，适合代码分析与探索
-  - 默认拒绝修改文件
-  - 运行 bash 命令前会询问
-  - 便于探索未知代码库或规划改动
-
-另外还包含一个 **general** 子 Agent，用于复杂搜索和多步任务，内部使用，也可在消息中输入 `@general` 调用。
-
-了解更多 [Agents](https://opencode.ai/docs/agents) 相关信息。
-
-### 文档
-
-更多配置说明请查看我们的 [**官方文档**](https://opencode.ai/docs)。
-
-### 参与贡献
-
-如有兴趣贡献代码，请在提交 PR 前阅读 [贡献指南 (Contributing Docs)](./CONTRIBUTING.md)。
-
-### 基于 OpenCode 进行开发
-
-如果你在项目名中使用了 “opencode”（如 “opencode-dashboard” 或 “opencode-mobile”），请在 README 里注明该项目不是 OpenCode 团队官方开发，且不存在隶属关系。
-
----
-
-**加入我们的社区** [飞书](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=52ao9352-5623-4fa0-b7dd-3407c392c1af&qr_code=true) | [X.com](https://x.com/opencode)
+本项目基于 OpenCode 及其贡献者的工作，保留现有 [MIT 许可证](LICENSE) 与上游版权声明。
