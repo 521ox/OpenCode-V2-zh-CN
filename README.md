@@ -16,6 +16,8 @@ This branch follows official V2 while adding substantial enhancements across loc
 
 The legacy binary-release workflow remains retired. The new release workflow reuses the current official build entry, pinned setup/artifact actions and GitHub CLI; it does not restore upstream deployment or community-maintenance automation. Four other upstream validation workflows remain as source references; their branch filters, runners and allowed actions have not been adapted or certified as this fork's CI.
 
+**Upgrade compatibility notice:** the published `v2.0.15-zhcn.1` can reject older native-compaction checkpoints containing images because of the upstream media-format transition. The bounded persisted-media read repair is tracked in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md); that existing Release has not been rebuilt or replaced with the repair. Do not delete or rewrite conversation history to work around this error.
+
 ### Native downloads and verification
 
 Each new release contains `opencode-windows-{x64,arm64}.zip`, `opencode-linux-{x64,arm64}.tar.gz` and `opencode-darwin-{x64,arm64}.tar.gz`, six JSON sidecars, `release-manifest.json` and `SHA256SUMS`. Extract the complete archive and use `cli-<platform>-<arch>/bin/opencode` (`opencode.exe` on Windows). Linux packages target glibc, not musl. These are CLI bundles with an embedded WebUI, not Electron Desktop installers.
@@ -43,7 +45,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"
+$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.2"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -60,6 +62,8 @@ The September 24, 2026 local Windows x64 candidate `2.0.15-custom-lite.20260924.
 - Later parent notifications after a child is reactivated by background Shell work remain unresolved.
 - Known upstream test limitations and narrower verification scopes remain recorded in the maintenance documents.
 - Completed materialized history does not establish full compatibility with unfinished legacy sidecar state, retired execution state or rollback after migration.
+
+The subsequent local `.2` repair adds compatibility for old native checkpoints containing flat media parts. Its focused acceptance covers 71 passing Core tests, Core/AI/CLI typechecks, production-checkpoint read-only validation, a compiled cold-read red/green comparison and isolated service/WebUI probes. Historical rows and opaque compaction content are not rewritten. This local repair has not been published as a replacement for `v2.0.15-zhcn.1`, and real TUI activation remains user-managed.
 
 Before replacing an installed executable or activating it on real data, retain a consistent backup of the old executable and user state. Keep personal configuration, credentials and live databases out of source commits and verification fixtures. No migration or conversion tool is provided by this source transition.
 

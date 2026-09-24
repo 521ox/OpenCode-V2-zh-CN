@@ -1,6 +1,6 @@
 export * as SessionProviderContext from "./provider-context.js"
 
-import { Message } from "@opencode/ai"
+import { Media, Message } from "@opencode/ai"
 import { SessionProviderContext } from "@opencode/schema/session-provider-context"
 import { Schema } from "effect"
 import { isDeepStrictEqual } from "node:util"
@@ -54,5 +54,39 @@ export const encode = (provenance: Provenance, replacement: ReadonlyArray<Messag
   messages: Schema.decodeSync(Schema.fromJsonString(Schema.Json))(JSON.stringify(replacement)),
 })
 
-export const decode = (context: Info) => Schema.decodeUnknownSync(messages)(context.messages)
-export const validate = (context: Info) => Schema.decodeUnknownEffect(messages)(context.messages)
+const normalizeLegacyMedia = (input: unknown): unknown => {
+  if (!Array.isArray(input)) return input
+  return input.map((message) => {
+    if (typeof message !== "object" || message === null || Array.isArray(message)) return message
+    const content = message.content
+    if (!Array.isArray(content)) return message
+    return {
+      ...message,
+      content: content.map((part) => {
+        if (typeof part !== "object" || part === null || Array.isArray(part)) return part
+        if (
+          part.type !== "media" ||
+          Object.hasOwn(part, "media") ||
+          typeof part.data !== "string" ||
+          typeof part.mediaType !== "string"
+        )
+          return part
+        const normalized = Object.fromEntries(
+          Object.entries(part).filter(([key]) => key !== "data" && key !== "mediaType"),
+        )
+        const media =
+          Media.parseDataUrl(part.data) ??
+          (/^https?:\/\//.test(part.data)
+            ? Media.url(part.data, { mediaType: part.mediaType })
+            : Media.base64(part.data, part.mediaType))
+        return {
+          ...normalized,
+          media: Schema.decodeSync(Schema.fromJsonString(Schema.Json))(JSON.stringify(media)),
+        }
+      }),
+    }
+  })
+}
+
+export const decode = (context: Info) => Schema.decodeUnknownSync(messages)(normalizeLegacyMedia(context.messages))
+export const validate = (context: Info) => Schema.decodeUnknownEffect(messages)(normalizeLegacyMedia(context.messages))

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { CompactionPart, LanguageModel, Message, ToolCallPart, Media } from "@opencode/ai"
+import { CompactionPart, LanguageModel, LLM, Message, ToolCallPart, Media } from "@opencode/ai"
 import { OpenAIResponses } from "@opencode/ai/protocols"
 import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
@@ -126,6 +126,137 @@ test("canonical provider context round-trips tools, opaque checkpoints and binar
     }),
   ).toThrow()
 })
+
+test("legacy flat media is normalized while malformed media remains rejected", async () => {
+  const legacy = {
+    ...providerContext,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "media",
+            data: "AQI=",
+            mediaType: "image/png",
+            filename: "clipboard",
+            metadata: { source: "legacy" },
+            providerMetadata: { openai: { itemId: "item_1" } },
+          },
+        ],
+      },
+    ],
+  }
+  const decoded = SessionProviderContext.decode(legacy)
+  const media = decoded[0]?.content[0]
+  expect(media).toMatchObject({
+    type: "media",
+    filename: "clipboard",
+    metadata: { source: "legacy" },
+    providerMetadata: { openai: { itemId: "item_1" } },
+    media: { source: { type: "base64", data: "AQI=", mediaType: "image/png" } },
+  })
+  expect(media && "data" in media).toBe(false)
+  expect(media && "mediaType" in media).toBe(false)
+  await Effect.runPromise(SessionProviderContext.validate(legacy))
+  expect(() =>
+    SessionProviderContext.decode({
+      ...legacy,
+      messages: [{ role: "user", content: [{ type: "media", data: "AQI=", mediaType: 123 }] }],
+    }),
+  ).toThrow()
+})
+
+it.effect("replays legacy media locations through persisted checkpoints without changing provider wire content", () =>
+  Effect.gen(function* () {
+    const fixtures = [
+      { data: "AQI=", mediaType: "image/png" },
+      { data: "data:image/png;base64,AQI=", mediaType: "image/*" },
+      { data: "data:application/pdf;base64,JVBERg==", mediaType: "application/octet-stream" },
+      { data: "http://example.test/image.png", mediaType: "image/*" },
+      { data: "https://example.test/image.png", mediaType: "image/*" },
+      { data: "http://example.test/report.pdf", mediaType: "application/octet-stream" },
+      { data: "https://example.test/report.pdf", mediaType: "application/octet-stream" },
+    ]
+    const legacy = Schema.decodeUnknownSync(Schema.fromJsonString(SessionProviderContext.Info))(
+      JSON.stringify({
+        ...providerContext,
+        messages: [
+          {
+            role: "user",
+            content: fixtures.map((fixture) => ({
+              type: "media",
+              ...fixture,
+              filename: "attachment",
+              metadata: { source: "legacy" },
+              providerMetadata: { openai: { detail: "low" } },
+            })),
+          },
+          replacement[1],
+        ],
+      }),
+    )
+    const original = JSON.stringify(legacy)
+    const decoded = SessionProviderContext.decode(legacy)
+    expect(yield* SessionProviderContext.validate(legacy)).toEqual(decoded)
+    expect(decoded[0]?.content.map((part) => (part.type === "media" ? part.media.source : undefined))).toEqual([
+      { type: "base64", data: "AQI=", mediaType: "image/png" },
+      { type: "base64", data: "AQI=", mediaType: "image/png" },
+      { type: "base64", data: "JVBERg==", mediaType: "application/pdf" },
+      ...fixtures
+        .slice(3)
+        .map((fixture) => ({ type: "url" as const, url: fixture.data, mediaType: fixture.mediaType })),
+    ])
+    for (const part of decoded[0]!.content) {
+      expect(part).toMatchObject({
+        filename: "attachment",
+        metadata: { source: "legacy" },
+        providerMetadata: { openai: { detail: "low" } },
+      })
+      expect(part).not.toHaveProperty("data")
+      expect(part).not.toHaveProperty("mediaType")
+    }
+    expect(decoded[1]).toEqual(replacement[1])
+    expect(SessionProviderContext.decode(SessionProviderContext.encode(legacy.provenance, decoded))).toEqual(decoded)
+
+    const s = yield* setup
+    yield* s.prepare
+    yield* s.prompt("before legacy checkpoint")
+    yield* s.compact(legacy)
+    const history = yield* s.load(target)
+    const replay = toLLMMessages(
+      history.entries.map((entry) => entry.message),
+      model.ref,
+    )
+    expect(replay).toEqual([...decoded])
+    const store = yield* SessionStore.Service
+    expect((yield* store.messages({ sessionID })).find((message) => message.type === "compaction")).toMatchObject({
+      providerContext: legacy,
+    })
+    const body = yield* OpenAIResponses.route.body.from(LLM.request({ model: model.model, messages: replay }))
+    expect(body.input).toMatchObject([
+      {
+        type: "message",
+        role: "user",
+        content: [
+          { type: "input_image", image_url: "data:image/png;base64,AQI=", detail: "low" },
+          { type: "input_image", image_url: "data:image/png;base64,AQI=", detail: "low" },
+          {
+            type: "input_file",
+            filename: "attachment",
+            file_data: "data:application/pdf;base64,JVBERg==",
+            detail: "low",
+          },
+          { type: "input_image", image_url: "http://example.test/image.png", detail: "low" },
+          { type: "input_image", image_url: "https://example.test/image.png", detail: "low" },
+          { type: "input_file", filename: "attachment", file_url: "http://example.test/report.pdf", detail: "low" },
+          { type: "input_file", filename: "attachment", file_url: "https://example.test/report.pdf", detail: "low" },
+        ],
+      },
+      { type: "compaction", id: "cp_1", encrypted_content: "opaque-checkpoint" },
+    ])
+    expect(JSON.stringify(legacy)).toBe(original)
+  }),
+)
 
 test("compatibility uses the actual deployment and endpoint rather than a catalog alias or variant", () => {
   expect(

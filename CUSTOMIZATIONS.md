@@ -1,6 +1,6 @@
 # Minimal Custom V2 Distribution
 
-Status: accepted candidate `2.0.15-custom-lite.20260924.1` integrates official V2 target `dca73ba9e3782e2b41983faca5854a9d56a3c482` (2.0.15), preserves the selected behavior below, and integrates the official extracted TUI group renderer, disclosure/scroll state, parent cache affinity, localization and Windows updater changes. Existing cleanup guidance and bounded Console-policy repairs remain intact. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for exact accepted source, artifact identity, verification scope and delivery state. Acceptance does not activate the installed executable; replacement and restart remain user-managed.
+Status: accepted candidate `2.0.15-custom-lite.20260924.2` repairs backward reading of native checkpoints containing pre-Asset media while retaining the official V2 target `dca73ba9e3782e2b41983faca5854a9d56a3c482` (2.0.15) and the selected behavior below. The official extracted TUI group renderer, disclosure/scroll state, parent cache affinity, localization and Windows updater changes remain integrated. Existing cleanup guidance and bounded Console-policy repairs remain intact. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for exact accepted source, artifact identity, verification scope and delivery state. Acceptance does not activate the installed executable; replacement and restart remain user-managed.
 
 The historical `2.0.9-custom-lite.20260919.1` build used the wrong `local` channel and must not be used as this distribution's in-place replacement. The `.2` correction and later candidates use `latest`; the current candidate verifies that identity again. These checks cover populated default-path synthetic history, not full unfinished legacy-state compatibility or production-migration approval.
 
@@ -144,8 +144,28 @@ queries only after dispatch, so this integration does not fabricate a local
 tool-call source or bypass per-query restrictions. In this case there is no silent
 local fallback on the supported native routes.
 
-Official compaction remains untouched. Search is a normal-generation capability,
-not a tool injected into compact endpoint bodies or auxiliary title/summary work.
+Official compaction strategy and recovery policy remain unchanged. The bounded
+persisted-media compatibility repair below only adapts historical checkpoint
+reads. Search is a normal-generation capability, not a tool injected into compact
+endpoint bodies or auxiliary title/summary work.
+
+### Native checkpoint media compatibility
+
+Version-1 provider-context windows written before the upstream Media Asset
+transition may contain flat media parts with `data` and `mediaType`. The Core
+`SessionProviderContext` read boundary recognizes that historical shape and
+adapts it in memory before using the current canonical Message codec. Bare
+base64, base64 data URLs and HTTP(S) URLs retain their distinct meanings; a
+data URL's declared MIME type takes priority over the historical fallback type.
+Filename, cache and provider metadata, message order and opaque compaction
+content remain intact. Both validation and model replay use the same adapter.
+
+The adapter does not rewrite database rows, prune tools, replace an encrypted
+checkpoint with a summary, or recover arbitrary malformed data. Existing current
+media fields are not overwritten by legacy fields. New checkpoints keep the
+current format; backward reading support does not guarantee that an old binary
+can read checkpoints written by a newer binary. No real-data migration or
+automatic rollback is provided.
 
 ### Visible official subagent identity
 

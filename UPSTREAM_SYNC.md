@@ -1,5 +1,109 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## Repository rename on September 24
+
+The owner renamed the existing public repository to `521ox/OpenCode-V2-zh-CN`.
+GitHub repository ID `1336715241` and default branch `v2-custom-lite` remain the
+same. The local `fork` remote, release workflow repository guard, release contract
+constant and current English/Chinese README links now use the new name. The
+official `origin` remote is unchanged. Historical entries below retain the name
+used when those actions occurred. No remote source push, release dispatch or
+download is performed as part of this local rename alignment.
+
+## September 24 native-checkpoint compatibility repair
+
+After activating the locally built `2.0.15-custom-lite.20260924.1`, the owner
+observed `Session.MessageDecodeError` while resuming an existing conversation and
+returned to the previous `2.0.12` installation. The upstream media-foundation
+commit `60c78ed8ab5aa88b856af56ceece87c38e08d27a` changed canonical media parts
+from flat `data`/`mediaType` fields to `media.source` without adapting existing
+version-1 native provider-context windows. The encrypted compaction checkpoint
+was not the incompatible part; retained images used the earlier media shape.
+The local synchronization's synthetic completed-message smoke did not cover
+that older native-compaction-plus-images case. The already published
+`v2.0.15-zhcn.1` uses the same uncorrected source contract.
+
+The repair belongs to `SessionProviderContext`'s persisted read boundary, shared
+by validation and model-message decoding, not the global AI schema or a live
+database patch. It preserves stored rows, opaque checkpoint content, message
+order and attachment metadata. Known legacy media is adapted in memory and
+then validated by the current canonical codec; unrelated malformed input is
+not discarded. New writes continue to use the current media representation.
+This is backward reading compatibility, not a guarantee that the old executable
+can read new checkpoints written after activation.
+
+During verification, the permanent worktree's stale installed dependency tree
+resolved `gitlab-ai-provider` 6.12.1 although its accepted lockfile requires
+6.18.0. The first temporary `.2` binary built against that tree is rejected for
+delivery. Verification and the deliverable must use dependencies matching the
+unchanged frozen lockfile. This dependency-layout issue is separate from the
+observed persisted-media incompatibility.
+
+The same independent reviewer rejected the first adapter because historical
+native compaction can persist data URLs and HTTP(S) URLs as well as bare base64.
+Treating every string as base64 would let history load but corrupt the next
+provider request. The repair now reuses the existing Media data-URL parser and
+URL/base64 constructors with data-URL MIME precedence. A synthesized Asset uses
+single-asset JSON omission before the JSON codec so optional `undefined` fields
+are not mistaken for persisted JSON. The original malformed-input rejection is
+retained. The first clean-dependency run caught two optional-JSON decode errors
+and two new test typing errors; those failures were corrected without weakening
+the fixtures or changing the global AI schema.
+
+With the unchanged frozen lockfile and a clean hoisted install, the seven related
+Core suites passed 71 tests / 359 assertions with no failures. Core, AI and CLI
+typechecks passed; the stale GitLab type errors disappeared after dependency
+restoration. Release/rename regression checks passed 51 tests / 323 assertions
+with one POSIX-only skip, including a guard preventing the old repository name
+from dispatching under the renamed release contract. Repository lint passed.
+This is focused evidence, not a new full-monorepo check or six-platform release.
+
+Read-only validation of the existing native checkpoints passed all 16 windows,
+including eight legacy-media windows containing 43 retained media parts across
+three Sessions. Each checked row retained its original SHA256, and the read-only
+connection reported zero changes. Message order, media payloads/metadata and
+opaque checkpoint content were compared without exporting real conversations or
+making provider calls. This evidence covers the observed persisted shapes, not
+future writes or rollback compatibility.
+
+The corrected Windows candidate is `2.0.15-custom-lite.20260924.2`, channel
+`latest`, built with Bun `1.4.2+744846f84`, bytecode and the full embedded WebUI.
+Its length is 207,758,848 bytes and SHA256 is
+`41272df4583e51d7d5df0abd993234dcd1b5d5edc8daad61ee0fb93f55bd2e9b`.
+It was built from `2896b40060e9c7fe4c82235076ffef35b54edcc9` plus the recorded
+compatibility patch, not falsely labeled a clean-commit build. Adjacent delivery
+metadata records the two changed source hashes and final accepted commit.
+Isolated executable version, localized help and embedded runtime probes passed.
+
+A synthetic compiled-service red/green comparison used production startup to
+initialize each private default database, inserted fixtures only while its owned
+service was stopped, and cold-restarted it. The unpatched `.1` executable passed
+the opaque-only checkpoint control but returned HTTP 500 for both context and
+message reads with legacy media; returned error references matched the private
+decode-failure log. The corrected `.2` returned HTTP 200 for the same fixture
+shapes. Both runs preserved the synthetic rows and removed their own profiles.
+This verifies cold persisted reads without manufacturing an execution claim or
+sending a model prompt; automatic startup resumption and real TUI activation
+remain user-level follow-up checks.
+
+The same candidate also passed the established isolated shared-port service smoke:
+owned election, authenticated API/OpenAPI, embedded WebUI HTML/module, dynamic
+plugin discovery, rejected unauthenticated reads, default database naming and
+owned shutdown/registration cleanup. The losing contender exited 0; the stopped
+owner's actual Windows exit was 1, consistent with the existing signal-owned
+stop contract rather than a newly asserted graceful zero-exit guarantee.
+
+The original reviewer `ses_f2c848b73ffeZktNgHtyNGFfPp` returned
+`APPROVE WITH DEFERRED RISKS` for the corrected source and exact `.2` candidate.
+P1-R1 and the related P2-R2 persisted-read coverage gap are closed. This used the
+single authorized blocking repair/re-review cycle (1/1), preserving the original
+findings. P3-R3 remains a nonblocking observation: legacy field guards use
+ordinary property lookup rather than own-property checks, without an established
+defect on the persisted JSON path. No separate hardening cycle is claimed.
+Local delivery records the accepted source commit separately from the dirty-source
+build identity; installed files, live data and the existing public Release remain
+unchanged. No online publication is included in this repair.
+
 ## Native six-platform publication on September 24
 
 After accepting the local synchronization below, the owner separately authorized

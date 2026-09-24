@@ -16,6 +16,8 @@
 
 旧版二进制发布工作流继续停用。新发布流程复用当前官方构建入口、固定版本的环境／产物 Actions 和 GitHub CLI，不恢复官方部署或社区运维自动化。另外四个上游验证工作流仍保留为源码参考，其分支过滤、运行器及允许使用的 Actions 尚未适配或验收为本仓库的 CI。
 
+**升级兼容性提示：** 已发布的 `v2.0.15-zhcn.1` 受上游媒体格式变更影响，可能无法读取含图片的旧原生压缩记录。有边界的持久化媒体读取修复记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)；该既有 Release 尚未重新构建或替换为修复版。不要通过删除或重写会话历史来绕过此错误。
+
 ### 原生下载包与校验
 
 每个新 Release 包含 `opencode-windows-{x64,arm64}.zip`、`opencode-linux-{x64,arm64}.tar.gz`、`opencode-darwin-{x64,arm64}.tar.gz`，以及六个 JSON 元数据文件、`release-manifest.json` 和 `SHA256SUMS`。完整解压后运行 `cli-<platform>-<arch>/bin/opencode`，Windows 使用 `opencode.exe`。Linux 包适用于 glibc，不是 musl。这些是内嵌 WebUI 的 CLI 包，不是 Electron 桌面安装器。
@@ -43,7 +45,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"
+$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.2"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -60,6 +62,8 @@ bun script/build.ts --target=opencode-windows-x64 --skip-install
 - 子会话被后续后台 Shell 工作重新激活后，继续向父会话发送通知的问题仍未解决。
 - 已知上游测试限制及更细的验证范围继续记录在维护文档中。
 - 已完成并物化的历史记录可读，不代表未完成的旧二开 sidecar 状态、已退休执行状态或迁移后的回滚完全兼容。
+
+后续本地 `.2` 修复增加了对旧原生压缩记录中扁平媒体格式的兼容读取。聚焦验收覆盖 71 项通过的 Core 测试、Core/AI/CLI 类型检查、既有压缩记录的只读验证、编译版冷启动读取的失败/成功对照，以及隔离服务/WebUI 检查。历史记录和加密压缩内容不被重写。此本地修复尚未作为 `v2.0.15-zhcn.1` 的替代发布包上线，真实 TUI 的替换启用仍由用户执行。
 
 替换已安装程序或在真实数据上启用前，请保留旧可执行文件与用户状态的一致备份。个人配置、凭据和真实数据库不应进入源码提交或验证夹具。本次源码切换不提供迁移或转换工具。
 
