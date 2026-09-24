@@ -46,8 +46,10 @@ Verification is isolated from installed programs, global configuration and user
 databases. The local candidate is `2.0.15-custom-lite.20260924.1`, channel `latest`,
 with bytecode and embedded WebUI. Source checks, clean-source build, populated
 old-default-database compatibility smoke, independent integrated acceptance and
-timestamped three-copy export are separate gates. At integration time, promotion
-and delivery remain pending; the existing accepted program stays usable.
+timestamped three-copy export are separate gates. Source and candidate acceptance
+are established below; exact final copy and cleanup results are recorded in the
+adjacent artifact metadata. The existing installed program stays usable and is not
+replaced by this delivery.
 
 Focused verification distinguishes integration repairs from environment problems.
 The TUI toast translation initially passed an optional count to a required parameter;
@@ -92,6 +94,51 @@ diff's whitespace check reports only the two vendor patch files for MCP Client
 Patch context whitespace is preserved rather than restyled, and successful frozen
 dependency installation verifies that the patches apply. This is not a claim that
 the complete upstream diff passes Git's whitespace checker.
+
+Independent integrated review `ses_f2dbdc5f4ffex6yqdYrXHFee3w` returned
+`APPROVE WITH DEFERRED RISKS` for clean merge
+`79ba7d450a2288269a8cbb243d77cb1b76b3f582` and the exact Windows x64 candidate.
+The merge has the accepted custom checkpoint and frozen official target as its
+two parents. No blocking repair/re-review cycle was needed. The immutable local
+acceptance tag `custom-lite-2.0.15-20260924.1` identifies the source plus these
+documentation-only acceptance updates; metadata distinguishes it from the build
+commit rather than claiming a documentation commit rebuilt the executable.
+
+Final focused evidence contains 4,353 passing cases, 72 conditional/platform skips,
+313 test files and 16,016 assertions across 18 non-overlapping suites. The integrated
+TUI suite passed 366 cases across 40 files, covering preserved customization and
+new grouping/anchor behavior together. Sixteen affected package typechecks passed.
+These results do not claim full Test262, real-browser E2E, Desktop execution or
+provider entitlement certification. The full Stats App check limitation remains
+as recorded above.
+
+The candidate is 207,756,288 bytes, SHA256
+`2972007f952f5cc8dd27a556d6f79ccdeb1143c97d09aa538d47181ecbd4503c`.
+Its exact version, help and embedded Bun revision `1.4.2+744846f84` passed. Both
+the isolated shared-port election/service/WebUI smoke and a separate populated
+old-default-database smoke passed on these bytes. The latter preserved the known
+Session identity and two prior-schema-valid completed messages, verified activity
+backfill and retained start-directory data, and left the original synthetic DB
+hash unchanged with a zero-length/absent WAL. Official owned stop terminated the
+test processes and removed registration; actual Windows exit code 1 is recorded,
+not relabeled as zero or as a graceful-shutdown guarantee. No live data was used.
+
+Review residual S24-R1 is one asynchronous tabs-layout persistence warning in the
+integrated TUI test log. The Flock error discards the underlying errno, so neither
+the root cause nor a new runtime regression is established. It is not claimed
+fixed or harmless: if repeated during normal use, one layout update could be lost.
+This concerns client layout persistence, not evidence of lost server-side Session
+messages. S24-R2 is the separate full-monorepo Stats App typecheck limitation.
+Both are nonblocking P2 residuals under this candidate's fixed acceptance scope.
+
+Promotion keeps source and maintenance documents in the permanent worktree
+`D:\opencode-local-build\opencode-v2-custom-lite`. The package executable, root
+mirror and timestamped export in `D:\opencode-zh-CN-nightly-windows-x64` must have
+identical length and SHA256. Task-owned integration files and scratch are removed
+after accepted delivery, with completion recorded in adjacent metadata. Installed
+`opencode.exe`, its existing backup, other worktrees, shared caches and the previous
+synthetic fixture are outside cleanup. No remote push, online release, user-data
+migration or installed activation is part of this synchronization.
 
 ## Native release workflow restoration on September 22
 
