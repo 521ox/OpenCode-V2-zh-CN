@@ -24,7 +24,7 @@ env:
 jobs:
   preflight:
     name: Validate source and unused release identity
-    if: github.repository == '521ox/opencode2-zh-CN' && github.ref == 'refs/heads/v2-custom-lite'
+    if: github.repository == '521ox/OpenCode-V2-zh-CN' && github.ref == 'refs/heads/v2-custom-lite'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

@@ -71,6 +71,24 @@ describe("release validation", () => {
     await expect(validateSource("not-a-sha")).rejects.toThrow()
   })
 
+  test("keeps release gates bound to the renamed repository", async () => {
+    expect(repository).toBe("521ox/OpenCode-V2-zh-CN")
+    const workflow = await Bun.file(
+      new URL("../../../.github/workflows/release-custom-cli.yml", import.meta.url),
+    ).text()
+    expect(workflow).toContain(`github.repository == '${repository}'`)
+    expect(workflow).not.toContain("521ox/opencode2-zh-CN")
+    await expect(
+      validateRelease({
+        version,
+        repository: "521ox/opencode2-zh-CN",
+        ref: releaseRef,
+        sourceSha: "0".repeat(40),
+        target: "opencode-windows-x64",
+      }),
+    ).rejects.toThrow("repository must be")
+  })
+
   test("rejects repeated, missing, positional and unknown CLI arguments", () => {
     expect(releaseArgs([`--version=${version}`], ["version"])).toEqual({ version })
     for (const args of [[], ["--version", "a", "--version", "b"], ["--unknown", "a"], ["position"], ["--version="]]) {

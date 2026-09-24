@@ -6,10 +6,10 @@
 
 ## 源码与发布状态
 
-本项目在现有 [521ox/opencode2-zh-CN 仓库](https://github.com/521ox/opencode2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
+本项目在现有 [521ox/OpenCode-V2-zh-CN 仓库](https://github.com/521ox/OpenCode-V2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
 - 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
-- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。当前 V2 增强版预发布 [**`v2.0.15-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.15-zhcn.1) 已于 2026 年 9 月 24 日发布，六种原生包均已提供；[发布 CI `35971350731`](https://github.com/521ox/opencode2-zh-CN/actions/runs/35971350731) 的八项任务全部通过。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
+- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。当前 V2 增强版预发布 [**`v2.0.15-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.15-zhcn.1) 已于 2026 年 9 月 24 日发布，六种原生包均已提供；[发布 CI `35971350731`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/35971350731) 的八项任务全部通过。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
 - 官方安装器、npm 包和官方更新器提供的是官方构建，不是此二开发行版。接受官方更新可能覆盖二开功能；本分支没有改变上游更新策略。
 
 本分支持续同步官方 V2，围绕界面本地化、原生工具、会话与子代理交互、搜索权限和执行可靠性进行了多项实质增强。维护上强调改动边界清晰、沿用官方模块职责，不整体恢复旧二开的复杂实现。内部名称 `v2-custom-lite` 表达的是这种维护方式，并不意味着只做汉化或功能很少。
@@ -39,8 +39,8 @@
 使用 **Bun 1.4.2** 和 Git。在自行选择的开发目录中打开 PowerShell，执行以下命令：
 
 ```powershell
-git clone --branch v2-custom-lite https://github.com/521ox/opencode2-zh-CN.git
-cd opencode2-zh-CN
+git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
+cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
 $env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"

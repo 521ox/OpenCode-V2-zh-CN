@@ -6,10 +6,10 @@ A community-maintained fork of [OpenCode](https://github.com/anomalyco/opencode)
 
 ## Source and release status
 
-The maintained default branch is **`v2-custom-lite`** in the existing [521ox/opencode2-zh-CN repository](https://github.com/521ox/opencode2-zh-CN).
+The maintained default branch is **`v2-custom-lite`** in the existing [521ox/OpenCode-V2-zh-CN repository](https://github.com/521ox/OpenCode-V2-zh-CN).
 
 - The former `main` branch, old tags and `v1.18.4-zhcn.*` releases remain legacy history. Those binaries are **not** packages of the current enhanced V2 branch.
-- Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. The current enhanced V2 prerelease, [**`v2.0.15-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.15-zhcn.1), was published on September 24, 2026 with all six packages; [release CI run `35971350731`](https://github.com/521ox/opencode2-zh-CN/actions/runs/35971350731) passed all eight jobs. Earlier releases remain available. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages.
+- Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. The current enhanced V2 prerelease, [**`v2.0.15-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.15-zhcn.1), was published on September 24, 2026 with all six packages; [release CI run `35971350731`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/35971350731) passed all eight jobs. Earlier releases remain available. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages.
 - Official installers, npm packages and the official updater deliver official builds, not this custom distribution. Accepting an official update can replace the custom additions; the upstream updater policy is unchanged.
 
 This branch follows official V2 while adding substantial enhancements across localization, native tools, Session and subagent interaction, search authorization and execution reliability. Its maintenance approach keeps changes clearly bounded and aligned with upstream owners rather than restoring the former complex fork wholesale. The internal `v2-custom-lite` name describes that maintenance approach, not a localization-only build or a claim that the feature set is small.
@@ -39,8 +39,8 @@ See [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) for exact behavior, search authorizat
 Use **Bun 1.4.2** and Git. Run the following in PowerShell from your chosen development directory:
 
 ```powershell
-git clone --branch v2-custom-lite https://github.com/521ox/opencode2-zh-CN.git
-cd opencode2-zh-CN
+git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
+cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
 $env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"

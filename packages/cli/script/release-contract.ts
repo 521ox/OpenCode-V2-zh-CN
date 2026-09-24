@@ -2,7 +2,7 @@ import { Schema } from "effect"
 import { parseArgs } from "node:util"
 import root from "../../../package.json"
 
-export const repository = "521ox/opencode2-zh-CN"
+export const repository = "521ox/OpenCode-V2-zh-CN"
 export const releaseRef = "refs/heads/v2-custom-lite"
 export const channel = "latest"
 export const bunVersion = "1.4.2"
