@@ -1,5 +1,64 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 24 evening synchronization
+
+The owner requested another upstream synchronization before exporting the accepted
+checkpoint-compatibility repair. The fixed upstream target is
+`9810d98bc2db41fe9fb59e069fb96bd2e8a93f79`, version 2.0.16 with Bun 1.4.2.
+Compared with the previous `dca73ba9e3782e2b41983faca5854a9d56a3c482` target,
+it adds ten commits across 130 files. The custom starting point is
+`a7ef233d4bfcbc0af57a5c86325fdabab5255fc6`; recovery tag
+`custom-lite-pre-sync-20260924-evening` retains that accepted repair and repository
+rename. Its `.2` binary remains an intermediate verified checkpoint, not a
+separately delivered replacement. Final delivery is intended to combine the
+repair with this new upstream increment.
+
+The upstream increment adds single-use pairing links and browser/API session
+credentials, nested App tab grouping/full Session paths, mobile navigation
+settings, missing-directory recovery through Session movement, plugin model
+variant selection, GitHub-marked Markdown links, model-catalog refresh and AI
+media/client helper refinements. Pairing semantics belong to the upstream
+Server/Protocol owners; the TUI conflict resolutions preserve Chinese/English
+chrome while adopting those owners rather than retaining password-bearing QR
+codes. This sync does not change default service lifetime, startup delays or
+child-followup notification behavior.
+
+The previously accepted `SessionProviderContext` compatibility patch and its
+review record are retained, not reset or re-reviewed as an unfixed candidate.
+This integration needs evidence for the new upstream delta and its interaction
+with the repaired media readers. Source, dependency, generated-client, auth/pairing,
+TUI and compiled default-database/WebUI checks precede final local acceptance.
+No live user data, installed executable, remote publication or online binary
+download is part of this synchronization. Task-owned integration and scratch
+will be removed after the combined local artifact is accepted and exported.
+
+The vendor dependency versions did not change in this increment; lockfile changes
+only advance workspace versions. A clean frozen hoisted installation in the
+integration worktree passed and left the lockfile unchanged. The accepted media
+compatibility implementation and tests retain their exact Git blobs; initial
+physical-file hash differences were Windows CRLF checkout differences, not a
+different implementation. No new database migration or Session SQL change was
+introduced by the fixed upstream target.
+
+The canonical Client generator passed and produced the exact fixed-upstream
+generated client blobs. Canonical Protocol generation added the previously stale
+OpenAPI artifact's new pairing endpoints/types and then passed its check. The
+generated document was not edited by hand. Focused Server and CLI checks cover
+single-use pairing, token/cookie authentication, denied unauthenticated API calls
+and the newly public WebUI shell. Additional deterministic-clock tests check the
+actual five-minute code expiry boundary and concurrent single consumption.
+
+The broad Client test run had 16 failures, all reproduced on the accepted custom
+starting point under matching isolated environments. Splitting default-condition
+Effect/Promise tests, browser-condition Solid tests and process-service fixtures
+did not remove them. One fixture passes numeric `idle` where the typed Effect API
+requires `DateTime.Utc`; six Windows fixture failures assume POSIX SIGTERM/zero
+exit behavior; nine Solid subset-match failures have an unestablished root cause.
+The relevant tests/runtime sources are unchanged by this increment. These are
+retained baseline limitations, not waived passes or evidence that the new pairing
+change caused a regression. Product shutdown behavior and test assertions were
+not weakened to conceal them. App Happy DOM checks are not real-browser E2E.
+
 ## Repository rename on September 24
 
 The owner renamed the existing public repository to `521ox/OpenCode-V2-zh-CN`.

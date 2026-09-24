@@ -45,7 +45,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.2"
+$env:OPENCODE_VERSION = "2.0.16-custom-lite.20260924.1"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -64,6 +64,8 @@ The September 24, 2026 local Windows x64 candidate `2.0.15-custom-lite.20260924.
 - Completed materialized history does not establish full compatibility with unfinished legacy sidecar state, retired execution state or rollback after migration.
 
 The subsequent local `.2` repair adds compatibility for old native checkpoints containing flat media parts. Its focused acceptance covers 71 passing Core tests, Core/AI/CLI typechecks, production-checkpoint read-only validation, a compiled cold-read red/green comparison and isolated service/WebUI probes. Historical rows and opaque compaction content are not rewritten. This local repair has not been published as a replacement for `v2.0.15-zhcn.1`, and real TUI activation remains user-managed.
+
+The current integration combines that accepted repair with official V2 2.0.16 at `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79`. Its local Windows version is `2.0.16-custom-lite.20260924.1`; exact build and acceptance results belong to [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) and the artifact's adjacent metadata. Pairing now uses official single-use links rather than placing the persistent server password in QR codes. This source update does not replace the existing public Release or activate an installed executable.
 
 Before replacing an installed executable or activating it on real data, retain a consistent backup of the old executable and user state. Keep personal configuration, credentials and live databases out of source commits and verification fixtures. No migration or conversion tool is provided by this source transition.
 

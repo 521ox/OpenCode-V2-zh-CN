@@ -63,7 +63,7 @@ import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
 import { DialogConfig } from "./component/dialog-config"
 import { DialogDebug } from "./component/dialog-debug"
-import { DialogPair, type DialogPairCredentials } from "./component/dialog-pair"
+import { DialogPair } from "./component/dialog-pair"
 import { DialogThemeList } from "./component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
@@ -409,16 +409,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                                   packages={input.packages}
                                                                                   directories={pluginDirectories}
                                                                                 >
-                                                                                  <App
-                                                                                    pair={
-                                                                                      input.server.endpoint.auth
-                                                                                        ? input.server.endpoint.auth
-                                                                                        : {
-                                                                                            username: "opencode",
-                                                                                            password: "",
-                                                                                          }
-                                                                                    }
-                                                                                  />
+                                                                                  <App />
                                                                                 </PluginProvider>
                                                                               </PanelProvider>
                                                                             </UpdateNotificationProvider>
@@ -472,7 +463,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   })
 })
 
-function App(props: { pair?: DialogPairCredentials }) {
+function App() {
   const { t } = useI18n()
   const log = useLog({ component: "app" })
   const app = useTuiApp()
@@ -1015,7 +1006,7 @@ function App(props: { pair?: DialogPairCredentials }) {
         title: t("main.command.pair"),
         slash: { name: "pair", aliases: ["web"] },
         run: () => {
-          dialog.replace(() => <DialogPair credentials={props.pair} />)
+          dialog.replace(() => <DialogPair />)
         },
         category: t("main.group.system"),
       },

@@ -8,7 +8,7 @@ on:
         description: Current source version followed by -zhcn.N
         required: true
         type: string
-        default: 2.0.15-zhcn.1
+        default: 2.0.16-zhcn.1
 
 permissions:
   contents: read

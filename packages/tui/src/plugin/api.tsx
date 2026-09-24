@@ -21,6 +21,7 @@ import { useAttention } from "../context/attention"
 import { useStorage } from "../context/storage"
 import { useSessionTabs } from "../context/session-tabs"
 import { useOptionalPanel } from "../context/panel"
+import { useLocal } from "../context/local"
 import { abbreviateHome } from "../util/path-format"
 import { useI18n } from "../context/i18n"
 
@@ -72,6 +73,7 @@ export function usePluginHost() {
     sessionTabs: useSessionTabs(),
     panel: useOptionalPanel(),
     i18n: useI18n(),
+    local: useLocal(),
   }
 }
 
@@ -252,6 +254,22 @@ export function createPluginContext(input: {
           if (!target || !host.sessionTabs.tabs().some((tab) => tab.sessionID === target)) return false
           host.sessionTabs.close(target)
           return true
+        },
+      },
+      model: {
+        current() {
+          const selection = host.local.model.selection()
+          if (!selection) return
+          return { providerID: selection.providerID, modelID: selection.modelID, variant: selection.variant }
+        },
+        variant: {
+          list: () => host.local.model.variant.list(),
+          set(variant) {
+            if (!host.local.model.selection()) return false
+            if (variant !== undefined && !host.local.model.variant.list().includes(variant)) return false
+            host.local.model.variant.set(variant)
+            return true
+          },
         },
       },
       slot(value: SlotClaim) {

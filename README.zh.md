@@ -45,7 +45,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.2"
+$env:OPENCODE_VERSION = "2.0.16-custom-lite.20260924.1"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -64,6 +64,8 @@ bun script/build.ts --target=opencode-windows-x64 --skip-install
 - 已完成并物化的历史记录可读，不代表未完成的旧二开 sidecar 状态、已退休执行状态或迁移后的回滚完全兼容。
 
 后续本地 `.2` 修复增加了对旧原生压缩记录中扁平媒体格式的兼容读取。聚焦验收覆盖 71 项通过的 Core 测试、Core/AI/CLI 类型检查、既有压缩记录的只读验证、编译版冷启动读取的失败/成功对照，以及隔离服务/WebUI 检查。历史记录和加密压缩内容不被重写。此本地修复尚未作为 `v2.0.15-zhcn.1` 的替代发布包上线，真实 TUI 的替换启用仍由用户执行。
+
+当前集成将上述已验收修复与官方 V2 2.0.16 的 `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` 合并。本地 Windows 版本为 `2.0.16-custom-lite.20260924.1`；确切构建和验收结果以 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 及产物旁的元数据为准。配对采用官方一次性链接，不再把长期服务密码放入二维码。这次源码更新不会替换既有线上 Release，也不会自动启用已安装的可执行文件。
 
 替换已安装程序或在真实数据上启用前，请保留旧可执行文件与用户状态的一致备份。个人配置、凭据和真实数据库不应进入源码提交或验证夹具。本次源码切换不提供迁移或转换工具。
 
