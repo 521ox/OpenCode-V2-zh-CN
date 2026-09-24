@@ -1,5 +1,78 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 25 local delivery of the September 24 synchronization
+
+The permanent `v2-custom-lite` worktree was fast-forwarded to the accepted build
+source `332ebd338332ce140e1477cac0f2a38e415ff962`, which includes official V2
+`9810d98bc2db41fe9fb59e069fb96bd2e8a93f79`, the retained native-checkpoint media
+reader repair, and the bounded recovery-message localization correction below.
+Its frozen hoisted dependency installation was refreshed successfully without
+changing `bun.lock`. This delivery record changes documentation only after the
+build; the binary's source identity remains the build commit above.
+
+The accepted local Windows x64 artifact is `2.0.16-custom-lite.20260924.1`, channel
+`latest`, built with Bun `1.4.2+744846f84`, bytecode and the complete embedded WebUI.
+It is 207,882,752 bytes with SHA256
+`4a3bfda6f587be5ff0259023846228f17283ab39ce4ffe7f62fb06c7890a68e3`.
+The version identifies the September 24 integration; its local export occurred
+after midnight on September 25. The delivery filename is
+`opencode2-zh-CN-2.0.16-custom-lite.20260924.1-windows-x64-20260925-000442.exe`
+in `D:\opencode-zh-CN-nightly-windows-x64`. The formal package executable,
+`opencode2.exe` worktree mirror and exported executable were verified identical.
+The generated package manifest also matches that version. The earlier same-version
+candidate with SHA256 `ec406652...` was rejected and deleted, not delivered.
+
+Independent reviewer `ses_f2c33316dffetGO5AQVfypn9qk` returned
+`APPROVE WITH DEFERRED RISKS` for this exact source and rebuilt artifact.
+SYNC16-F1 is closed. This consumed the synchronization's one repair/re-review
+cycle (1/1) in the same review session. The prior native-media repair's approval
+and separately consumed 1/1 budget remain unchanged.
+
+Applicable evidence includes twelve affected package typechecks, repository lint,
+focused formatting and canonical Client/Protocol generation checks. Source tests
+passed 596 AI/Core cases, 43 additional history cases, 17 Server cases plus two
+pairing-clock/concurrency cases, 65 CLI cases with one platform skip, 926 App cases
+with one skip, 11 timeline cases, 193 SessionUI cases, and 61 retained-custom TUI
+cases. The locale correction separately passed 20 prompt-move cases / 110
+assertions and TUI typechecking; these overlap the earlier TUI verification rather
+than constituting a new disjoint aggregate. Unchanged-source evidence is retained
+without claiming that every suite was rerun after the locale-only correction.
+
+The rebuilt executable passed isolated version, Chinese help and embedded-runtime
+probes, replacing the initial candidate's historical probe evidence. Its compiled
+service smoke passed election, API/OpenAPI authentication, embedded WebUI module,
+anonymous API denial, dynamic plugin, default `opencode.db` and owned-stop cleanup.
+The owner's observed Windows signal-stop exit was 1, not a graceful-zero-exit
+guarantee. Cold legacy-media context and message reads both returned HTTP 200,
+with opaque control and synthetic-row preservation checks passing. No real
+conversation row was rewritten and no provider request was sent.
+
+Material residuals remain explicit:
+
+- Client tests retain 168 passes and 16 baseline failures reproduced on the
+  accepted first parent, as detailed below; they are not counted as a passing suite.
+- Compiled pairing passed 28 functional assertions on the rebuilt executable, but
+  its harness exited 1 after an owned-child termination-observation timeout.
+  Subsequent OS inspection confirmed the exact PID absent and the private profile
+  was removed. Repeated timeout evidence is retained, not relabeled as a lifecycle
+  pass or used to change the deferred product shutdown policy.
+- Real-browser desktop/mobile rendering remains unverified: the isolated Chromium
+  launch failed before rendering on the earlier candidate. No browser E2E or
+  screenshot verification is claimed for the rebuilt executable.
+- Two Server test listener warnings and the prior adapter's P3 own-property
+  hardening observation remain without an established production-path defect.
+- This is local Windows x64 acceptance, not a full-monorepo, Electron-runtime,
+  six-platform-release, real-provider or reverse-rollback compatibility claim.
+
+Both installed old-version executables remain unchanged; activation is left to
+the owner. No source push, Release dispatch or online binary download occurred.
+The existing public `v2.0.15-zhcn.1` still does not contain the compatibility fix.
+The task-owned integration worktree and both repair/synchronization scratch roots
+are eligible for removal after verifying the delivered copies. Adjacent metadata
+records the actual cleanup result and retained source/recovery references; no
+Session-rules narrative is created. Shared caches, unrelated worktrees and user
+data are outside cleanup scope.
+
 ## September 24 evening synchronization
 
 The owner requested another upstream synchronization before exporting the accepted
