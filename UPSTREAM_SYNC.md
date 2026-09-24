@@ -59,6 +59,22 @@ retained baseline limitations, not waived passes or evidence that the new pairin
 change caused a regression. Product shutdown behavior and test assertions were
 not weakened to conceal them. App Happy DOM checks are not real-browser E2E.
 
+## September 24 bounded review repair
+
+The first integrated candidate was held after independent review found that the
+new missing-directory recovery route displayed application-generated failure
+titles in English even when the selected TUI locale was Simplified Chinese. The
+repair is limited to `SessionLocationMissing`: it reuses the existing workspace
+translation keys, adds the missing English/Chinese session-move title, and keeps
+downstream error bodies literal. Recovery actions, session routing and failure
+state are unchanged. The repair commit is
+`27cc378b7a` (`fix(tui): localize missing-session recovery errors`), with focused
+coverage for both locales at `packages/tui/test/cli/tui/prompt-move.test.tsx`.
+The focused suite passed 20 tests / 110 assertions and the TUI typecheck passed.
+The earlier compiled `.1` candidate from
+`21b24fcd0b80970d743f0363a1af7df0e887a58a` is superseded and is not a
+deliverable; any accepted binary must be rebuilt from the repaired source.
+
 ## Repository rename on September 24
 
 The owner renamed the existing public repository to `521ox/OpenCode-V2-zh-CN`.
