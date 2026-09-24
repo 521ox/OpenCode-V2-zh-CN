@@ -215,12 +215,20 @@ test("creating a worktree recovers the session without reading its removed locat
   }
 })
 
-test("failed recovery does not navigate away from the session", async () => {
-  const fixture = await renderMove({ directory: clone, unavailable: "location", showMissingLocation: true, moveFails: true })
+test.each(["en", "zh"] as const)("failed recovery does not navigate away from the session (%s)", async (locale) => {
+  const fixture = await renderMove({
+    directory: clone,
+    unavailable: "location",
+    showMissingLocation: true,
+    moveFails: true,
+    locale,
+  })
   try {
-    await fixture.app.waitForFrame((frame) => frame.includes("Session location unavailable"))
+    await fixture.app.waitForFrame((frame) =>
+      frame.includes(locale === "en" ? "Session location unavailable" : "会话目录不可用"),
+    )
     fixture.app.mockInput.pressEnter()
-    await fixture.app.waitForFrame((frame) => frame.includes("Worktrees") && frame.includes(linked))
+    await fixture.app.waitForFrame((frame) => frame.includes(linked))
     await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof InputRenderable)
     await fixture.app.mockInput.typeText("linked")
     await fixture.app.waitForFrame((frame) => frame.includes(linked) && !frame.includes(main))
@@ -229,7 +237,11 @@ test("failed recovery does not navigate away from the session", async () => {
 
     expect(fixture.moves).toEqual([{ directory: linked }])
     expect(fixture.route.data).toEqual({ type: "session", sessionID: "ses_clone" })
-    expect(fixture.toast.currentToast).toMatchObject({ title: "Failed to move session", variant: "error" })
+    expect(fixture.toast.currentToast).toMatchObject({
+      title: locale === "en" ? "Failed to move session" : "移动会话失败",
+      message: "UnexpectedStatus: 503",
+      variant: "error",
+    })
   } finally {
     fixture.app.renderer.destroy()
   }
@@ -239,16 +251,27 @@ test.each([
   { name: "session", unavailable: "session" as const },
   { name: "location", unavailable: "location" as const },
 ])("does not create from another clone when $name lookup fails", async (input) => {
-  const fixture = await renderMove({ ...input, directory: `${linked}/packages/tui`, worktree: linked })
-  try {
-    await fixture.create()
+  for (const locale of ["en", "zh"] as const) {
+    const fixture = await renderMove({ ...input, directory: `${linked}/packages/tui`, worktree: linked, locale })
+    try {
+      await fixture.create()
 
-    expect(fixture.requests).toEqual([])
-    expect(fixture.moves).toEqual([])
-    expect(fixture.toast.currentToast).toMatchObject({ title: "Creating workspace failed", variant: "error" })
-    expect(fixture.move.creating()).toBe(false)
-  } finally {
-    fixture.app.renderer.destroy()
+      expect(fixture.requests).toEqual([])
+      expect(fixture.moves).toEqual([])
+      expect(fixture.toast.currentToast).toMatchObject({
+        title: locale === "en" ? "Creating workspace failed" : "创建工作区失败",
+        message:
+          input.unavailable === "session"
+            ? locale === "en"
+              ? "Unable to determine current session location"
+              : "无法确定当前会话位置"
+            : "UnexpectedStatus: 503",
+        variant: "error",
+      })
+      expect(fixture.move.creating()).toBe(false)
+    } finally {
+      fixture.app.renderer.destroy()
+    }
   }
 })
 
@@ -285,6 +308,7 @@ async function renderMove(input: {
   unavailable?: "session" | "location"
   showMissingLocation?: boolean
   moveFails?: boolean
+  locale?: "en" | "zh"
 }) {
   const launch = input.launch ?? (input.home ? input.directory : main)
   const requests: unknown[] = []
@@ -384,7 +408,7 @@ async function renderMove(input: {
   const app = await testRender(
     () => (
       <TestTuiContexts cwd={launch}>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: input.locale ?? "en" })}>
           <I18nProvider>
             <Keymap.Provider>
               <ToastProvider>
@@ -428,10 +452,12 @@ async function renderMove(input: {
     async create() {
       await move.open()
       const frame = await app.waitForFrame(
-        (frame) => frame.includes("Worktrees") && (frame.includes(clone) || frame.includes(launch)),
+        (frame) =>
+          frame.includes(input.locale === "en" ? "Worktrees" : input.locale === "zh" ? "工作树" : "Worktrees") &&
+          (frame.includes(clone) || frame.includes(launch)),
       )
       app.mockInput.pressKey("a", { ctrl: true })
-      await app.waitForFrame((frame) => frame.includes("Name worktree"))
+      await app.waitForFrame((frame) => frame.includes(input.locale === "zh" ? "命名工作树" : "Name worktree"))
       await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
       await app.mockInput.typeText("fresh")
       app.mockInput.pressEnter()

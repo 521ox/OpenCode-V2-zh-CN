@@ -13,6 +13,7 @@ import { DialogWorkspaces, type WorkspaceSelection } from "../../component/dialo
 import { useData } from "../../context/data"
 
 export function SessionLocationMissing(props: { directory: string; projectID: string; sessionID: string }) {
+  const { t } = useI18n()
   const dialog = useDialog()
   const client = useClient()
   const toast = useToast()
@@ -41,16 +42,16 @@ export function SessionLocationMissing(props: { directory: string; projectID: st
         : await client.api.worktree
             .create({ projectID: props.projectID, name: selection.name })
             .then((result) => {
-              if (!result.directory) throw new Error("No worktree directory returned")
+              if (!result.directory) throw new Error(t("main.workspace.noDirectory"))
               return result.directory
             })
             .catch((error) => {
-              toast.show({ title: "Creating workspace failed", message: errorMessage(error), variant: "error" })
+              toast.show({ title: t("main.workspace.createFailed"), message: errorMessage(error), variant: "error" })
               return undefined
             })
     if (!directory) return
     await client.api.session.move({ sessionID: props.sessionID, directory }).catch((error) => {
-      toast.show({ title: "Failed to move session", message: errorMessage(error), variant: "error" })
+      toast.show({ title: t("main.workspace.moveFailed"), message: errorMessage(error), variant: "error" })
     })
   }
 

@@ -227,6 +227,7 @@ export default {
   "main.workspace.noDirectory": "未返回工作树目录",
   "main.workspace.creatingSession": "正在创建会话",
   "main.workspace.createFailed": "创建工作区失败",
+  "main.workspace.moveFailed": "移动会话失败",
   "main.workspace.submitting": "正在提交提示词",
   "main.shell.missing": "Shell 输出已不可用。",
   "main.shell.readFailed": "无法读取 Shell 输出，正在重试…",

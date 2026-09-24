@@ -227,6 +227,7 @@ export default {
   "main.workspace.noDirectory": "No worktree directory returned",
   "main.workspace.creatingSession": "Creating session",
   "main.workspace.createFailed": "Creating workspace failed",
+  "main.workspace.moveFailed": "Failed to move session",
   "main.workspace.submitting": "Submitting prompt",
   "main.shell.missing": "Shell output is no longer available.",
   "main.shell.readFailed": "Unable to read shell output. Retrying…",
