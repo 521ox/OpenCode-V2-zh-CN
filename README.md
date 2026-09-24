@@ -9,7 +9,7 @@ A community-maintained fork of [OpenCode](https://github.com/anomalyco/opencode)
 The maintained default branch is **`v2-custom-lite`** in the existing [521ox/opencode2-zh-CN repository](https://github.com/521ox/opencode2-zh-CN).
 
 - The former `main` branch, old tags and `v1.18.4-zhcn.*` releases remain legacy history. Those binaries are **not** packages of the current enhanced V2 branch.
-- Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. The first enhanced V2 prerelease, [**`v2.0.12-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.12-zhcn.1), was published on September 22, 2026 with all six packages. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages.
+- Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. The current enhanced V2 prerelease, [**`v2.0.15-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.15-zhcn.1), was published on September 24, 2026 with all six packages; [release CI run `35971350731`](https://github.com/521ox/opencode2-zh-CN/actions/runs/35971350731) passed all eight jobs. Earlier releases remain available. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages.
 - Official installers, npm packages and the official updater deliver official builds, not this custom distribution. Accepting an official update can replace the custom additions; the upstream updater policy is unchanged.
 
 This branch follows official V2 while adding substantial enhancements across localization, native tools, Session and subagent interaction, search authorization and execution reliability. Its maintenance approach keeps changes clearly bounded and aligned with upstream owners rather than restoring the former complex fork wholesale. The internal `v2-custom-lite` name describes that maintenance approach, not a localization-only build or a claim that the feature set is small.
@@ -43,7 +43,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/opencode2-zh-CN.git
 cd opencode2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.12-custom-lite.20260922.1"
+$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -54,7 +54,7 @@ Keep an explicit custom `OPENCODE_VERSION` and **`OPENCODE_CHANNEL=latest`**. Th
 
 ## Verification and known limits
 
-The September 22, 2026 local Windows x64 candidate `2.0.12-custom-lite.20260922.1` uses official V2 baseline `b8aa08f260130452dc87fbc20c2a4e2ff743e642`. Recorded acceptance covers 1,136 focused cases, eleven package typechecks, the full Windows bytecode/WebUI build and an isolated populated old-format synthetic-database smoke. These are prior, bounded results—not new runtime verification performed by this README update, a six-platform release certification, or Electron Desktop validation.
+The September 24, 2026 local Windows x64 candidate `2.0.15-custom-lite.20260924.1` uses official V2 baseline `dca73ba9e3782e2b41983faca5854a9d56a3c482`. Recorded acceptance covers 4,353 passing focused cases (72 conditional/platform skips), sixteen affected package typechecks, the full Windows bytecode/WebUI build and isolated service and populated old-format synthetic-database smokes. These are bounded local results, separate from native release CI—not new runtime verification performed by this README update, a full-monorepo check pass, or Electron Desktop validation. The Stats App typecheck limitation and one unresolved TUI layout-persistence warning remain recorded in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).
 
 - Startup-delay changes and changes to the default shared-service exit/lifetime remain deferred.
 - Later parent notifications after a child is reactivated by background Shell work remain unresolved.

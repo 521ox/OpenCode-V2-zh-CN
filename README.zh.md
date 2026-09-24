@@ -9,7 +9,7 @@
 本项目在现有 [521ox/opencode2-zh-CN 仓库](https://github.com/521ox/opencode2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
 - 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
-- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。首个 V2 增强版预发布 [**`v2.0.12-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.12-zhcn.1) 已于 2026 年 9 月 22 日发布，六种原生包均已提供。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
+- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。当前 V2 增强版预发布 [**`v2.0.15-zhcn.1`**](https://github.com/521ox/opencode2-zh-CN/releases/tag/v2.0.15-zhcn.1) 已于 2026 年 9 月 24 日发布，六种原生包均已提供；[发布 CI `35971350731`](https://github.com/521ox/opencode2-zh-CN/actions/runs/35971350731) 的八项任务全部通过。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
 - 官方安装器、npm 包和官方更新器提供的是官方构建，不是此二开发行版。接受官方更新可能覆盖二开功能；本分支没有改变上游更新策略。
 
 本分支持续同步官方 V2，围绕界面本地化、原生工具、会话与子代理交互、搜索权限和执行可靠性进行了多项实质增强。维护上强调改动边界清晰、沿用官方模块职责，不整体恢复旧二开的复杂实现。内部名称 `v2-custom-lite` 表达的是这种维护方式，并不意味着只做汉化或功能很少。
@@ -43,7 +43,7 @@ git clone --branch v2-custom-lite https://github.com/521ox/opencode2-zh-CN.git
 cd opencode2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.12-custom-lite.20260922.1"
+$env:OPENCODE_VERSION = "2.0.15-custom-lite.20260924.1"
 $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
@@ -54,7 +54,7 @@ bun script/build.ts --target=opencode-windows-x64 --skip-install
 
 ## 验证范围与已知限制
 
-2026 年 9 月 22 日本地 Windows x64 候选版本 `2.0.12-custom-lite.20260922.1` 基于官方 V2 `b8aa08f260130452dc87fbc20c2a4e2ff743e642`。已有验收记录覆盖 1,136 项聚焦用例、11 个包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的已填充旧格式合成数据库冒烟验证。这些是此前已有且有范围的结果，不是此次 README 更新产生的新运行验证，也不代表六平台发布认证或 Electron Desktop 验证。
+2026 年 9 月 24 日本地 Windows x64 候选版本 `2.0.15-custom-lite.20260924.1` 基于官方 V2 `dca73ba9e3782e2b41983faca5854a9d56a3c482`。已有验收记录覆盖 4,353 项通过的聚焦用例（72 项条件性或平台相关跳过）、16 个受影响包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的服务和已填充旧格式合成数据库冒烟验证。这些是有明确范围的本地结果，与原生发布 CI 分别记录，不是此次 README 更新产生的新运行验证，也不代表整个仓库的检查通过或 Electron Desktop 验证。Stats App 类型检查限制及一次尚未查明原因的 TUI 布局持久化警告继续记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
 - 启动延迟和默认共享服务退出/生命周期调整仍然延期。
 - 子会话被后续后台 Shell 工作重新激活后，继续向父会话发送通知的问题仍未解决。

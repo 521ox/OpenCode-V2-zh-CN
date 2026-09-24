@@ -1,5 +1,73 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## Native six-platform publication on September 24
+
+After accepting the local synchronization below, the owner separately authorized
+pushing the maintained source and running the existing six-platform release CI.
+The normal, non-forced push advanced `fork/v2-custom-lite` from
+`dd12f1d0d3453aa9ff272e35732fff02e16aa083` to
+`3da126e054ffca8291800e040e0daa716a1e58e0`. No runtime, dependency or workflow
+changes were added by this publication task. The earlier local-only scope remains
+an accurate record of that completed synchronization, not a prohibition on this
+subsequently authorized release.
+
+Manual GitHub run `35971350731` used exactly that source and version
+`2.0.15-zhcn.1`. All eight jobs succeeded: Linux preflight, six native builds and
+publication. Preflight passed 50 tests with one Windows-only skip and 313
+assertions across three files. The six native runners covered Windows x64/ARM64,
+Linux glibc x64/ARM64 and macOS Intel/Apple Silicon. Each passed source/native
+identity, bytecode and embedded-WebUI build, artifact scan, executable version/
+help/runtime, isolated default-channel service, archive round-trip verification
+and source-cleanliness checks. Publication downloaded all 14 draft attachments,
+compared their exact names and checksum file, verified the other 13 SHA256 values,
+and only then made the prerelease public.
+
+Release `395457807`, tag `v2.0.15-zhcn.1`, was published at
+`2026-09-24T07:57:21Z`. Post-publication API reads confirmed its non-draft
+prerelease state, the exact source commit above, and all 14 uploaded assets with
+lengths and SHA256 digests. The Windows x64 ZIP is 120,799,930 bytes, SHA256
+`a89399cd0aab39ec1af86d0339ad67f1636dd27a5ca5a7b1c3936fd0b196cab4`.
+The manifest SHA256 is
+`9effedcb68fcad918e714d80e35577143967374b92c30e0feaa102c090a9e1c4`.
+
+An independent public Windows x64 download passed actual length/hash comparisons
+against the API, checksum file, sidecar and manifest before execution. The
+extracted executable is 207,756,288 bytes, SHA256
+`cf011c535a0878dcefce32224ed44c098b24a63201e84d5280c56ecaabd09ead`.
+The existing isolated executable probe returned exit 0 for version, help and
+embedded Bun revision, confirming `opencode v2.0.15-zhcn.1` and
+`1.4.2+744846f84`. It used only private HOME/cwd/config/data/cache/temp locations,
+without a live service, model request or installation. Its downloaded archives,
+executable, script and probe environment were removed after all processes ended.
+
+The three older Releases and all 42 asset identities, names, lengths and digests
+remain unchanged, as do legacy `main`, the three prior public tags, repository
+identity/default branch and the Actions policy/five-action SHA allowlist. The
+eight protected local executables, metadata files and backup objects also retain
+their original lengths and hashes. In particular, the accepted local
+`2.0.15-custom-lite.20260924.1` candidate and installed `2.0.12` executable were
+not replaced. The public-version binary is a separately identified CI artifact.
+
+Retained upstream Actions again emitted Node 20 deprecation notices while GitHub
+ran them under Node 24; no job failed. Coordinated action-pin/allowlist upgrades
+remain deferred. This release CI is not a claim that the four retained upstream
+reference workflows ran, that the full monorepo check passes, or that every
+feature, real user database, code signature, macOS notarization or Electron
+Desktop package has been certified. The local synchronization's S24-R1/S24-R2
+residuals and the release workflow's draft-recovery limitation remain documented
+below; no uncertain publication retry was needed in this run.
+
+After the CI watcher and download verification finished, final hashes reconfirmed
+all eight protected local objects. The task-owned
+`C:\Users\Administrator\AppData\Local\Temp\opencode\release-v2-20260924`
+scratch directory was removed and its absence confirmed (11 remaining files,
+552,045 logical bytes; the downloaded binary and archive had already been
+removed). No other task directory, shared cache or installed file was deleted.
+This tracked record and the GitHub run/Release identities retain the necessary
+outcome evidence; no separate Session-rules narrative was created. Follow-up
+README and maintenance-record changes are documentation-only and do not rebuild
+the published binaries or move their source tag.
+
 ## September 24 synchronization
 
 The integration branch `sync-20260924` starts at accepted custom checkpoint
