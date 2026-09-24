@@ -5,6 +5,7 @@ import { useI18n } from "../context/i18n"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "./border"
 import { TextAttributes } from "@opentui/core"
+import { errorMessage } from "../util/error"
 export type ToastOptions = {
   title?: string
   message: string
@@ -23,6 +24,7 @@ function ToastSurface(props: {
   onHover?: (hovered: boolean) => void
   onActivate: () => void
 }) {
+  const { t } = useI18n()
   const theme = useTheme()
   const dimensions = useTerminalDimensions()
   const renderer = useRenderer()
@@ -92,9 +94,11 @@ function ToastSurface(props: {
           </text>
         </Show>
         <Show when={props.pending}>
-          <text fg={theme.text.muted} marginTop={1}>
-            +{props.pending} more
-          </text>
+          {(pending) => (
+            <text fg={theme.text.muted} marginTop={1}>
+              {t("main.toast.pending", { count: pending() })}
+            </text>
+          )}
         </Show>
       </box>
     </box>
@@ -119,7 +123,6 @@ export function Toast() {
 }
 
 function init() {
-  const { t } = useI18n()
   const [store, setStore] = createStore({
     currentToast: null as ToastOptions | null,
     queue: [] as ToastOptions[],
@@ -166,16 +169,8 @@ function init() {
       setStore("currentToast", toastOptions)
       start(toastOptions.duration)
     },
-    error: (err: any) => {
-      if (err instanceof Error)
-        return toast.show({
-          variant: "error",
-          message: err.message,
-        })
-      toast.show({
-        variant: "error",
-        message: t("main.error.unknown"),
-      })
+    error: (err: unknown) => {
+      toast.show({ variant: "error", message: errorMessage(err) })
     },
     pause() {
       if (!store.currentToast || paused) return

@@ -124,7 +124,7 @@ test.each(["dismissed", "refreshing"])(
     const locations: string[] = []
     await using setup = await createAppFixture({
       state: state.path,
-      config: { locale: "en", animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { mode: "off" } },
       fetch: (url) => {
         if (url.pathname === "/api/session") {
           if (url.searchParams.has("parentID")) {
@@ -449,7 +449,7 @@ test("vertical session tabs switch to horizontal below readable content width", 
     config: {
       locale: "en",
       animations: false,
-      tabs: { enabled: true, layout: "vertical", indicators: "status" },
+      tabs: { mode: "on", layout: "vertical", indicators: "status" },
       session: { sidebar: "hide" },
     },
     args: { sessionID: session.id },
@@ -488,7 +488,7 @@ test("narrow vertical session tabs collapse to a compact rail with the terminal"
     config: {
       locale: "en",
       animations: false,
-      tabs: { enabled: true, layout: "vertical", indicators: "status" },
+      tabs: { mode: "on", layout: "vertical", indicators: "status" },
       session: { sidebar: "hide" },
     },
     args: { sessionID: session.id },
@@ -529,7 +529,7 @@ test("automatic rename refreshes the displayed title before settling, even witho
     width: 110,
     height: 20,
     state: state.path,
-    config: { locale: "en", tabs: { enabled: true, layout: "vertical" }, session: { sidebar: "hide" } },
+    config: { locale: "en", tabs: { mode: "on", layout: "vertical" }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: async (url, request) => {
       if (url.pathname === "/api/location") return json(location)
@@ -588,7 +588,7 @@ test.each([80, 120])("completes custom Markdown and ordinary fences in a session
     width,
     height: 55,
     state: state.path,
-    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -693,7 +693,7 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
     width: 100,
     height: 40,
     state: state.path,
-    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide", tps: true } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" }, session: { sidebar: "hide", tps: true } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -889,7 +889,7 @@ test.each([false, true])("uses the resolved launch directory for new prompts (fa
   let session: unknown
   await using setup = await createAppFixture({
     state: state.path,
-    config: { locale: "en", animations: false, tabs: { enabled: false }, keybinds: { "session.new": "f6" } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" }, keybinds: { "session.new": "f6" } },
     fetch: async (url, request) => {
       requests.push(url)
       if (url.searchParams.has("location[directory]") && url.searchParams.get("location[directory]") !== target)
@@ -1027,7 +1027,7 @@ test("completed user shell output replaces a partial live read when the final re
   let failedReads = 0
   await using setup = await createAppFixture({
     state: state.path,
-    config: { locale: "en", animations: false, tabs: { enabled: false }, session: { sidebar: "hide" } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" }, session: { sidebar: "hide" } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
@@ -1462,7 +1462,7 @@ test.each([100, 44])(
       width,
       state: state.path,
       args: { sessionID: session.id },
-      config: { locale: "en", animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { mode: "off" } },
       fetch: (url) => {
         if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
         if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
@@ -1628,7 +1628,7 @@ test.each([44, 100])(
       width,
       state: state.path,
       args: { sessionID: session.id },
-      config: { locale: "en", animations: false, tabs: { enabled: false } },
+      config: { locale: "en", animations: false, tabs: { mode: "off" } },
       fetch: (url) => {
         if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
         if (url.pathname === `/api/session/${session.id}`) return json({ data: session })

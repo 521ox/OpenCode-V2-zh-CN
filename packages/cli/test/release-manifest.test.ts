@@ -2,11 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { chmod, cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import root from "../../../package.json"
 import { createArchive, fileDigest } from "../script/release-artifact"
 import { bunVersion, channel, decodeMetadata, targetInfo, targets, type Metadata } from "../script/release-contract"
 import { assembleRelease } from "../script/release-manifest"
 
-const version = "2.0.12-zhcn.1"
+const version = `${root.version}-zhcn.1`
 const sourceSha = "a".repeat(40)
 const temporary = process.env.RELEASE_TEST_TEMP ?? path.join(tmpdir(), "opencode-release-tests")
 let fixture: string
@@ -103,7 +104,7 @@ describe("six-platform manifest", () => {
 
   const mutations: { name: string; change: (metadata: Metadata) => unknown }[] = [
     { name: "source SHA", change: (m) => ({ ...m, sourceSha: "c".repeat(40) }) },
-    { name: "version", change: (m) => ({ ...m, version: "2.0.12-zhcn.2" }) },
+    { name: "version", change: (m) => ({ ...m, version: `${root.version}-zhcn.2` }) },
     { name: "channel", change: (m) => ({ ...m, channel: "dev" }) },
     { name: "Bun version", change: (m) => ({ ...m, bun: { ...m.bun, version: "1.4.3" } }) },
     { name: "Bun revision", change: (m) => ({ ...m, bun: { ...m.bun, revision: "c".repeat(40) } }) },

@@ -102,7 +102,7 @@ async function fixture(
         get: async () => ({
           locale: options.locale ?? "en",
           animations: false,
-          tabs: { enabled: false },
+          tabs: { mode: "off" },
           session: { grouping: options.grouping ?? "auto" },
         }),
         update: async () => ({ locale: "en" }),

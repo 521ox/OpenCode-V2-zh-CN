@@ -1,4 +1,9 @@
 export default {
+  "feature.sidebar.onboarding.title": "Getting started",
+  "feature.sidebar.onboarding.freeModels": "OpenCode includes free models so you can start immediately.",
+  "feature.sidebar.onboarding.providers":
+    "Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc",
+  "feature.sidebar.onboarding.connect": "Connect provider",
   "feature.notifications.done": "Session done",
   "feature.notifications.response": "Input needs response",
   "feature.notifications.permission": "Permission needs input",

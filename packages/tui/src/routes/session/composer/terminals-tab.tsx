@@ -4,8 +4,8 @@ import { Keymap } from "../../../context/keymap"
 import { useSessionTerminals } from "../../../context/session-terminals"
 import { useTheme } from "../../../context/theme"
 import { useToast } from "../../../ui/toast"
-import { useComposerTab } from "./index"
 import { useI18n } from "../../../context/i18n"
+import { useComposerTab } from "./context"
 
 export function TerminalsTab(props: { sessionID: string; visibleTerminalID?: string }) {
   const { t } = useI18n()

@@ -115,7 +115,7 @@ async function main() {
     if ((await pluginIDs(info.url, headers)).includes("smoke")) throw new Error("Smoke plugin existed before creation")
     const plugin = path.join(root, ".opencode", "plugins", "smoke.ts")
     await fs.writeFile(plugin, pluginSource())
-    await waitForPlugin(info.url, headers)
+    await waitForPlugin(info.url, headers, plugin)
 
     stage = "unauthenticated GET /api/info"
     const unauthorizedInfo = await fetch(new URL("/api/info", info.url), {
@@ -352,11 +352,15 @@ async function main() {
     )
   }
 
-  async function waitForPlugin(url: string, headers: HeadersInit) {
+  async function waitForPlugin(url: string, headers: HeadersInit, plugin: string) {
     const deadline = Date.now() + 10_000
+    let attempt = 0
     while (Date.now() < deadline) {
       if ((await pluginIDs(url, headers)).includes("smoke")) return
       await Bun.sleep(25)
+      // Native watchers may coalesce a single creation edge. Keep changing valid source so
+      // the smoke proves that a later native event is delivered.
+      if (++attempt % 10 === 0) await fs.writeFile(plugin, `${pluginSource()}// watcher retry ${attempt}\n`)
     }
     throw new Error("Compiled service did not discover the created plugin")
   }
@@ -525,7 +529,13 @@ export async function cleanExit(
   milliseconds: number,
   reason: "normal" | "elected-loser" | "owned-stop" = "normal",
 ) {
-  const code = await Promise.race([child.exited, Bun.sleep(milliseconds).then(() => undefined)])
+  const code = await new Promise<number | undefined>((resolve) => {
+    const timeout = setTimeout(() => resolve(undefined), milliseconds)
+    child.exited.then((code) => {
+      clearTimeout(timeout)
+      resolve(code)
+    })
+  })
   const expected = reason === "normal" ? "0" : "terminated"
   if (code === undefined || (reason === "normal" && code !== 0))
     throw new Error(`Compiled contender did not exit cleanly: expected ${expected}, actual ${code ?? "timeout"}`)

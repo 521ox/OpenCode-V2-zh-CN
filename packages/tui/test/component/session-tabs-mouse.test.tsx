@@ -29,7 +29,7 @@ test("releasing a transcript selection over tab controls does not activate them"
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { mode: "on" } })}>
           <I18nProvider>
             <ThemeProvider mode="dark" source={emptyThemeSource}>
               <box flexDirection="column">
@@ -82,7 +82,7 @@ test("middle-click closes a session tab without selecting it", async () => {
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { mode: "on" } })}>
           <I18nProvider>
             <ThemeProvider mode="dark" source={emptyThemeSource}>
               <SessionTabs controller={controller} animations={false} />
@@ -132,7 +132,7 @@ test("keeps consecutive close controls fixed across overflow window changes", as
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { mode: "on" } })}>
           <I18nProvider>
             <ThemeProvider mode="dark" source={emptyThemeSource}>
               <SessionTabs controller={controller} animations={false} />
@@ -185,7 +185,7 @@ test("reflows held tabs when the pointer leaves the strip", async () => {
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { enabled: true } })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", tabs: { mode: "on" } })}>
           <I18nProvider>
             <ThemeProvider mode="dark" source={emptyThemeSource}>
               <box flexDirection="column">

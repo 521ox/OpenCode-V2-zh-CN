@@ -24,6 +24,7 @@ import { DialogPrompt } from "../ui/dialog-prompt"
 import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { errorMessage } from "../util/error"
 import { formLabel, formToggleMultiselect, formValidateValue, type FormAnswerField } from "../util/form"
 import { useI18n } from "../context/i18n"
 import { type Key, type Translator } from "../i18n"
@@ -371,7 +372,7 @@ function CommandStarting(props: {
       })
       .catch((cause) => {
         if (closed) return
-        toast.show({ variant: "error", message: message(cause, t) })
+        toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
       })
   })
@@ -425,7 +426,7 @@ function CommandPending(props: {
       })
       .catch((cause) => {
         settled = true
-        toast.show({ variant: "error", message: message(cause, t) })
+        toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
       })
   }
@@ -505,7 +506,7 @@ function KeyMethod(props: {
             ...(props.answer ? { answer: props.answer } : {}),
           })
           .then(() => connected(props.integration, props.location, data, dialog, toast, t, props.onConnected))
-          .catch((cause) => setError(message(cause, t)))
+          .catch((cause) => setError(errorMessage(cause)))
       }}
       description={() => (
         <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
@@ -579,7 +580,7 @@ function OAuthStarting(props: {
         ))
       })
       .catch((cause) => {
-        toast.show({ variant: "error", message: message(cause, t) })
+        toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
       })
   })
@@ -660,7 +661,7 @@ function OAuthAuto(props: {
       })
       .catch((cause) => {
         settled = true
-        toast.show({ variant: "error", message: message(cause, t) })
+        toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
       })
   }
@@ -730,7 +731,7 @@ function OAuthCode(props: {
             settled = true
             return connected(props.integration, props.location, data, dialog, toast, t, props.onConnected)
           })
-          .catch((cause) => setError(message(cause, t)))
+          .catch((cause) => setError(errorMessage(cause)))
       }}
       description={() => (
         <box gap={1}>
@@ -1070,9 +1071,4 @@ function providerID(data: ReturnType<typeof useData>, location: LocationRef, int
 
 function locationQuery(location: LocationRef) {
   return { directory: location.directory }
-}
-
-function message(cause: unknown, t: Translator<Key>) {
-  if (cause instanceof Error) return cause.message
-  return t("main.integration.authFailed")
 }

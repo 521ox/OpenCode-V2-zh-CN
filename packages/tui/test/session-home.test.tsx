@@ -94,7 +94,7 @@ test.each([
         get: async () => ({
           locale: "en",
           animations: false,
-          tabs: { enabled: false },
+          tabs: { mode: "off" },
           keybinds: {
             "session.line.up": "f6",
             "session.page.down": "f7",

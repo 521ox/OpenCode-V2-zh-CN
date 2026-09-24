@@ -701,6 +701,16 @@
       "table": "project"
     },
     {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "time_active",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
       "type": "text",
       "notNull": true,
       "autoincrement": false,

@@ -1,4 +1,7 @@
 export default {
+  "main.command.session.clear": "Clear session",
+  "main.setting.tabsMode": "Mode",
+  "main.toast.pending": "+{{count}} more",
   "main.tabs.rename": "Rename",
   "main.open.title": "Open",
   "main.open.noWorktrees": "No matching worktrees",

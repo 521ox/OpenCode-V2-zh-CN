@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import { pathToFileURL } from "node:url"
 import path from "node:path"
+import root from "../../../package.json"
 import {
   archiveExtraction,
   createArchive,
@@ -22,21 +23,22 @@ import {
 } from "../script/release-contract"
 
 const temporary = process.env.RELEASE_TEST_TEMP ?? path.join(tmpdir(), "opencode-release-tests")
+const version = `${root.version}-zhcn.1`
 
 describe("release validation", () => {
   test("accepts only the root base version and positive zhcn release ordinal", () => {
-    expect(validateVersion("2.0.12-zhcn.1")).toBe("2.0.12-zhcn.1")
-    expect(validateVersion("2.0.12-zhcn.123")).toBe("2.0.12-zhcn.123")
-    for (const version of [
-      "2.0.12",
-      "2.0.13-zhcn.1",
-      "2.0.12-zhcn.0",
-      "2.0.12-zhcn.01",
-      "2.0.12-zhcn.-1",
-      "2.0.12-zhcn.1+test",
-      "2.0.12-zhcn.1\n",
+    expect(validateVersion(version)).toBe(version)
+    expect(validateVersion(`${root.version}-zhcn.123`)).toBe(`${root.version}-zhcn.123`)
+    for (const invalid of [
+      root.version,
+      "0.0.0-zhcn.1",
+      `${root.version}-zhcn.0`,
+      `${root.version}-zhcn.01`,
+      `${root.version}-zhcn.-1`,
+      `${version}+test`,
+      `${version}\n`,
     ]) {
-      expect(() => validateVersion(version)).toThrow()
+      expect(() => validateVersion(invalid)).toThrow()
     }
   })
 
@@ -57,7 +59,7 @@ describe("release validation", () => {
 
   test("rejects another repository/ref and a source that is not HEAD", async () => {
     const input = {
-      version: "2.0.12-zhcn.1",
+      version,
       repository,
       ref: releaseRef,
       sourceSha: "0".repeat(40),
@@ -70,7 +72,7 @@ describe("release validation", () => {
   })
 
   test("rejects repeated, missing, positional and unknown CLI arguments", () => {
-    expect(releaseArgs(["--version=2.0.12-zhcn.1"], ["version"])).toEqual({ version: "2.0.12-zhcn.1" })
+    expect(releaseArgs([`--version=${version}`], ["version"])).toEqual({ version })
     for (const args of [[], ["--version", "a", "--version", "b"], ["--unknown", "a"], ["position"], ["--version="]]) {
       expect(() => releaseArgs(args, ["version"])).toThrow()
     }
@@ -78,7 +80,6 @@ describe("release validation", () => {
 })
 
 describe("executable release probes", () => {
-  const version = "2.0.12-zhcn.1"
   const stdout = {
     "--version": `opencode v${version}\n`,
     "--help": "opencode [command]\n",
@@ -115,7 +116,7 @@ describe("executable release probes", () => {
     },
     {
       name: "rejects wrong release version",
-      override: { "--version": "opencode v2.0.12-zhcn.2" },
+      override: { "--version": `opencode v${root.version}-zhcn.2` },
       error: "Executable version mismatch",
       calls: ["--version"],
     },

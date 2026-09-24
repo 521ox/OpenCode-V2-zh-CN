@@ -1,4 +1,7 @@
 export default {
+  "main.command.session.clear": "清空会话",
+  "main.setting.tabsMode": "模式",
+  "main.toast.pending": "另有 {{count}} 条",
   "main.tabs.rename": "重命名",
   "main.open.title": "打开",
   "main.open.noWorktrees": "没有匹配的工作树",

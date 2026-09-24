@@ -15,7 +15,7 @@ import { uriGlobal, urlGlobal, urlSearchParamsGlobal } from "../stdlib/url.js"
 import { headersGlobal } from "../stdlib/headers.js"
 import { iteratorGlobals } from "../stdlib/iterator.js"
 import { coercion } from "../stdlib/value.js"
-import { base64Global, cryptoGlobal } from "../stdlib/web.js"
+import { base64Global, cryptoGlobal, structuredCloneGlobal } from "../stdlib/web.js"
 import { ToolReference } from "../tool-runtime.js"
 import { errorGlobal } from "./errors.js"
 import { errorTypes } from "./intrinsics.js"
@@ -70,6 +70,7 @@ const table: Record<string, Factory> = {
   console: (ctx) => consoleGlobal(ctx),
   Promise: (ctx) => promiseGlobal(ctx),
   Symbol: (ctx) => symbolGlobal(ctx),
+  Iterator: (ctx) => iteratorGlobals(ctx),
   Number: (ctx) => numberGlobal(ctx),
   String: (ctx) => stringGlobal(ctx),
   Boolean: (ctx) => booleanGlobal(ctx),
@@ -94,6 +95,7 @@ const table: Record<string, Factory> = {
   atob: (ctx) => base64Global(ctx, "atob"),
   btoa: (ctx) => base64Global(ctx, "btoa"),
   crypto: (ctx) => cryptoGlobal(ctx),
+  structuredClone: (ctx) => structuredCloneGlobal(ctx),
   ...Object.fromEntries(errorTypes.map((type) => [type, <R>(ctx: Interpreter<R>) => errorGlobal(type, ctx)])),
 }
 
@@ -103,6 +105,5 @@ export const globalNames: ReadonlySet<string> = new Set(Object.keys(table))
 /** The immutable global bindings of every program, in declaration order. */
 export const globals = <R>(ctx: Interpreter<R>): ReadonlyArray<readonly [string, Value]> => {
   generatorGlobals(ctx)
-  iteratorGlobals(ctx)
   return Object.entries(table).map(([name, factory]) => [name, factory(ctx)] as const)
 }

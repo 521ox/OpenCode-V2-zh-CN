@@ -1,6 +1,10 @@
 import type en from "./en"
 
 export default {
+  "feature.sidebar.onboarding.title": "开始使用",
+  "feature.sidebar.onboarding.freeModels": "OpenCode 提供免费模型，助你立即开始使用。",
+  "feature.sidebar.onboarding.providers": "连接 75 多家提供商，使用 Claude、GPT、Gemini 等更多模型",
+  "feature.sidebar.onboarding.connect": "连接提供商",
   "feature.notifications.done": "会话已完成",
   "feature.notifications.response": "有输入需要回复",
   "feature.notifications.permission": "权限请求需要处理",

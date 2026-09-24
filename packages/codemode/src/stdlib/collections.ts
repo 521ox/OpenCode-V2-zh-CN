@@ -9,7 +9,8 @@ import {
   hidden,
   Arr,
   coerceToString,
-  IteratorObj,
+  hostCursor,
+  hostIterator,
   MapObj,
   Obj,
   PromiseObj,
@@ -55,7 +56,7 @@ export const groupBy = <R>(ctx: Interpreter<R>, namespace: "Map" | "Object") =>
           const step = yield* cursor.next
           if (step.done) return result
           const item = step.value
-          const key = yield* preserveConsumerError(cursor, apply([item, index]))
+          const key = yield* preserveConsumerError(cursor.close, apply([item, index]))
           const group = result.map.get(key)
           if (group === undefined) result.map.set(key, new Arr(builtins.Array, [item]))
           else (group as Arr).items.push(item)
@@ -71,7 +72,7 @@ export const groupBy = <R>(ctx: Interpreter<R>, namespace: "Map" | "Object") =>
         if (step.done) return result
         const item = step.value
         const key = yield* preserveConsumerError(
-          cursor,
+          cursor.close,
           Effect.flatMap(apply([item, index]), (value) => coerceGroupByPropertyKey(ctx, value)),
         )
         const group = getOwn(result, key)
@@ -94,7 +95,7 @@ const constructMap = <R>(ctx: Interpreter<R>, init: Value, proto: Obj) => {
       const step = yield* cursor.next
       if (step.done) return target
       yield* preserveConsumerError(
-        cursor,
+        cursor.close,
         Effect.sync(() => {
           if (!(step.value instanceof Obj)) {
             throw typeError("new Map(...) expects [key, value] pairs as entry objects.")
@@ -177,9 +178,9 @@ export const mapGlobal = <R>(ctx: Interpreter<R>) => {
         return undefined
       },
     ],
-    ["keys", 0, (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "keys").map.keys())],
-    ["values", 0, (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "values").map.values())],
-    ["entries", 0, (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "entries").iterator(builtins))],
+    ["keys", 0, (thisValue) => hostIterator(builtins, self(thisValue, "keys").map.keys())],
+    ["values", 0, (thisValue) => hostIterator(builtins, self(thisValue, "values").map.values())],
+    ["entries", 0, (thisValue) => hostIterator(builtins, self(thisValue, "entries").iterator(builtins))],
     [
       "forEach",
       1,
@@ -187,7 +188,7 @@ export const mapGlobal = <R>(ctx: Interpreter<R>) => {
         const target = self(thisValue, "forEach")
         const apply = applyCollectionCallback(ctx, args[0], "Map.forEach")
         return Effect.gen(function* () {
-          for (const [key, item] of Array.from(target.map.entries())) yield* apply([item, key, target])
+          for (const [key, item] of target.map.entries()) yield* apply([item, key, target])
           return undefined
         })
       },
@@ -239,10 +240,15 @@ const loadSetRecord = <R>(
       size: Math.max(Math.trunc(size), 0),
       has: (item: Value) => Effect.map(ctx.call(has, source, [item]), Boolean),
       keys: () =>
-        Effect.flatMap(ctx.call(keys, source, []), (result): Effect.Effect<Iterable<Value>> => {
-          if (result instanceof IteratorObj) return Effect.succeed(result.source)
-          if (result instanceof Arr) return Effect.succeed(result.items)
-          throw typeError(`Set.${name} expected 'keys' to return an iterator.`)
+        Effect.gen(function* () {
+          const result = yield* ctx.call(keys, source, [])
+          const cursor = result instanceof Arr ? hostCursor(result.items.values()) : ctx.iterateDirect(result)
+          const items: Array<Value> = []
+          while (true) {
+            const step = yield* cursor.next
+            if (step.done) return items
+            items.push(step.value)
+          }
         }),
     }
   })
@@ -360,14 +366,14 @@ export const setGlobal = <R>(ctx: Interpreter<R>) => {
         return undefined
       },
     ],
-    ["keys", 0, (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "keys").set.values())],
-    ["values", 0, (thisValue) => new IteratorObj(builtins.Iterator, self(thisValue, "values").set.values())],
+    ["keys", 0, (thisValue) => hostIterator(builtins, self(thisValue, "keys").set.values())],
+    ["values", 0, (thisValue) => hostIterator(builtins, self(thisValue, "values").set.values())],
     [
       "entries",
       0,
       (thisValue) =>
-        new IteratorObj(
-          builtins.Iterator,
+        hostIterator(
+          builtins,
           self(thisValue, "entries")
             .set.values()
             .map((item) => wrap([item, item])),
@@ -380,7 +386,7 @@ export const setGlobal = <R>(ctx: Interpreter<R>) => {
         const target = self(thisValue, "forEach")
         const apply = applyCollectionCallback(ctx, args[0], "Set.forEach")
         return Effect.gen(function* () {
-          for (const item of Array.from(target.set.values())) yield* apply([item, item, target])
+          for (const item of target.set.values()) yield* apply([item, item, target])
           return undefined
         })
       },

@@ -193,13 +193,9 @@ const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (
 
 // Native namespaces hold only function tools, so deeper levels flatten into
 // the leaf names the same way non-native protocols flatten the whole tree.
-const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (
-  tool: ToolEntry,
-  compatibility: Parameters<typeof ToolSchemaProjection.modelCompatibility>[1],
-  request: LLMRequest,
-) {
+const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (tool: ToolEntry, request: LLMRequest) {
   if (tool.type === "tool")
-    return yield* lowerTool(tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, compatibility), request)
+    return yield* lowerTool(tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, request.model), request)
   // OpenAI requires a namespace description; fall back to a generic one so a
   // missing description never blocks the request.
   return {
@@ -207,7 +203,7 @@ const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (
     name: tool.name,
     description: tool.description ?? `Tools in the ${tool.name} namespace.`,
     tools: yield* Effect.forEach(ProviderShared.flattenTools(tool.tools), (leaf) =>
-      OpenResponses.lowerTool(NAME, leaf, ToolSchemaProjection.modelCompatibility(leaf.inputSchema, compatibility)),
+      OpenResponses.lowerTool(NAME, leaf, ToolSchemaProjection.modelCompatibility(leaf.inputSchema, request.model)),
     ),
   }
 })
@@ -233,7 +229,6 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
   )(request.providerOptions?.contextManagement)
   const options = OpenResponsesOptions.resolve(request)
   const updates = resolveEffortUpdates(request, options.reasoningEffort)
-  const toolSchemaCompatibility = request.model.compatibility?.toolSchema
   const allowed = OpenResponses.allowedToolChoice(request)
   return yield* decodeBody({
     ...(yield* OpenResponses.lowerConversation(updates.request, adapter)),
@@ -242,7 +237,7 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
     tools:
       request.tools.length === 0
         ? undefined
-        : yield* Effect.forEach(request.tools, (tool) => lowerToolEntry(tool, toolSchemaCompatibility, request)),
+        : yield* Effect.forEach(request.tools, (tool) => lowerToolEntry(tool, request)),
     tool_choice:
       request.tools.length === 0
         ? undefined

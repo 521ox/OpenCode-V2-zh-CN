@@ -15,8 +15,32 @@ import { Locale } from "../../util/locale"
 import { use } from "./render-context"
 import { generateThinkingSyntax } from "./thinking-syntax"
 import { useI18n } from "../../context/i18n"
+import { canonicalToolName } from "../../util/tool-display"
 
 export const INLINE_TOOL_ICON_WIDTH = 2
+
+const toolDisplays = new Set([
+  "environment_tools",
+  "direct_exec",
+  "shell",
+  "glob",
+  "read",
+  "grep",
+  "webfetch",
+  "websearch",
+  "write",
+  "edit",
+  "subagent",
+  "execute",
+  "patch",
+  "question",
+  "skill",
+])
+
+export function toolDisplay(tool: string) {
+  const normalized = canonicalToolName(tool)
+  return toolDisplays.has(normalized) ? normalized : "generic"
+}
 
 export function ReasoningPart(props: {
   last: boolean

@@ -658,7 +658,7 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
   part: MediaPart,
   breakpoints?: Cache.Breakpoints,
 ) {
-  const mime = part.mediaType.toLowerCase()
+  const mime = part.media.mediaType.toLowerCase()
   const cacheControlValue = breakpoints ? cacheControl(breakpoints, part.cache) : undefined
   const fileId = fileIdFromMetadata(part.metadata)
 
@@ -687,9 +687,9 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
     } satisfies AnthropicDocumentBlock
   }
 
-  const rawString = typeof part.data === "string" ? part.data.trim() : undefined
+  const rawString = ProviderShared.mediaUrl(part.media)?.trim()
   // SDK URL sources: URLImageSource:3817 / URLPDFSource:3823 {type:"url", url}
-  if (rawString && isHttpUrl(rawString) && !rawString.startsWith("data:")) {
+  if (rawString && isHttpUrl(rawString)) {
     if (mime.startsWith("image/"))
       return {
         type: "image" as const,
@@ -714,20 +714,11 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
       } satisfies AnthropicDocumentBlock
   }
 
+  const media = yield* ProviderShared.requireInlineMedia("Anthropic Messages", part.media)
+
   // SDK PlainTextSource:2716 {type:"text", media_type:"text/plain", data}
   if (mime === "text/plain") {
-    const textData =
-      typeof part.data !== "string"
-        ? Buffer.from(part.data).toString("utf8")
-        : part.data.startsWith("data:")
-          ? (() => {
-              const comma = part.data.indexOf(",")
-              const payload = comma >= 0 ? part.data.slice(comma + 1) : part.data
-              return part.data.includes(";base64")
-                ? Buffer.from(payload, "base64").toString("utf8")
-                : decodeURIComponent(payload)
-            })()
-          : part.data
+    const textData = Buffer.from(media.base64, "base64").toString("utf8")
     return {
       type: "document" as const,
       source: { type: "text" as const, media_type: "text/plain" as const, data: textData },
@@ -742,7 +733,6 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
     } satisfies AnthropicDocumentBlock
   }
 
-  const media = ProviderShared.normalizeMedia(part)
   if (media.mime === "application/pdf")
     return {
       type: "document" as const,
@@ -761,7 +751,7 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
         : { citations: citationsFromMetadata(part.metadata)! }),
     } satisfies AnthropicDocumentBlock
   if (!media.mime.startsWith("image/"))
-    return yield* invalid(`Anthropic Messages does not support media type ${part.mediaType}`)
+    return yield* invalid(`Anthropic Messages does not support media type ${part.media.mediaType}`)
   return {
     type: "image" as const,
     source: {
@@ -780,7 +770,7 @@ const lowerMedia = Effect.fn("AnthropicMessages.lowerMedia")(function* (
 // content instead of JSON-stringifying base64 into a prompt string.
 const lowerToolResultContentItem = Effect.fnUntraced(function* (item: Tool.Content) {
   if (item.type === "text") return { type: "text" as const, text: item.text } satisfies AnthropicTextBlock
-  return yield* lowerMedia({ type: "media", mediaType: item.mime, data: item.uri, filename: item.name })
+  return yield* lowerMedia(ProviderShared.toolFileMedia(item))
 })
 
 const lowerToolResultContent = Effect.fnUntraced(function* (part: ToolResultPart) {
@@ -1044,7 +1034,6 @@ const fromRequest = Effect.fn("AnthropicMessages.fromRequest")(function* (reques
   const format = outputConfig?.format ?? undefined
   const updates = resolveEffortUpdates(request, options.effort ?? outputConfig?.effort ?? undefined)
   const generation = request.generation
-  const toolSchemaCompatibility = request.model.compatibility?.toolSchema
   // Allocate the 4-breakpoint budget in invalidation order: tools → system →
   // messages. Tools live highest in the cache hierarchy, so when callers
   // over-mark we keep their tool hints and shed the message-tail ones first.
@@ -1054,11 +1043,7 @@ const fromRequest = Effect.fn("AnthropicMessages.fromRequest")(function* (reques
     flattened.tools.length === 0
       ? undefined
       : flattened.tools.map((tool) =>
-          lowerTool(
-            breakpoints,
-            tool,
-            ToolSchemaProjection.modelCompatibility(tool.inputSchema, toolSchemaCompatibility),
-          ),
+          lowerTool(breakpoints, tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, request.model)),
         )
   // Anthropic rejects tool_choice when tools are absent; "none" is only meaningful with tools present.
   const toolChoice = tools === undefined || !request.toolChoice ? undefined : yield* lowerToolChoice(request.toolChoice)

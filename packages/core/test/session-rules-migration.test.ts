@@ -2,10 +2,86 @@ import { expect, test } from "bun:test"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
 import { EffectDrizzleSqlite } from "@opencode/core/database/drizzle"
 import { DatabaseMigration } from "@opencode/core/database/migration"
+import { migrations } from "@opencode/core/database/migration.gen"
 import migration from "@opencode/core/database/migration/20260919120000_session_start_directory"
 import { Global } from "@opencode/util/global"
 import { Effect } from "effect"
 import { sql } from "drizzle-orm"
+
+test.each([false, true])("merged registry upgrades existing history (rules already applied: %s)", async (applied) => {
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const db = yield* EffectDrizzleSqlite.makeWithDefaults()
+      yield* db.run(sql`CREATE TABLE migration (id text PRIMARY KEY, time_completed integer NOT NULL)`)
+      const completed = migrations.filter((entry) => (applied ? entry.id <= migration.id : entry.id < migration.id))
+      for (const entry of completed) yield* db.run(sql`INSERT INTO migration VALUES (${entry.id}, 123)`)
+      yield* db.run(sql`CREATE TABLE project (id text PRIMARY KEY, time_updated integer NOT NULL)`)
+      yield* db.run(sql`INSERT INTO project VALUES ('project', 456)`)
+      yield* db.run(sql`CREATE TABLE session_v2 (id text PRIMARY KEY, parent_id text, directory text, permission text)`)
+      yield* db.run(sql`INSERT INTO session_v2 VALUES
+        ('ses_root', NULL, '/moved', 'keep'), ('ses_child', 'ses_root', '/child', 'child-keep')`)
+      yield* db.run(sql`CREATE TABLE event (aggregate_id text, seq integer, type text, data text)`)
+      const creation = JSON.stringify({ sessionID: "ses_root", location: { directory: "/created" } })
+      yield* db.run(sql`INSERT INTO event VALUES ('ses_root', 0, 'session.created.1', ${creation})`)
+      yield* db.run(sql`CREATE TABLE session_message (id text PRIMARY KEY, session_id text, data text)`)
+      yield* db.run(sql`INSERT INTO session_message VALUES ('message', 'ses_root', '{"text":"completed history"}')`)
+      if (applied) {
+        yield* db.run(sql`ALTER TABLE session_v2 ADD COLUMN start_directory text`)
+        yield* db.run(sql`UPDATE session_v2 SET start_directory = '/persisted-root' WHERE id = 'ses_root'`)
+      }
+
+      expect(migrations.slice(-2).map((entry) => entry.id)).toEqual([
+        "20260919120000_session_start_directory",
+        "20260923013825_project_time_active",
+      ])
+      yield* DatabaseMigration.apply(db)
+      expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })
+      yield* db.run(sql`UPDATE project SET time_active = 789`)
+      yield* DatabaseMigration.apply(db)
+
+      expect(yield* db.all(sql`SELECT * FROM session_v2 ORDER BY id`)).toEqual([
+        {
+          id: "ses_child",
+          parent_id: "ses_root",
+          directory: "/child",
+          permission: "child-keep",
+          start_directory: null,
+        },
+        {
+          id: "ses_root",
+          parent_id: null,
+          directory: "/moved",
+          permission: "keep",
+          start_directory: applied ? "/persisted-root" : "/created",
+        },
+      ])
+      expect(yield* db.get(sql`SELECT * FROM event`)).toEqual({
+        aggregate_id: "ses_root",
+        seq: 0,
+        type: "session.created.1",
+        data: creation,
+      })
+      expect(yield* db.get(sql`SELECT * FROM session_message`)).toEqual({
+        id: "message",
+        session_id: "ses_root",
+        data: '{"text":"completed history"}',
+      })
+      expect(yield* db.get(sql`SELECT * FROM project`)).toEqual({ id: "project", time_updated: 456, time_active: 789 })
+      expect(yield* db.all(sql`SELECT id FROM migration ORDER BY id`)).toEqual(
+        migrations.map((entry) => ({ id: entry.id })),
+      )
+      expect(yield* db.get(sql`SELECT count(*) AS count FROM migration WHERE time_completed = 123`)).toEqual({
+        count: completed.length,
+      })
+      yield* db.run(sql`INSERT INTO project (id, time_updated) VALUES ('new', 999)`)
+      expect(yield* db.get(sql`SELECT time_active FROM project WHERE id = 'new'`)).toEqual({ time_active: 0 })
+    }).pipe(
+      Effect.provideService(Global.Service, Global.make({ data: "/unused-rules-test" })),
+      Effect.provide(SqliteClient.layer({ filename: ":memory:", disableWAL: true })),
+      Effect.scoped,
+    ),
+  )
+})
 
 test.each([false, true])(
   "rules migration only accepts exact creation facts (existing column: %s)",

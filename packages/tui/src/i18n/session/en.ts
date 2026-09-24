@@ -1,7 +1,7 @@
 export default {
   "session.hint.output": "output",
   "session.hint.submit": "submit",
-  "session.tokenSummaryOne": ": {{count}} step · {{fresh}} new · {{cached}} cached · {{total}} total",
+  "session.tokenSummaryOne": ": {{count}} step · latest: {{fresh}} new · {{cached}} cached · {{total}} total",
   "session.cacheBustOne": "{{count}} likely cache bust",
   "session.searchOne": "{{count}} search",
   "session.readOne": "{{count}} read",
@@ -17,7 +17,7 @@ export default {
   "session.tokenNew": "New",
   "session.tokenCached": "Cached",
   "session.tokenTotal": "Total",
-  "session.tokenSummary": ": {{count}} steps · {{fresh}} new · {{cached}} cached · {{total}} total",
+  "session.tokenSummary": ": {{count}} steps · latest: {{fresh}} new · {{cached}} cached · {{total}} total",
   "session.cacheBusts": "{{count}} likely cache busts",
   "session.cacheBust": "! Likely cache bust: {{count}} fewer cached tokens than the previous step",
   "session.searchCount": "{{count}} searches",

@@ -79,7 +79,7 @@ test.skipIf(process.platform === "win32").each([80, 120, 180])(
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
         config: {
-          get: async () => ({ locale: "en", animations: false, tabs: { enabled: false } }),
+          get: async () => ({ locale: "en", animations: false, tabs: { mode: "off" } }),
           update: async () => ({ locale: "en" }),
         },
         packages: { prepare: async () => ({ directory: "" }) },

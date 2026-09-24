@@ -106,60 +106,65 @@ async function setup(width: number, output = "") {
   }
 }
 
-test.each([40, 100])("shell output opens, follows, scrolls, and survives exit at %s columns", async (width) => {
-  await using app = await setup(width, Array.from({ length: 50 }, (_, i) => `Frame ${i + 1}\n`).join(""))
-  expect(app.captureCharFrame()).toContain("output")
-  app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("Shell output") && frame.includes("Frame 50"))
-  const scroll = app.renderer.root.findDescendantById("shell-output-scroll")
-  if (!(scroll instanceof ScrollBoxRenderable)) throw new Error("Output scrollbox missing")
-  expect(scroll.scrollTop).toBeGreaterThan(0)
+test.each([40, 100])(
+  "shell output opens, follows, scrolls, and survives exit at %s columns",
+  async (width) => {
+    await using app = await setup(width, Array.from({ length: 50 }, (_, i) => `Frame ${i + 1}\n`).join(""))
+    expect(app.captureCharFrame()).toContain("output")
+    app.mockInput.pressEnter()
+    await app.waitForFrame((frame) => frame.includes("Shell output") && frame.includes("Frame 50"))
+    const scroll = app.renderer.root.findDescendantById("shell-output-scroll")
+    if (!(scroll instanceof ScrollBoxRenderable)) throw new Error("Output scrollbox missing")
+    expect(scroll.scrollTop).toBeGreaterThan(0)
 
-  app.mockInput.pressKey("HOME")
-  await app.waitForFrame((frame) => frame.includes("Frame 1\n") || /Frame 1\s/.test(frame))
-  expect(scroll.scrollTop).toBe(0)
-  app.state.output += "Frame 51\n"
-  await app.waitFor(
-    () =>
-      app.requests.some(
-        (request) => request.url.searchParams.get("cursor") === String(Buffer.byteLength(app.state.output)),
-      ),
-    { maxPasses: 150 },
-  )
-  expect(scroll.scrollTop).toBe(0)
-  app.mockInput.pressKey("END")
-  await app.waitForFrame((frame) => frame.includes("Frame 51"))
-  app.shell.status = "exited"
-  app.shell.exit = 0
-  app.events.emit({
-    id: "evt_exit",
-    created: 0,
-    type: "shell.exited",
-    location: app.location,
-    data: { id: app.shell.id, exit: 0, status: "exited" },
-  })
-  await app.waitForFrame((frame) => frame.includes("code 0"), { maxPasses: 100 })
-  const metadataReads = app.requests.filter((request) => request.url.pathname === `/api/shell/${app.shell.id}`).length
-  // Terminal metadata can arrive before the capture's final flush.
-  app.state.output += "\u001b[32mRender complete\u001b[0m\r\n"
-  await app.waitForFrame((frame) => frame.includes("Render complete") && frame.includes("code 0"), { maxPasses: 100 })
-  expect(app.requests.filter((request) => request.url.pathname === `/api/shell/${app.shell.id}`)).toHaveLength(
-    metadataReads,
-  )
-  expect(app.captureCharFrame()).not.toContain("[32m")
-  expect(app.requests.every((request) => request.method === "GET")).toBe(true)
-  const reads = app.requests.filter((request) => request.url.pathname !== "/api/shell")
-  expect(reads.every((request) => request.url.searchParams.get("location[directory]") === app.location.directory)).toBe(
-    true,
-  )
-  expect(reads.every((request) => request.url.searchParams.has("location[workspace]") === false)).toBe(true)
+    app.mockInput.pressKey("HOME")
+    await app.waitForFrame((frame) => frame.includes("Frame 1\n") || /Frame 1\s/.test(frame))
+    expect(scroll.scrollTop).toBe(0)
+    app.state.output += "Frame 51\n"
+    await app.waitFor(
+      () =>
+        app.requests.some(
+          (request) => request.url.searchParams.get("cursor") === String(Buffer.byteLength(app.state.output)),
+        ),
+      { maxPasses: 150 },
+    )
+    expect(scroll.scrollTop).toBe(0)
+    app.mockInput.pressKey("END")
+    await app.waitForFrame((frame) => frame.includes("Frame 51"))
+    app.shell.status = "exited"
+    app.shell.exit = 0
+    app.events.emit({
+      id: "evt_exit",
+      created: 0,
+      type: "shell.exited",
+      location: app.location,
+      data: { id: app.shell.id, exit: 0, status: "exited" },
+    })
+    await app.waitForFrame((frame) => frame.includes("code 0"), { maxPasses: 100 })
+    const metadataReads = app.requests.filter((request) => request.url.pathname === `/api/shell/${app.shell.id}`).length
+    // Terminal metadata can arrive before the capture's final flush.
+    app.state.output += "\u001b[32mRender complete\u001b[0m\r\n"
+    await app.waitForFrame((frame) => frame.includes("Render complete") && frame.includes("code 0"), { maxPasses: 100 })
+    expect(app.requests.filter((request) => request.url.pathname === `/api/shell/${app.shell.id}`)).toHaveLength(
+      metadataReads,
+    )
+    expect(app.captureCharFrame()).not.toContain("[32m")
+    expect(app.requests.every((request) => request.method === "GET")).toBe(true)
+    const reads = app.requests.filter((request) => request.url.pathname !== "/api/shell")
+    expect(
+      reads.every((request) => request.url.searchParams.get("location[directory]") === app.location.directory),
+    ).toBe(true)
+    expect(reads.every((request) => request.url.searchParams.has("location[workspace]") === false)).toBe(true)
 
-  app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => !frame.includes("Shell output") && frame.includes("No shell commands"))
-  const count = app.requests.length
-  await Bun.sleep(1100)
-  expect(app.requests).toHaveLength(count)
-})
+    app.mockInput.pressEscape()
+    await app.waitForFrame((frame) => !frame.includes("Shell output") && frame.includes("No shell commands"))
+    const count = app.requests.length
+    await Bun.sleep(1100)
+    expect(app.requests).toHaveLength(count)
+    // Four one-second polling boundaries plus the post-close inactivity check exceed the default five seconds.
+  },
+  10_000,
+)
 
 test("empty output explains redirection, retries errors, and preserves output after removal", async () => {
   await using app = await setup(100)

@@ -263,6 +263,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
           (renderer) => Effect.sync(() => destroyRenderer(renderer)),
         )
       })
+      renderer.setMaxListeners(15)
       const clipboard = yield* Effect.acquireRelease(
         Effect.sync(() => createTuiClipboard(renderer)),
         (clipboard) =>
@@ -734,7 +735,7 @@ function App(props: { pair?: DialogPairCredentials }) {
         title: t("main.command.session.new"),
         suggested: route.data.type === "session",
         category: t("main.group.session"),
-        slash: { name: "new", aliases: ["clear"] },
+        slash: { name: "new" },
         run: () => {
           const model = local.model.current()
           const agent = local.agent.current()
@@ -742,6 +743,33 @@ function App(props: { pair?: DialogPairCredentials }) {
             route.data.type === "session"
               ? (data.session.get(route.data.sessionID)?.location ?? location.ref)
               : undefined
+          route.navigate({
+            type: "home",
+            location: newSessionLocation(
+              config.data.session.new_location,
+              data.location.default().directory,
+              current,
+              location.error?.location,
+            ),
+          })
+          if (agent) local.agent.set(agent.id)
+          if (model) local.model.set(model)
+          dialog.clear()
+        },
+      },
+      {
+        name: "session.clear",
+        title: t("main.command.session.clear"),
+        category: t("main.group.session"),
+        slash: { name: "clear" },
+        run: () => {
+          const model = local.model.current()
+          const agent = local.agent.current()
+          const current =
+            route.data.type === "session"
+              ? (data.session.get(route.data.sessionID)?.location ?? location.ref)
+              : undefined
+          sessionTabs.close()
           route.navigate({
             type: "home",
             location: newSessionLocation(
@@ -976,7 +1004,6 @@ function App(props: { pair?: DialogPairCredentials }) {
             {
               name: "opencode.update",
               title: t("main.command.update"),
-              description: t("main.command.upgrade"),
               slash: { name: "update" },
               run: () => updater.open?.("manual"),
               category: t("main.group.system"),

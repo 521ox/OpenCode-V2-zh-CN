@@ -45,13 +45,16 @@ test("exposes every standard HTTP API group", () => {
   expect(Object.keys(client.integration.oauth)).toEqual(["connect", "status", "complete", "cancel"])
   expect(Object.keys(client.integration.command)).toEqual(["connect", "status", "cancel"])
   expect(Object.keys(client.websearch)).toEqual(["providers", "query"])
-  expect(Object.keys(client.file)).toEqual(["read", "list", "find"])
-  expect(Object.keys(client.vcs)).toEqual(["get", "base", "status", "branches", "diff"])
+  expect(Object.keys(client.file)).toEqual(["read", "list", "find", "write"])
+  expect(client.file.write).toBeFunction()
+  expect(Object.keys(client.vcs)).toEqual(["get", "base", "status", "branch", "diff"])
+  expect(Object.keys(client.vcs.branch)).toEqual(["list"])
+  expect(client.vcs.branch.list).toBeFunction()
   expect(Object.keys(client.pty)).toEqual(["list", "create", "get", "update", "remove", "connect"])
   expect(Object.keys(client.pty.connect)).toEqual(["token"])
   expect(Object.keys(client.experimental)).toEqual(["persistentPty"])
   expect(client.experimental.persistentPty.read).toBeFunction()
-  expect(Object.keys(client.shell)).toEqual(["list", "create", "get", "timeout", "output", "remove"])
+  expect(Object.keys(client.shell)).toEqual(["list", "create", "get", "output", "remove"])
   expect(Object.keys(client.project)).toEqual(["list", "update"])
   expect(Object.keys(client.worktree)).toEqual(["list", "create", "remove", "refresh"])
 })
@@ -81,6 +84,34 @@ test("config.get returns ordered config entries for a location", async () => {
   expect(await client.config.get({ location: { directory: "/tmp/project" } })).toEqual(entries)
   expect(request?.method).toBe("GET")
   expect(request?.url).toBe("http://localhost:3000/api/config?location%5Bdirectory%5D=%2Ftmp%2Fproject")
+})
+
+test("requests keep a path prefix on baseUrl", async () => {
+  let request: Request | undefined
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:8888/ws/abc",
+    fetch: async (input) => {
+      request = input instanceof Request ? input : new Request(input)
+      return Response.json({ version: "2.0.0", pid: 1, urls: [], paths: { tmp: "/tmp" } })
+    },
+  })
+
+  await client.server.info()
+  expect(request?.url).toBe("http://localhost:8888/ws/abc/api/info")
+})
+
+test("requests join against the base URL pathname", async () => {
+  let request: Request | undefined
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:8888/ws/abc?tenant=one#fragment",
+    fetch: async (input) => {
+      request = input instanceof Request ? input : new Request(input)
+      return Response.json({ version: "2.0.0", pid: 1, urls: [], paths: { tmp: "/tmp" } })
+    },
+  })
+
+  await client.server.info()
+  expect(request?.url).toBe("http://localhost:8888/ws/abc/api/info")
 })
 
 test("vcs.base and committed diffs preserve location and explicit base on the wire", async () => {
@@ -121,6 +152,67 @@ test("vcs.diff exposes unavailable comparisons as errors, not empty diffs", asyn
     service: "vcs",
     message: "No review base available",
   })
+})
+
+test("declared errors are thrown as Error instances that keep the body", async () => {
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:3000",
+    fetch: async () =>
+      Response.json(
+        { _tag: "InvalidRequestError", message: "Incompatible auth server", kind: "integration_authorization" },
+        { status: 400 },
+      ),
+  })
+  const error = await client.integration.oauth
+    .connect({ integrationID: "mcp_test", methodID: "oauth", location: { directory: "/repo" } })
+    .then(
+      () => undefined,
+      (cause: unknown) => cause,
+    )
+  expect(error).toBeInstanceOf(Error)
+  if (!(error instanceof Error)) throw error
+  expect(error.message).toBe("Incompatible auth server")
+  expect(error.name).toBe("InvalidRequestError")
+  expect(error.stack).toContain("InvalidRequestError: Incompatible auth server")
+  expect(error).toMatchObject({ _tag: "InvalidRequestError", kind: "integration_authorization" })
+})
+
+test("declared errors with a data envelope read the nested message", async () => {
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:3000",
+    fetch: async () =>
+      Response.json({ name: "WorktreeError", data: { message: "Worktree directory unavailable" } }, { status: 400 }),
+  })
+  const error = await client.worktree.create({ projectID: "prj_test" }).then(
+    () => undefined,
+    (cause: unknown) => cause,
+  )
+  expect(error).toBeInstanceOf(Error)
+  if (!(error instanceof Error)) throw error
+  expect(error.message).toBe("Worktree directory unavailable")
+  expect(error.name).toBe("WorktreeError")
+  expect(error).toMatchObject({ name: "WorktreeError", data: { message: "Worktree directory unavailable" } })
+})
+
+test("client errors keep the reason and describe the failure in the message", async () => {
+  const failure = (fetch: () => Promise<Response>) =>
+    OpenCode.make({ baseUrl: "http://localhost:3000", fetch })
+      .session.list()
+      .catch((cause: unknown) => cause)
+  expect(await failure(() => Promise.reject(new TypeError("Unable to connect")))).toMatchObject({
+    reason: "Transport",
+    message: "Transport: Unable to connect",
+  })
+  expect(await failure(async () => new Response("", { status: 500 }))).toMatchObject({
+    reason: "UnexpectedStatus",
+    message: "UnexpectedStatus: 500",
+  })
+  expect(await failure(async () => new Response("<html>", { headers: { "content-type": "text/html" } }))).toMatchObject(
+    {
+      reason: "UnsupportedContentType",
+      message: "UnsupportedContentType: text/html",
+    },
+  )
 })
 
 test("project.update uses the global project contract", async () => {
@@ -878,7 +970,7 @@ test("session methods use the public HTTP contract", async () => {
   const context = await client.session.context({ sessionID: "ses_test" })
   const log = []
   for await (const item of client.session.log({ sessionID: "ses_test", after: 0 })) log.push(item)
-  const interrupted = await client.session.interrupt({ sessionID: "ses_test", continue: true })
+  const interrupted = await client.session.interrupt({ sessionID: "ses_test", resume: true })
   const message = await client.session.message.get({ sessionID: "ses_test", messageID: "msg_model" })
 
   expect(page.cursor.next).toBe("next")
@@ -906,7 +998,7 @@ test("session methods use the public HTTP contract", async () => {
     ["POST", "http://localhost:3000/api/experimental/session/ses_test/wait"],
     ["GET", "http://localhost:3000/api/session/ses_test/context"],
     ["GET", "http://localhost:3000/api/experimental/session/ses_test/log?after=0"],
-    ["POST", "http://localhost:3000/api/session/ses_test/interrupt?continue=true"],
+    ["POST", "http://localhost:3000/api/session/ses_test/interrupt?resume=true"],
     ["GET", "http://localhost:3000/api/session/ses_test/message/msg_model"],
   ])
   const viewBody = requests.find((request) => request.url.endsWith("/api/session/ses_test/view"))?.init?.body

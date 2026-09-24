@@ -1,5 +1,98 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 24 synchronization
+
+The integration branch `sync-20260924` starts at accepted custom checkpoint
+`dd12f1d0d3453aa9ff272e35732fff02e16aa083` and merges the fixed official V2 target
+`dca73ba9e3782e2b41983faca5854a9d56a3c482` (source version 2.0.15). The increment
+from `b8aa08f260130452dc87fbc20c2a4e2ff743e642` contains 137 commits and 868 changed
+files, including substantial App/shared-UI translation additions. Fetch subsequently
+observed `0bc8b8dbeb` adding GitHub marks to Markdown links; that later commit is
+outside this deliberately frozen integration. The local recovery tag
+`custom-lite-pre-sync-20260924` retains the accepted starting point.
+
+Twenty-six textual conflicts were resolved by their current owners. The official
+extracted TUI group renderer, persisted disclosure state, exact scroll anchors and
+mount budget replace obsolete inline renderers; native execution collections and
+their failure/approval visibility integrate into those owners. Existing Chinese/
+English chrome, native detail collapse, child-title navigation and background-tab
+Location admission remain selected behavior. Automatic tab modes, upstream error
+formatting, sidebar state and latest-step token summaries are retained. The
+upstream transcript-verbosity additions were reverted before this target and are
+not advertised as new functionality.
+
+Model requests adopt parent cache affinity and upstream request hooks/media shapes
+while retaining primary-only protected root Session rules and permission-gated
+native search. Console policy publication keeps the accepted active-connection
+serialization and cross-Location failure retention. No custom compaction, tool
+pruning, default service-lifetime or child-followup notification repair is added.
+
+The canonical migration generator reconciles the existing Session start-directory
+migration with the new upstream project-activity migration in chronological order;
+no duplicate migration is generated and neither historical migration is rewritten.
+Upgrade regressions cover existing history, root lineage, already-applied custom
+migrations, activity backfill and repeat upgrades. Client code and OpenAPI are
+checked through their official generators. Windows CRLF made the initial OpenAPI
+byte comparison fail; regeneration passed with no normalized Git content change.
+
+Bun remains 1.4.2. Dependencies use the merged frozen lockfile and a clean hoisted
+installation in the disposable integration worktree, reusing the established Bun
+cache. The custom release packaging remains intact, including explicit Windows
+system bsdtar. Its version fixtures now derive the base version from the manifest
+instead of staying fixed at 2.0.12; the manual workflow input suggests 2.0.15-zhcn.1.
+This sync does not dispatch that workflow, push source or publish a new Release.
+
+Verification is isolated from installed programs, global configuration and user
+databases. The local candidate is `2.0.15-custom-lite.20260924.1`, channel `latest`,
+with bytecode and embedded WebUI. Source checks, clean-source build, populated
+old-default-database compatibility smoke, independent integrated acceptance and
+timestamped three-copy export are separate gates. At integration time, promotion
+and delivery remain pending; the existing accepted program stays usable.
+
+Focused verification distinguishes integration repairs from environment problems.
+The TUI toast translation initially passed an optional count to a required parameter;
+using the existing Solid `Show` callback accessor restores compile-time narrowing
+without changing display conditions. A Shell-output fixture's four one-second polls
+plus a 1.1-second post-close assertion exceed Bun's five-second default budget;
+that fixture now explicitly allows ten seconds, retaining every assertion and
+poll interval. Client surface assertions were already stale on the previous custom
+and official baselines (`file.write`, `vcs.branch.list`, interrupt `resume`); tests
+are aligned with the canonical Protocol rather than changing product endpoints.
+Solid reconnect tests require the browser export condition for actual reactive
+effects; the original default-condition failure is not represented as a pass.
+
+The direct compaction fixture also needed the existing temporary Location layer
+to satisfy the request owner's real permission/search dependencies; no production
+compaction behavior was changed. Windows retained-image testing initially failed
+because the Bun executable is on D: while private TEMP is on C:. A distinguishing
+link probe returned `EXDEV`; running the unchanged test with the byte-identical
+Bun 1.4.2 already installed on C: passed all four cases. This proves the same-volume
+path, not cross-volume hard-link support or automatic updater certification.
+
+The canonical full `bun run check` passed repository lint but stopped at the
+unmodified Stats App Vite configuration: hoisted Vite/Rolldown plugin types and
+that package's Vite/Rollup types are incompatible. The complete monorepo typecheck
+is not claimed passed. Separate canonical typechecks passed for Schema, Protocol,
+HTTPAPI-codegen, Client, Core, AI, TUI, CLI, App, UI, Session UI, Plugin, browser
+plugin, Server and Util; CodeMode's separate typecheck also passed. Stats-specific
+dependency repair and Desktop runtime certification remain outside this CLI sync.
+
+The isolated runner initially omitted PowerShell from PATH, causing Windows shell
+fixtures to select Git Bash and receive PowerShell syntax errors. Restoring the
+verified PowerShell 7 directory in the runner's private PATH made the unchanged
+Session/Shell fixtures pass (95 cases, 63 platform/conditional skips); no product
+shell-selection policy was changed. An upstream `/new` fixture likewise needed
+explicit English locale for its existing English-text assertion, without changing
+the Chinese product default. Full-check-generated Storybook declarations were
+restored to their tracked baseline rather than committed as unrelated output churn.
+
+Integration-owned formatting and whitespace checks pass. The complete upstream
+diff's whitespace check reports only the two vendor patch files for MCP Client
+2.0.0 and pacote 21.5.1; their blobs match the frozen official target exactly.
+Patch context whitespace is preserved rather than restyled, and successful frozen
+dependency installation verifies that the patches apply. This is not a claim that
+the complete upstream diff passes Git's whitespace checker.
+
 ## Native release workflow restoration on September 22
 
 After the source-only transition below, the owner explicitly requested and

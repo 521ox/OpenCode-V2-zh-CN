@@ -1,7 +1,7 @@
 export default {
   "session.hint.output": "输出",
   "session.hint.submit": "提交",
-  "session.tokenSummaryOne": "：{{count}} 个步骤 · 新增 {{fresh}} · 缓存 {{cached}} · 合计 {{total}}",
+  "session.tokenSummaryOne": "：{{count}} 个步骤 · 最近：新增 {{fresh}} · 缓存 {{cached}} · 合计 {{total}}",
   "session.cacheBustOne": "{{count}} 次疑似缓存失效",
   "session.searchOne": "{{count}} 次搜索",
   "session.readOne": "{{count}} 次读取",
@@ -17,7 +17,7 @@ export default {
   "session.tokenNew": "新增",
   "session.tokenCached": "缓存",
   "session.tokenTotal": "合计",
-  "session.tokenSummary": "：{{count}} 个步骤 · 新增 {{fresh}} · 缓存 {{cached}} · 合计 {{total}}",
+  "session.tokenSummary": "：{{count}} 个步骤 · 最近：新增 {{fresh}} · 缓存 {{cached}} · 合计 {{total}}",
   "session.cacheBusts": "{{count}} 次疑似缓存失效",
   "session.cacheBust": "! 疑似缓存失效：缓存 Token 比上一步少 {{count}} 个",
   "session.searchCount": "{{count}} 次搜索",
