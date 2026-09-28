@@ -1,6 +1,30 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## September 29 synchronization in progress
+## September 29 accepted local synchronization
+
+Independent reviewer `ses_f15d53c10ffevlI661X7O29otg` returned
+`APPROVE WITH DEFERRED RISKS` for source
+`e8100f9d7200fc335667abfdc5d0cbc0fe1f19b4` and the final `.2` artifact. S29-F1
+is closed; this task's same-session repair/re-review allowance is consumed (1/1).
+The earlier review histories remain unchanged. The paragraphs below retain staged
+integration history and initial failures, not outstanding blockers.
+
+The accepted executable is `2.0.18-custom-lite.20260929.2`, latest channel,
+Windows x64 native bytecode with the complete embedded WebUI, built with Bun
+`1.4.2+744846f84`. Its length is 208,752,640 bytes and SHA256 is
+`02938f1eed0a272966cfa49b4f993ba0cac51ea57248ebf39e2ff25d8e68befb`.
+Final compiled cold legacy-media, 28 pairing checks and service smoke passed,
+as did version, Chinese-help and embedded-runtime probes. The service winner's
+observed stop exit was 1 and registration removal passed; this does not assert
+graceful-zero-exit or universally bounded shutdown. No user DB was rewritten.
+
+Remaining limits: missing provider-recording/platform skips are not passes;
+real-provider, real-user migration/unfinished-state/rollback, browser E2E,
+Desktop runtime and six-platform release are outside this local acceptance.
+The existing service-smoke finalizer lacks an outer deadline, although this run
+completed and no candidate process remained. Formal delivery facts belong to the
+executable sidecar; these post-build documentation changes do not alter the
+build-source identity. Activation and remote publication remain separate.
 
 The owner subsequently authorized the additional three official fixes through
 `7827dbe39630cbe3b3b7cab22f902b6f5e7cf74f`: wait for Agent/model readiness before
