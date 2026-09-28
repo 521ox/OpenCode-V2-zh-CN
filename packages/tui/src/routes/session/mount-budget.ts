@@ -1,24 +1,53 @@
 import { groupID } from "./anchors"
-import type { GroupKind, SessionNode, SessionRow } from "./grouping/session"
+import {
+  collapsedActivityEntries,
+  executionEntries,
+  executionVisible,
+  groupLeaves,
+  isPending,
+  type GroupKind,
+  type GroupToolLookup,
+  type SessionNode,
+  type SessionRow,
+} from "./grouping/session"
 
 /**
- * Transcript mounting is budgeted by rendered entries, not rows. A collapsed group
- * renders one header however many parts it holds; an expanded or ungrouped one
- * renders its children. With every group collapsed each row costs one, which is
- * the former row-count budget.
+ * Budget summary headers and mounted entries, including leaves kept visible by
+ * collapsed execution/activity groups. Permissions partitioned outside a root
+ * group count once, independently of disclosure.
  */
 export function rowWeight(
   row: SessionRow,
-  input: { expanded: (groupID: string) => boolean; grouped: (kind: GroupKind) => boolean },
+  input: {
+    expanded: (groupID: string, kind: GroupKind) => boolean
+    grouped: (kind: GroupKind) => boolean
+    tool: GroupToolLookup
+    pendingTools: readonly string[]
+  },
 ) {
   if (row.type !== "group") return 1
+  const pending = row.kind === "exploration" || row.kind === "activity" ? row.pending : []
   const visit = (node: Extract<SessionNode, { type: "group" }>, level: number): number => {
-    if (!input.grouped(node.kind)) return node.size
+    const children = () =>
+      node.children.reduce(
+        (total, child) =>
+          total + (child.type === "group" ? visit(child, level + 1) : isPending(child.entry, pending) ? 0 : 1),
+        0,
+      )
+    const executions = node.kind === "execution" ? executionEntries(node, input.tool) : []
+    if (!input.grouped(node.kind) || (node.kind === "execution" && executions.length <= 1)) return children()
     const id = groupID(node, level)
-    if (!id || !input.expanded(id)) return 1
-    return node.children.reduce((total, child) => total + (child.type === "group" ? visit(child, level + 1) : 1), 1)
+    const expanded = Boolean(id && input.expanded(id, node.kind))
+    if (node.kind === "execution")
+      return 1 + executions.filter(({ part }) => expanded || executionVisible(part, input.pendingTools)).length
+    if (expanded) return 1 + children()
+    if (node.kind === "activity")
+      return (
+        1 + collapsedActivityEntries(node, { ...input, pending }).filter((entry) => !isPending(entry, pending)).length
+      )
+    return 1
   }
-  return visit(row, 0)
+  return visit(row, 0) + groupLeaves(row).filter((entry) => isPending(entry, pending)).length
 }
 
 /** First row index such that rows [index, end) spend at least `budget`. */

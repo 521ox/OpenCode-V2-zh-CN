@@ -37,6 +37,7 @@ test("main settings labels react to config locale without changing stable settin
   const setting = settings.find((setting) => settingID(setting) === "theme.name")!
   const language = settings.find((setting) => settingID(setting) === "locale")!
   const tabs = settings.find((setting) => settingID(setting) === "tabs.mode")!
+  const verbosity = settings.find((setting) => settingID(setting) === "session.verbosity")!
   function Consumer() {
     context = useI18n()
     return (
@@ -44,6 +45,8 @@ test("main settings labels react to config locale without changing stable settin
         {settingCategory(setting, context.t)} / {settingTitle(setting, context.t)}
         {" · "}
         {settingCategory(tabs, context.t)} / {settingTitle(tabs, context.t)}
+        {" · "}
+        {settingCategory(verbosity, context.t)} / {settingTitle(verbosity, context.t)}
       </text>
     )
   }
@@ -58,15 +61,19 @@ test("main settings labels react to config locale without changing stable settin
     await app.renderOnce()
     expect(app.captureCharFrame()).toContain("外观 / 主题")
     expect(app.captureCharFrame()).toContain("标签页 / 模式")
+    expect(app.captureCharFrame()).toContain("会话 / 详细程度")
     if (!context) throw new Error("Missing locale fixture")
     await context.setLocale("en")
     await app.renderOnce()
     expect(app.captureCharFrame()).toContain("Appearance / Theme")
     expect(app.captureCharFrame()).toContain("Tabs / Mode")
+    expect(app.captureCharFrame()).toContain("Session / Verbosity")
     expect(current).toEqual({ locale: "en", mouse: false })
     expect(settingID(setting)).toBe("theme.name")
     expect(language.values).toEqual(["zh", "en"])
     expect(tabs.values).toEqual(["off", "on", "auto"])
+    expect(verbosity.values).toEqual(["low", "medium", "high"])
+    expect(verbosity.default).toBe("medium")
   } finally {
     app.renderer.destroy()
   }

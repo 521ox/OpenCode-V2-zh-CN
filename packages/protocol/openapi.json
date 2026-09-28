@@ -18758,6 +18758,9 @@
           "exit": {
             "type": "number"
           },
+          "signal": {
+            "type": "string"
+          },
           "metadata": {
             "type": "object"
           },

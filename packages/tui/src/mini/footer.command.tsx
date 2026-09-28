@@ -969,6 +969,7 @@ export function RunQueuedPromptSelectBody(props: {
   prompts: Accessor<FooterQueuedPrompt[]>
   onClose: () => void
   onSelect: (prompt: FooterQueuedPrompt) => void
+  onUndo: (prompt: FooterQueuedPrompt) => void
   onDelete: (prompt: FooterQueuedPrompt) => void
   onRows?: (rows: number) => void
   mono?: boolean
@@ -991,10 +992,21 @@ export function RunQueuedPromptSelectBody(props: {
     onRows: props.onRows,
   })
   const shortcuts = Keymap.useShortcuts()
+  const undoShortcut = () => monoShortcut(shortcuts.get("queued_prompt.undo") ?? "", props.mono ?? false)
   const deleteShortcut = () => monoShortcut(shortcuts.get("queued_prompt.delete") ?? "", props.mono ?? false)
   Keymap.createLayer(() => ({
     priority: 1,
     commands: [
+      {
+        id: "queued_prompt.undo",
+        title: t("miniCli.undoPending"),
+        group: t("miniCli.group.prompt"),
+        run() {
+          const item = controller.items()[controller.menu.selected()]
+          if (!item) return false
+          props.onUndo(item.prompt)
+        },
+      },
       {
         id: "queued_prompt.delete",
         title: t("miniCli.deletePending"),
@@ -1026,6 +1038,7 @@ export function RunQueuedPromptSelectBody(props: {
             : "miniCli.steerHint",
         ),
         deleteShortcut() ? `${deleteShortcut()} ${t("miniCli.delete")}` : undefined,
+        undoShortcut() ? `${undoShortcut()} ${t("miniCli.undo")}` : undefined,
       ]
         .filter(Boolean)
         .join(" · ")}

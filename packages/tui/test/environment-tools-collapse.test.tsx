@@ -8,6 +8,8 @@ import { toolDisplay } from "../src/routes/session"
 import type { OpenCodeEvent, PermissionRequest, SessionMessageAssistantTool } from "@opencode/client"
 
 const input = { search: { query: "bun", limit: 5 } }
+// Permit only the observed wraps onto one immediately adjacent bordered line.
+const chineseDescription = /"description": "中文(?:测试|[ \t]*\n[ \t]*┃[ \t]*测试|测[ \t]*\n[ \t]*┃[ \t]*试)"/
 const output = JSON.stringify(
   {
     operation: "search",
@@ -29,6 +31,7 @@ async function fixture(
     count?: number
     locale?: "en" | "zh"
     grouping?: "auto" | "none"
+    verbosity?: "low" | "medium" | "high"
     states?: SessionMessageAssistantTool["state"][]
     followingText?: boolean
     permissions?: PermissionRequest[]
@@ -103,7 +106,7 @@ async function fixture(
           locale: options.locale ?? "en",
           animations: false,
           tabs: { mode: "off" },
-          session: { grouping: options.grouping ?? "auto" },
+          session: { grouping: options.grouping ?? "auto", verbosity: options.verbosity ?? "medium" },
         }),
         update: async () => ({ locale: "en" }),
       },
@@ -177,7 +180,7 @@ test.each([
   const expanded = f.setup.captureCharFrame()
   expect(expanded).toContain('"--version"')
   expect(expanded).toContain("C:/synthetic")
-  expect(expanded).toContain("中文测试")
+  expect(expanded).toMatch(chineseDescription)
   expect(expanded).toContain("OUTPUT_END")
   expect(expanded).toContain(header)
   console.info(`FRAME execution-${count}-${locale}-${width}-expanded\n${expanded}`)
@@ -198,6 +201,22 @@ test.each([
   expect(f.setup.captureCharFrame()).toBe(expanded)
 })
 
+test("low singleton execution retains its native selection-aware detail block", async () => {
+  await using f = await fixture("direct_exec", 120, "completed", { verbosity: "low" })
+  await f.ready()
+  expect(f.setup.captureCharFrame()).not.toContain("Executions finished")
+  await f.click("direct_exec")
+  expect(f.setup.captureCharFrame()).toContain("OUTPUT_END")
+  const p = f.point('"--version"')
+  await f.setup.mockMouse.drag(p.x, p.y, p.x + 8, p.y)
+  await f.setup.waitForVisualIdle()
+  expect(f.setup.renderer.getSelection()?.getSelectedText()).toBeTruthy()
+  expect(f.setup.captureCharFrame()).toContain("OUTPUT_END")
+  f.setup.renderer.clearSelection()
+  await f.click('"operation"')
+  expect(f.setup.captureCharFrame()).not.toContain("OUTPUT_END")
+})
+
 test("execution header and child selection preserve expansion", async () => {
   await using f = await fixture("direct_exec", 120, "completed", { count: 2 })
   await f.ready()
@@ -214,94 +233,107 @@ test("execution header and child selection preserve expansion", async () => {
   }
 })
 
-test("grouping none keeps every execution as a native block", async () => {
-  await using f = await fixture("direct_exec", 120, "completed", { count: 6, grouping: "none" })
-  await f.ready()
-  expect(f.setup.captureCharFrame()).not.toContain("Executions finished")
-  expect(f.setup.captureCharFrame().match(/direct_exec/g)).toHaveLength(6)
-  await f.click("direct_exec")
-  expect(f.setup.captureCharFrame()).toContain("OUTPUT_END")
-})
+test.each(["low", "medium", "high"] as const)(
+  "grouping none keeps every execution as a native block at %s",
+  async (verbosity) => {
+    await using f = await fixture("direct_exec", 120, "completed", { count: 6, grouping: "none", verbosity })
+    await f.ready()
+    expect(f.setup.captureCharFrame()).not.toContain("Executions finished")
+    expect(f.setup.captureCharFrame().match(/direct_exec/g)).toHaveLength(6)
+    await f.click("direct_exec")
+    expect(f.setup.captureCharFrame()).toContain("OUTPUT_END")
+  },
+)
 
-test("collapsed execution groups retain active, failed, nonzero and permission calls in order", async () => {
-  const states: SessionMessageAssistantTool["state"][] = [
-    {
-      status: "completed",
-      input: { id: "hidden-ok" },
-      content: [{ type: "text", text: "ok" }],
-      metadata: { exitCode: 0 },
-    },
-    { status: "running", input: { id: "visible-running" }, metadata: {} },
-    { status: "streaming", input: '{"id":"streaming"' },
-    {
-      status: "error",
-      input: { id: "visible-error" },
-      error: { type: "ProcessError", message: "Execution fixture error" },
-    },
-    {
-      status: "completed",
-      input: { id: "visible-exit" },
-      content: [{ type: "text", text: "EXIT_OUTPUT_END" }],
-      metadata: { exitCode: 7 },
-    },
-    { status: "completed", input: { id: "visible-permission" }, content: [{ type: "text", text: "ok" }], metadata: {} },
-    {
-      status: "completed",
-      input: { id: "hidden-unknown" },
-      content: [{ type: "text", text: "ok" }],
-      metadata: { exitCode: "unknown" },
-    },
-    { status: "completed", input: { id: "hidden-missing" }, content: [{ type: "text", text: "ok" }] },
-  ]
-  await using f = await fixture("direct_exec", 120, "completed", {
-    states,
-    followingText: true,
-    permissions: [
+test.each(["low", "medium", "high"] as const)(
+  "collapsed %s groups retain active, failed, nonzero and permission calls in order",
+  async (verbosity) => {
+    const states: SessionMessageAssistantTool["state"][] = [
       {
-        id: "permission-fixture",
-        sessionID: "ses_environment_collapse",
-        action: "direct_exec",
-        resources: ["synthetic"],
-        source: { type: "tool", messageID: "assistant-0", id: "tool-5" },
+        status: "completed",
+        input: { id: "hidden-ok" },
+        content: [{ type: "text", text: "ok" }],
+        metadata: { exitCode: 0 },
       },
-    ],
-  })
-  await f.ready()
-  // Tool rows can be visually idle while the following Markdown is still highlighting.
-  const frame = await f.setup.waitForFrame(
-    (frame) => frame.includes("visible-permission") && frame.includes("Following text boundary"),
-  )
-  expect(frame).toContain("Executing — 8 calls")
-  expect(frame).not.toContain("Executions finished")
-  expect(frame).toContain("Following text boundary")
-  expect(frame).toContain("Execution fixture error")
-  expect(frame).not.toContain("hidden-ok")
-  expect(frame).not.toContain("hidden-unknown")
-  expect(frame).not.toContain("hidden-missing")
-  console.info(`FRAME execution-mixed-collapsed\n${frame}`)
-  expect(frame.match(/direct_exec \[/g)).toHaveLength(4)
-  const positions = ["visible-running", "Execution fixture error", "visible-exit", "visible-permission"].map((text) =>
-    frame.indexOf(text),
-  )
-  expect(positions).toEqual(positions.toSorted((a, b) => a - b))
-  await f.click("visible-exit")
-  expect(f.setup.captureCharFrame()).toContain("EXIT_OUTPUT_END")
-  expect(f.setup.captureCharFrame()).not.toContain("hidden-ok")
-  f.events.emit({
-    id: "evt_permission_replied",
-    created: 10,
-    type: "permission.replied",
-    data: { sessionID: "ses_environment_collapse", requestID: "permission-fixture", reply: "once" },
-  })
-  await f.setup.waitForFrame((frame) => !frame.includes("visible-permission"))
-  expect(f.setup.captureCharFrame()).toContain("visible-exit")
-  await f.click("Executing")
-  const all = f.setup.captureCharFrame()
-  expect(all).toContain("hidden-ok")
-  expect(all).toContain("hidden-unknown")
-  expect(all).toContain("hidden-missing")
-  expect(all.match(/visible-permission/g)).toHaveLength(1)
-})
+      { status: "running", input: { id: "visible-running" }, metadata: {} },
+      { status: "streaming", input: '{"id":"streaming"' },
+      {
+        status: "error",
+        input: { id: "visible-error" },
+        error: { type: "ProcessError", message: "Execution fixture error" },
+      },
+      {
+        status: "completed",
+        input: { id: "visible-exit" },
+        content: [{ type: "text", text: "EXIT_OUTPUT_END" }],
+        metadata: { exitCode: 7 },
+      },
+      {
+        status: "completed",
+        input: { id: "visible-permission" },
+        content: [{ type: "text", text: "ok" }],
+        metadata: {},
+      },
+      {
+        status: "completed",
+        input: { id: "hidden-unknown" },
+        content: [{ type: "text", text: "ok" }],
+        metadata: { exitCode: "unknown" },
+      },
+      { status: "completed", input: { id: "hidden-missing" }, content: [{ type: "text", text: "ok" }] },
+    ]
+    await using f = await fixture("direct_exec", 120, "completed", {
+      states,
+      followingText: true,
+      verbosity,
+      permissions: [
+        {
+          id: "permission-fixture",
+          sessionID: "ses_environment_collapse",
+          action: "direct_exec",
+          resources: ["synthetic"],
+          source: { type: "tool", messageID: "assistant-0", id: "tool-5" },
+        },
+      ],
+    })
+    await f.ready()
+    // Tool rows can be visually idle while the following Markdown is still highlighting.
+    const frame = await f.setup.waitForFrame(
+      (frame) => frame.includes("visible-permission") && frame.includes("Following text boundary"),
+    )
+    if (verbosity !== "low") expect(frame).toContain("Executing — 8 calls")
+    expect(frame).not.toContain("Executions finished")
+    expect(frame).toContain("Following text boundary")
+    expect(frame).toContain("Execution fixture error")
+    expect(frame).not.toContain("hidden-ok")
+    expect(frame).not.toContain("hidden-unknown")
+    expect(frame).not.toContain("hidden-missing")
+    console.info(`FRAME execution-mixed-collapsed\n${frame}`)
+    expect(frame.match(/direct_exec \[/g)).toHaveLength(4)
+    const positions = ["visible-running", "Execution fixture error", "visible-exit", "visible-permission"].map((text) =>
+      frame.indexOf(text),
+    )
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b))
+    await f.click("visible-exit")
+    expect(f.setup.captureCharFrame()).toContain("EXIT_OUTPUT_END")
+    expect(f.setup.captureCharFrame()).not.toContain("hidden-ok")
+    f.events.emit({
+      id: "evt_permission_replied",
+      created: 10,
+      type: "permission.replied",
+      data: { sessionID: "ses_environment_collapse", requestID: "permission-fixture", reply: "once" },
+    })
+    await f.setup.waitForFrame((frame) => !frame.includes("visible-permission"))
+    expect(f.setup.captureCharFrame()).toContain("visible-exit")
+    if (verbosity === "low") await f.click("6 tools")
+    await f.click("Executing")
+    const all = f.setup.captureCharFrame()
+    expect(all).toContain("hidden-ok")
+    expect(all).toContain("hidden-unknown")
+    expect(all).toContain("hidden-missing")
+    expect(all.match(/visible-permission/g)).toHaveLength(1)
+  },
+)
 
 test("finished execution labels remain neutral for nonzero exits and tool errors", async () => {
   await using f = await fixture("direct_exec", 120, "completed", {
@@ -428,7 +460,7 @@ test.each([
   await f.click(tool)
   const expanded = f.setup.captureCharFrame()
   expect(expanded).toContain(f.detail)
-  expect(expanded).toContain("中文测试")
+  expect(expanded).toMatch(chineseDescription)
   expect(expanded).toContain("OUTPUT_END")
   for (const target of [f.detail, '"operation"']) {
     await f.click(target)

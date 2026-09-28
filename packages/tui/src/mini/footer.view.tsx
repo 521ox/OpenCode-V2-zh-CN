@@ -27,6 +27,8 @@ import {
 import { FOOTER_MENU_ROWS, RunFooterMenu } from "./footer.menu"
 import { RunFooterSubagentBody } from "./footer.subagent"
 import { RunPromptBody, createPromptState } from "./footer.prompt"
+import { promptAppend } from "./prompt.shared"
+import { promptOffsetWidth } from "../prompt/display"
 import { RunPermissionBody } from "./footer.permission"
 import { RunFormBody } from "./footer.form"
 import { createFormBodyState, type FormBodyState } from "./form.shared"
@@ -325,7 +327,7 @@ export function RunFooterView(props: RunFooterViewProps) {
   }
 
   const runQueuedAction = createSingleFlight<string>()
-  const queuedPromptAction = async (action: QueuedPromptAction, inboxID: string) => {
+  const queuedPromptAction = async (action: QueuedPromptAction, inboxID: string, failureLabel?: string) => {
     const run = props.onQueuedPromptAction
     if (!run) return false
     const result = await runQueuedAction(inboxID, async () => {
@@ -336,7 +338,9 @@ export function RunFooterView(props: RunFooterViewProps) {
       if (!error) return true
       props.onStatus(
         t("miniCli.pendingFailed", {
-          action: t(action === "cancel" ? "miniCli.delete" : action === "queue" ? "miniCli.queue" : "miniCli.steer"),
+          action:
+            failureLabel ??
+            t(action === "cancel" ? "miniCli.delete" : action === "queue" ? "miniCli.queue" : "miniCli.steer"),
           error: errorMessage(error),
         }),
       )
@@ -819,6 +823,17 @@ export function RunFooterView(props: RunFooterViewProps) {
                                 await queuedPromptAction(item.delivery === "queue" ? "steer" : "queue", item.messageID)
                               )
                                 closePanel()
+                            }}
+                            onUndo={async (item) => {
+                              const current = composer.current()
+                              if (current.mode === "shell" && current.text) {
+                                props.onStatus(t("miniCli.undoLeaveShell"))
+                                return
+                              }
+                              if (!(await queuedPromptAction("cancel", item.messageID, t("miniCli.undo")))) return
+                              closePanel()
+                              const next = promptAppend(composer.current(), item.prompt)
+                              composer.replacePrompt(next, promptOffsetWidth(next.text))
                             }}
                             onDelete={(item) => {
                               void queuedPromptAction("cancel", item.messageID)

@@ -1,23 +1,22 @@
 import { Effect, Layer, ManagedRuntime, Stream } from "effect"
 import { AIClient } from "./ai-client.js"
 import type { AwaitOptions, Event, Generation, Snapshot } from "./generation.js"
-import { Image, ImageModel, ImageRequest, type ImageOptions, type ImageRequestInput } from "./image.js"
+import { Image, type ImageModel, type ImageRequest, type ImageRequestInput } from "./image.js"
 import { LLM } from "./index.js"
 import { Media } from "./media.js"
 import { tryRequest } from "./media-model.js"
 import { RequestExecutor } from "./route/executor.js"
 import { AIError, InvalidRequestError, LanguageModel, LLMRequest } from "./schema/index.js"
 import type { RequestInput } from "./llm.js"
-import { Speech, SpeechModel, SpeechRequest, type SpeechRequestInput } from "./speech.js"
+import { Speech, type SpeechModel, type SpeechRequest, type SpeechRequestInput } from "./speech.js"
 import {
   Transcription,
-  TranscriptionModel,
-  TranscriptionRequest,
-  type TranscriptionOptions,
+  type TranscriptionModel,
+  type TranscriptionRequest,
   type TranscriptionRequestInput,
 } from "./transcription.js"
 import { fileMediaType } from "./utils/media-type.js"
-import { Video, VideoModel, VideoRequest, type VideoOptions, type VideoRequestInput } from "./video.js"
+import { Video, type VideoModel, type VideoRequest, type VideoRequestInput } from "./video.js"
 
 /**
  * Promise-first entrypoint for scripts and non-Effect callers. One `ManagedRuntime` hosts the LLM, image, video, speech,
@@ -43,7 +42,7 @@ export type GenerationHandle<Response> = Snapshot & {
   /** Serializable JSON; pass it back to `resume` from another process. */
   readonly token: unknown
   readonly await: (options?: AwaitOptions & RunOptions) => Promise<Response>
-  /** Status observations until the first terminal one, polling like `await`; abort ends iteration without throwing. */
+  /** Status observations until the first terminal one, polling like `await`; abort throws `signal.reason`. */
   readonly events: (options?: AwaitOptions & RunOptions) => AsyncIterable<Event>
   /** The result without polling; fails when the generation has not completed. */
   readonly result: (options?: RunOptions) => Promise<Response>
@@ -51,15 +50,16 @@ export type GenerationHandle<Response> = Snapshot & {
   readonly cancel: (options?: RunOptions) => Promise<void>
 }
 
+// Fails with `signal.reason` so aborted calls reject and aborted streams throw like `fetch`: an `AbortError` by default.
 const abortEffect = (signal: AbortSignal | undefined) =>
   signal === undefined
     ? Effect.never
-    : Effect.callback<void>((resume) => {
+    : Effect.callback<never, unknown>((resume) => {
         if (signal.aborted) {
-          resume(Effect.void)
+          resume(Effect.fail(signal.reason))
           return
         }
-        const onAbort = () => resume(Effect.void)
+        const onAbort = () => resume(Effect.fail(signal.reason))
         signal.addEventListener("abort", onAbort, { once: true })
         return Effect.sync(() => signal.removeEventListener("abort", onAbort))
       })
@@ -69,14 +69,14 @@ export const make = (options: Options = {}) => {
 
   /** Run any package Effect (for example `LLMClient.compact(...)`) inside this runtime. */
   const run = <A, E>(effect: Effect.Effect<A, E, Services>, options?: RunOptions) =>
-    runtime.runPromise(effect, { signal: options?.signal })
+    runtime.runPromise(Effect.raceFirst(effect, abortEffect(options?.signal)))
 
   const iterate = <A, E>(stream: Stream.Stream<A, E, Services>, options?: RunOptions): AsyncIterable<A> =>
     Stream.toAsyncIterable(
       Stream.unwrap(
         runtime.contextEffect.pipe(
           Effect.map(
-            (context): Stream.Stream<A, E> =>
+            (context): Stream.Stream<A, unknown> =>
               stream.pipe(Stream.interruptWhen(abortEffect(options?.signal)), Stream.provideContext(context)),
           ),
         ),
@@ -93,17 +93,8 @@ export const make = (options: Options = {}) => {
     cancel: (options) => run(generation.cancel(), options),
   })
 
-  // The typed `generate`/`stream` overloads take a concrete input or a request, not the union; normalize once here.
   const llmRequest = (input: RequestInput | LLMRequest) =>
     input instanceof LLMRequest ? Effect.succeed(input) : tryRequest(() => LLM.request(input))
-  const imageRequest = (input: ImageRequestInput | ImageRequest) =>
-    input instanceof ImageRequest ? input : Image.request(input)
-  const videoRequest = (input: VideoRequestInput | VideoRequest) =>
-    input instanceof VideoRequest ? input : Video.request(input)
-  const speechRequest = (input: SpeechRequestInput | SpeechRequest) =>
-    input instanceof SpeechRequest ? input : Speech.request(input)
-  const transcriptionRequest = (input: TranscriptionRequestInput | TranscriptionRequest) =>
-    input instanceof TranscriptionRequest ? input : Transcription.request(input)
 
   return {
     run,
@@ -155,61 +146,58 @@ export const make = (options: Options = {}) => {
       generate: <const Model extends ImageModel>(
         input: ImageRequestInput<Model> | ImageRequest,
         options?: AwaitOptions & RunOptions,
-      ) => run(Image.generate(imageRequest(input), { poll: options?.poll }), options),
+      ) => run(Image.generate(input, { poll: options?.poll }), options),
       stream: <const Model extends ImageModel>(
         input: ImageRequestInput<Model> | ImageRequest,
         options?: AwaitOptions & RunOptions,
-      ) => iterate(Image.stream(imageRequest(input), { poll: options?.poll }), options),
+      ) => iterate(Image.stream(input, { poll: options?.poll }), options),
       start: <const Model extends ImageModel>(input: ImageRequestInput<Model> | ImageRequest, options?: RunOptions) =>
-        run(Image.start(imageRequest(input)), options).then(handle),
-      resume: <Options extends ImageOptions>(model: ImageModel<Options>, token: unknown, options?: RunOptions) =>
+        run(Image.start(input), options).then(handle),
+      resume: (model: ImageModel, token: unknown, options?: RunOptions) =>
         run(Image.resume(model, token), options).then(handle),
     },
     video: {
       request: Video.request,
       start: <const Model extends VideoModel>(input: VideoRequestInput<Model> | VideoRequest, options?: RunOptions) =>
-        run(Video.start(videoRequest(input)), options).then(handle),
+        run(Video.start(input), options).then(handle),
       generate: <const Model extends VideoModel>(
         input: VideoRequestInput<Model> | VideoRequest,
         options?: AwaitOptions & RunOptions,
-      ) => run(Video.generate(videoRequest(input), { poll: options?.poll }), options),
-      resume: <Options extends VideoOptions>(model: VideoModel<Options>, token: unknown, options?: RunOptions) =>
+      ) => run(Video.generate(input, { poll: options?.poll }), options),
+      resume: (model: VideoModel, token: unknown, options?: RunOptions) =>
         run(Video.resume(model, token), options).then(handle),
       stream: <const Model extends VideoModel>(
         input: VideoRequestInput<Model> | VideoRequest,
         options?: AwaitOptions & RunOptions,
-      ) => iterate(Video.stream(videoRequest(input), { poll: options?.poll }), options),
+      ) => iterate(Video.stream(input, { poll: options?.poll }), options),
     },
     speech: {
       request: Speech.request,
       generate: <const Model extends SpeechModel>(
         input: SpeechRequestInput<Model> | SpeechRequest,
         options?: RunOptions,
-      ) => run(Speech.generate(speechRequest(input)), options),
+      ) => run(Speech.generate(input), options),
       stream: <const Model extends SpeechModel>(
         input: SpeechRequestInput<Model> | SpeechRequest,
         options?: RunOptions,
-      ) => iterate(Speech.stream(speechRequest(input)), options),
+      ) => iterate(Speech.stream(input), options),
     },
     transcription: {
       request: Transcription.request,
       generate: <const Model extends TranscriptionModel>(
         input: TranscriptionRequestInput<Model> | TranscriptionRequest,
         options?: AwaitOptions & RunOptions,
-      ) => run(Transcription.generate(transcriptionRequest(input), { poll: options?.poll }), options),
+      ) => run(Transcription.generate(input, { poll: options?.poll }), options),
       stream: <const Model extends TranscriptionModel>(
         input: TranscriptionRequestInput<Model> | TranscriptionRequest,
         options?: AwaitOptions & RunOptions,
-      ) => iterate(Transcription.stream(transcriptionRequest(input), { poll: options?.poll }), options),
+      ) => iterate(Transcription.stream(input, { poll: options?.poll }), options),
       start: <const Model extends TranscriptionModel>(
         input: TranscriptionRequestInput<Model> | TranscriptionRequest,
         options?: RunOptions,
-      ) => run(Transcription.start(transcriptionRequest(input)), options).then(handle),
-      resume: <Options extends TranscriptionOptions>(
-        model: TranscriptionModel<Options>,
-        token: unknown,
-        options?: RunOptions,
-      ) => run(Transcription.resume(model, token), options).then(handle),
+      ) => run(Transcription.start(input), options).then(handle),
+      resume: (model: TranscriptionModel, token: unknown, options?: RunOptions) =>
+        run(Transcription.resume(model, token), options).then(handle),
     },
     dispose: () => runtime.dispose(),
   }

@@ -90,7 +90,6 @@ import { WriteTool } from "../tool/plugin/write.js"
 import { AgentPlugin } from "./agent.js"
 import BrowserPlugin from "@opencode/plugin-browser"
 import { CommandPlugin } from "./command.js"
-import { NativeCompactionPlugin } from "./compaction.js"
 import { IdentityPlugin } from "./identity.js"
 import { PluginHooks } from "./hooks.js"
 import { PlanPlugin } from "./plan.js"
@@ -104,6 +103,7 @@ import { VcsHgPlugin } from "./vcs/hg.js"
 import { ToolInputRepairPlugin } from "./tool-input-repair.js"
 import { OptimizePlugin } from "./optimize.js"
 import { VcsGitPlugin } from "./vcs/git.js"
+import { VerbosityPlugin } from "./verbosity.js"
 import { WarmingPlugin } from "./warming.js"
 import { WellKnownPlugin } from "../wellknown/plugin.js"
 
@@ -229,12 +229,12 @@ const pre = [
   SkillPlugin.Plugin,
   VcsHgPlugin.Plugin,
   ModelsDevPlugin,
-  NativeCompactionPlugin.Plugin,
   ...ProviderPlugins,
   ...WebSearchPlugins,
   PatchTool.Plugin,
   // Render model prompts after the patch plugin selects the available editing tools.
   ...OptimizePlugin.Plugins,
+  VerbosityPlugin.Plugin,
   IdentityPlugin.Plugin,
   EditTool.Plugin,
   GlobTool.Plugin,

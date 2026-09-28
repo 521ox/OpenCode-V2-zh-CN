@@ -11,7 +11,7 @@ import type {
   FormValue,
   LocationRef,
 } from "@opencode/client"
-import open from "open"
+import { openUrl } from "@opencode/util/open"
 import { createEffect, createMemo, createSignal, onCleanup, onMount, Show, untrack } from "solid-js"
 import { useClipboard } from "../context/clipboard"
 import { useData } from "../context/data"
@@ -612,7 +612,7 @@ function OAuthAuto(props: {
         title: t("main.integration.authOpen"),
         group: t("main.group.dialog"),
         run: () => {
-          open(props.attempt.url).catch(() =>
+          openUrl(props.attempt.url).catch(() =>
             toast.show({
               message: t("main.integration.browserFailed"),
               variant: "error",
@@ -1022,7 +1022,7 @@ async function externalAnswer(
         () => <OAuthView title={formLabel(field) || title} message={t("main.link.opening")} />,
         () => resolve(CANCELLED),
       )
-      void open(field.url).then(
+      void openUrl(field.url).then(
         () => resolve(true),
         () => resolve(false),
       )
@@ -1050,7 +1050,7 @@ async function connected(
     data.location.provider.sync(location),
   ])
   toast.show({ variant: "success", message: t("main.integration.connected", { name: integration.name }) })
-  if (onConnected) {
+  if (onConnected && integration.metadata?.source !== "mcp") {
     onConnected(providerID(data, location, integration.id))
     return
   }

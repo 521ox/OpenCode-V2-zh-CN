@@ -1,5 +1,68 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## September 29 synchronization in progress
+
+The owner authorized a multi-agent local synchronization to frozen official V2
+`07338c5d48348f7fc3ba97c348f5f74d754e84b1` (2.0.18). The custom starting point is
+`b7cca2e5806ba2f8cc131452dccb1c6f6ba84b9e`; recovery tag
+`custom-lite-pre-sync-20260929` preserves it. The local Git comparison from the
+previous official `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` contains 104 commits
+and 411 changed paths. The earlier GitHub comparison's 300-file list was capped
+and was not the complete change inventory.
+
+Implementation ownership is split between native AI protocol integration, Core
+checkpoint/compaction/Console integration, TUI grouping/native-tool presentation,
+and remaining CLI/TUI localization. Git, dependency installation, generated
+artifacts, final compilation and acceptance remain centrally coordinated. This
+record describes work in progress, not a successful build or delivery.
+
+The upstream dependency baseline keeps Bun 1.4.2 and updates OpenTUI to 0.5.12.
+The existing custom i18next/Mustache dependencies remain; the obsolete direct
+TUI `open` dependency follows upstream's shared browser-opener owner. The official
+publishing workflow remains intentionally absent from this fork; the guarded,
+manually dispatched custom six-platform workflow is preserved with its proposed
+version default advanced to `2.0.18-zhcn.1`. Neither workflow is dispatched here.
+
+Official legacy-media repair `041885d838` is reconciled at the persisted checkpoint
+read boundary, not copied blindly: the approved custom data-URL/HTTP(S) handling,
+MIME precedence, malformed rejection and unchanged stored data remain requirements.
+The official fixture and custom regressions must both pass. Native compaction
+follows the new upstream SessionCompaction/LLMClient ownership rather than restoring
+the removed strategy plugin. The upstream output-budget and child-affinity changes
+must remain compatible with custom hosted-search authorization and protected
+Session-rules context.
+
+New transcript verbosity affects presentation only; it is not authorization to
+prune tool history. Custom direct-execution collections must retain visible error,
+nonzero-exit, active and approval-required entries, selection-aware disclosure and
+child-completion navigation across supported verbosity settings. First-party
+chrome continues to use the existing Chinese/English locale owner.
+
+The installed executable, live services, user database and global configuration
+are not synchronization targets. Prior startup/exit-policy and session-specific
+lag investigations remain deferred. No source push, Release publication or
+automatic activation is authorized by this local synchronization record. Local
+delivery will use the established build/export location after applicable checks
+and integrated review; task-owned worktrees and scratch will then be cleaned.
+
+Source verification before compilation: the focused AI suite passed 672 cases
+with three missing-recording skips; Core integration passed 199 cases. Web/Server,
+SessionUI and timeline checks passed 1,153 cases with one App skip. CLI/native
+checks passed 142 cases with one platform skip; the separately deferred two Git
+artifact cases then passed alongside 391 focused Codemode/runner cases. These are
+bounded suites, not an assertion that all repository tests or live providers ran.
+The full focused TUI set passed 127 cases with no skips, including actual en/zh
+Low-verbosity rendering, mounted-anchor weights, native-tool disclosure, completion
+navigation and new-session retry IDs. Nine earlier TUI fixture failures were
+resolved without changing product behavior: assertions now respect real adjacent
+narrow-screen wrapping, the existing localized exploration label, and an explicit
+English locale for the English retry fixture. No failing case was removed.
+
+Canonical Protocol generation/check and Client generation succeeded. Repository
+oxlint reported no warnings or errors. Compiled service, pairing, cold synthetic
+legacy-media checks and independent integrated review are still required before
+acceptance; source-test results do not substitute for those remaining gates.
+
 ## September 25 local delivery of the September 24 synchronization
 
 The permanent `v2-custom-lite` worktree was fast-forwarded to the accepted build

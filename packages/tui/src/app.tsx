@@ -83,7 +83,7 @@ import { Toast, ToastProvider, useToast } from "./ui/toast"
 import { isFallbackTitle } from "@opencode/util/session-title-fallback"
 import * as Model from "./util/model"
 import { ArgsProvider, useArgs, type Args } from "./context/args"
-import open from "open"
+import { openUrl } from "@opencode/util/open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { Config, ConfigProvider, useConfig } from "./config"
 import { I18nProvider, useI18n } from "./context/i18n"
@@ -1100,7 +1100,7 @@ function App() {
         name: "docs.open",
         title: t("main.command.docs"),
         run: () => {
-          open("https://opencode.ai/docs").catch(() => {})
+          openUrl("https://opencode.ai/docs").catch(() => {})
           dialog.clear()
         },
         category: t("main.group.system"),
