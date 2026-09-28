@@ -33,7 +33,19 @@ function group(size: number, path: readonly GroupKind[] = ["exploration"]): Sess
     : { ...node, kind: node.kind, pending: [], completed: true }
 }
 
-const collapsed = { expanded: () => false, grouped: () => true, tool: () => undefined, pendingTools: [] }
+const collapsed = {
+  expanded: () => false,
+  grouped: () => true,
+  activityVisible: () => true,
+  tool: (ref: PartRef): SessionMessageAssistantTool => ({
+    type: "tool",
+    id: ref.partID,
+    name: "read",
+    time: { created: 0, completed: 1 },
+    state: { status: "completed", input: {}, content: [{ type: "text", text: "ok" }] },
+  }),
+  pendingTools: [],
+}
 
 test("collapsed groups without visible exceptions retain the one-row budget", () => {
   const rows: SessionRow[] = [
@@ -82,6 +94,14 @@ test("a heavy tail group leaves fewer older rows mounted", () => {
   // The expanded group alone exceeds the tail budget.
   expect(rowsBefore(weights, weights.length, 40)).toBe(100)
   expect(rowsAfter(weights, 90, 60)).toBe(101)
+})
+
+test("F1 pending-only exploration has no header even with saved expansion", () => {
+  const row = group(1)
+  if (row.type !== "group" || row.kind !== "exploration") throw new Error("Expected exploration")
+  row.pending = [{ messageID: "m0", partID: "read-0" }]
+  expect(rowWeight(row, collapsed)).toBe(1)
+  expect(rowWeight(row, { ...collapsed, expanded: () => true })).toBe(1)
 })
 
 function executions(verbosity: Verbosity) {

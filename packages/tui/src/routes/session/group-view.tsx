@@ -14,6 +14,7 @@ import {
   executionVisible,
   collapsedActivityEntries,
   groupLeaves,
+  groupTools,
   instructionPaths,
   isPending,
   type PartRef,
@@ -98,14 +99,7 @@ function GroupContent(props: GroupProps) {
         }),
   )
   const tools = createMemo(() =>
-    props.node.kind === "reasoning"
-      ? []
-      : refs().flatMap((ref) => {
-          const message = props.message(ref.messageID)
-          if (message?.type !== "assistant") return []
-          const part = resolvePart(message, ref.partID)
-          return part?.type === "tool" ? [part] : []
-        }),
+    props.node.kind === "reasoning" ? [] : groupTools(props.node, (ref) => toolPart(props, ref), props.pending),
   )
   const latest = createMemo((previous: string | null) => {
     const item = thoughts().at(-1)

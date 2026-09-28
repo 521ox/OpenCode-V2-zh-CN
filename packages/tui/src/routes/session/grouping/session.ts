@@ -98,6 +98,18 @@ export function isPending(entry: SessionEntry, pending: readonly PartRef[]) {
   )
 }
 
+export function groupTools(
+  node: Extract<SessionNode, { type: "group" }>,
+  tool: GroupToolLookup,
+  pending: readonly PartRef[],
+) {
+  return groupLeaves(node).flatMap((entry) => {
+    if (entry.type !== "part" || isPending(entry, pending)) return []
+    const part = tool(entry.ref)
+    return part ? [part] : []
+  })
+}
+
 export function executionEntries(node: Extract<SessionNode, { type: "group" }>, tool: GroupToolLookup) {
   const visit = (
     node: Extract<SessionNode, { type: "group" }>,

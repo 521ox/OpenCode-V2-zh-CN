@@ -124,6 +124,7 @@ import { SessionGroupView } from "./group-view"
 import { useEntryAnchor } from "./anchor-view"
 import { containsAnchor, createTimelineAnchors } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
+import { summarizeActivity } from "./activity-summary"
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -417,6 +418,14 @@ export function Session(props: {
       rowWeight(row, {
         expanded: groupExpanded,
         grouped: groupedKind,
+        activityVisible: (node, pending) =>
+          summarizeActivity(
+            node,
+            (messageID) => data.session.message.get(route.sessionID, messageID),
+            pending,
+            row.type === "group" && row.completed,
+            t,
+          ).label !== "",
         tool: (ref) => {
           const message = data.session.message.get(route.sessionID, ref.messageID)
           if (message?.type !== "assistant") return

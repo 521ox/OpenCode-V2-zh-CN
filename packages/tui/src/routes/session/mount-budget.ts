@@ -4,9 +4,11 @@ import {
   executionEntries,
   executionVisible,
   groupLeaves,
+  groupTools,
   isPending,
   type GroupKind,
   type GroupToolLookup,
+  type PartRef,
   type SessionNode,
   type SessionRow,
 } from "./grouping/session"
@@ -23,6 +25,7 @@ export function rowWeight(
     grouped: (kind: GroupKind) => boolean
     tool: GroupToolLookup
     pendingTools: readonly string[]
+    activityVisible: (node: Extract<SessionNode, { type: "group" }>, pending: readonly PartRef[]) => boolean
   },
 ) {
   if (row.type !== "group") return 1
@@ -40,11 +43,16 @@ export function rowWeight(
     const expanded = Boolean(id && input.expanded(id, node.kind))
     if (node.kind === "execution")
       return 1 + executions.filter(({ part }) => expanded || executionVisible(part, input.pendingTools)).length
-    if (expanded) return 1 + children()
-    if (node.kind === "activity")
+    if (node.kind === "activity") {
+      const header = input.activityVisible(node, pending) ? 1 : 0
+      if (expanded) return header ? header + children() : 0
       return (
-        1 + collapsedActivityEntries(node, { ...input, pending }).filter((entry) => !isPending(entry, pending)).length
+        header +
+        collapsedActivityEntries(node, { ...input, pending }).filter((entry) => !isPending(entry, pending)).length
       )
+    }
+    if (node.kind === "exploration" && groupTools(node, input.tool, pending).length === 0) return 0
+    if (expanded) return 1 + children()
     return 1
   }
   return visit(row, 0) + groupLeaves(row).filter((entry) => isPending(entry, pending)).length

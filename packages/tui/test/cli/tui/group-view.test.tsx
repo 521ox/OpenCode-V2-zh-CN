@@ -11,6 +11,7 @@ import { SessionGroupView } from "../../../src/routes/session/group-view"
 import { createTimelineAnchors, groupID, type AnchorTarget } from "../../../src/routes/session/anchors"
 import { context } from "../../../src/routes/session/render-context"
 import { rowWeight } from "../../../src/routes/session/mount-budget"
+import { summarizeActivity } from "../../../src/routes/session/activity-summary"
 import type { SessionEntry, SessionGroup } from "../../../src/routes/session/grouping/session"
 import { emptyThemeSource } from "../../fixture/fixture"
 import { TestTuiContexts } from "../../fixture/tui-environment"
@@ -286,6 +287,7 @@ test.each(["en", "zh"] as const)(
         expanded: (id) => expanded[id] ?? false,
         grouped: () => true,
         pendingTools: [],
+        activityVisible: (node, pending) => summarizeActivity(node, () => message, pending, row.completed).label !== "",
         tool: (ref) => {
           const part = message.content.find((part) => part.type === "tool" && part.id === ref.partID)
           return part?.type === "tool" ? part : undefined
@@ -324,6 +326,112 @@ test.each(["en", "zh"] as const)(
     }
   },
 )
+
+test.each([false, true])("F1 Low pending read header accounting with execution=%s", async (withExecution) => {
+  const anchors = createTimelineAnchors()
+  const [expanded, setExpanded] = createStore<Record<string, boolean>>({})
+  const message: SessionMessageAssistant = {
+    id: "f1",
+    type: "assistant",
+    agent: "build",
+    model: { providerID: "fixture", id: "fixture" },
+    time: { created: 0, completed: 2 },
+    content: [
+      ...(withExecution
+        ? [
+            {
+              type: "tool" as const,
+              id: "exec",
+              name: "direct_exec",
+              time: { created: 0, completed: 1 },
+              state: {
+                status: "completed" as const,
+                input: {},
+                content: [{ type: "text" as const, text: "ok" }] as [{ type: "text"; text: string }],
+              },
+            },
+          ]
+        : []),
+      {
+        type: "tool",
+        id: "read",
+        name: "read",
+        time: { created: 1 },
+        state: { status: "running", input: {}, metadata: {} },
+      },
+    ],
+  }
+  const row: SessionGroup = {
+    type: "group",
+    kind: "activity",
+    completed: true,
+    size: withExecution ? 2 : 1,
+    pending: [{ messageID: "f1", partID: "read" }],
+    children: [
+      ...(withExecution
+        ? [
+            {
+              type: "group" as const,
+              kind: "execution" as const,
+              size: 1,
+              children: [
+                {
+                  type: "entry" as const,
+                  size: 1 as const,
+                  entry: { type: "part" as const, ref: { messageID: "f1", partID: "exec" } },
+                },
+              ],
+            },
+          ]
+        : []),
+      {
+        type: "group",
+        kind: "exploration",
+        size: 1,
+        children: [{ type: "entry", size: 1, entry: { type: "part", ref: { messageID: "f1", partID: "read" } } }],
+      },
+    ],
+  }
+  const outer = groupID(row, 0)!
+  setExpanded(outer, withExecution)
+  const app = await mount({
+    row,
+    anchors,
+    config: createTuiResolvedConfig({ locale: "en", animations: false }),
+    expanded: (id) => expanded[id] ?? false,
+    setExpanded: (id, value) => setExpanded(id, value),
+    pendingTools: ["read"],
+    message: () => message,
+    entry: (entry) => <text>{entry.type === "part" ? `F1 ${entry.ref.partID}` : ""}</text>,
+  })
+  const weight = () =>
+    rowWeight(row, {
+      activityVisible: (node, pending) => summarizeActivity(node, () => message, pending, row.completed).label !== "",
+      expanded: (id) => expanded[id] ?? false,
+      grouped: () => true,
+      pendingTools: ["read"],
+      tool: (ref) => {
+        const part = message.content.find((part) => part.type === "tool" && part.id === ref.partID)
+        return part?.type === "tool" ? part : undefined
+      },
+    })
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("F1 read"))
+    for (const open of [withExecution, !withExecution, withExecution]) {
+      setExpanded(outer, open)
+      await app.renderOnce()
+      expect(app.captureCharFrame().match(/F1 read/g)).toHaveLength(1)
+      expect(app.captureCharFrame()).not.toContain("Explored")
+      expect(anchors.list()).toHaveLength(withExecution ? 3 : 1)
+      expect(weight()).toBe(anchors.list().length)
+      if (withExecution)
+        expect(app.captureCharFrame().indexOf("F1 exec")).toBeLessThan(app.captureCharFrame().indexOf("F1 read"))
+    }
+  } finally {
+    app.renderer.destroy()
+  }
+})
 
 function mount(input: {
   row: SessionGroup
