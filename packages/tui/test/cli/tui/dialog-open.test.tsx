@@ -136,6 +136,43 @@ test("shows the current project and opens its root", async () => {
   }
 })
 
+test("deduplicates historical project identities sharing a canonical checkout", async () => {
+  const root = "/tmp/opencode/shared-checkout"
+  const fixture = await renderOpen((url) => {
+    if (url.pathname === "/api/session") return json({ data: [], cursor: {} })
+    if (url.pathname === "/api/project")
+      return json([
+        {
+          id: "proj_active",
+          canonical: root,
+          name: "Active identity",
+          time: { created: 2, updated: 3 },
+          sandboxes: [],
+        },
+        {
+          id: "proj_historical",
+          canonical: root,
+          name: "Historical identity",
+          time: { created: 1, updated: 2 },
+          sandboxes: [],
+        },
+      ])
+    return undefined
+  })
+
+  try {
+    const frame = await fixture.app.waitForFrame((value) => value.includes("Active identity"))
+    expect(frame).not.toContain("Historical identity")
+    expect(frame.split(root)).toHaveLength(2)
+    fixture.app.mockInput.pressEnter()
+    await fixture.app.waitFor(() => fixture.route.data.type === "home")
+    expect(fixture.route.data).toEqual({ type: "home", location: { directory: root } })
+    expect(fixture.location.ref).toEqual({ directory: root })
+  } finally {
+    await fixture.dispose()
+  }
+})
+
 test("shows only canonical projects while retaining sessions from other directories", async () => {
   const fixture = await renderOpen((url) => {
     if (url.pathname === "/api/project")

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import {
   OpenCode,
   type EventSubscribeOutput,
@@ -38,14 +38,17 @@ function prompted(inboxID: string): V2Event {
   }
 }
 
-function settled(outcome: "success" | "interrupted" = "success"): V2Event {
+function settled(
+  outcome: "success" | "interrupted" = "success",
+  reason: Extract<V2Event, { type: "session.execution.interrupted" }>["data"]["reason"] = "user",
+): V2Event {
   if (outcome === "interrupted")
     return {
       id: "evt_interrupted",
       created: 0,
       type: "session.execution.interrupted",
       durable: { aggregateID: "ses_1", seq: 1, version: 1 },
-      data: { sessionID: "ses_1", reason: "user" },
+      data: { sessionID: "ses_1", reason },
     }
   return {
     id: "evt_succeeded",
@@ -70,6 +73,30 @@ function stepStarted(): V2Event {
       model: { providerID: "test", id: "test-model" },
     },
   }
+}
+
+function permissionAsked(): V2Event {
+  return {
+    id: "evt_permission",
+    created: 1,
+    type: "permission.asked",
+    data: { id: "perm_declined", sessionID: "ses_1", action: "shell", resources: ["echo fixture"] },
+  }
+}
+
+function projectedFailure(inboxID: string): SessionMessageInfo[] {
+  return [
+    {
+      id: "msg_interrupted",
+      type: "assistant",
+      agent: "build",
+      model: { providerID: "test", id: "test-model" },
+      content: [],
+      error: { type: "aborted", message: "Projected step interrupted" },
+      time: { created: 2, completed: 3 },
+    },
+    { id: inboxID, type: "user", text: "hello", time: { created: 1 } },
+  ]
 }
 
 function stepFailed(message: string): V2Event {
@@ -241,6 +268,8 @@ async function run(input: {
   })()
   spyOn(sdk.event, "subscribe").mockImplementation(() => stream)
   spyOn(sdk.permission, "list").mockImplementation(() => ok([]) as never)
+  spyOn(sdk.permission, "reply").mockResolvedValue(undefined)
+  spyOn(sdk.session, "interrupt").mockResolvedValue({ interrupted: true })
   spyOn(sdk.session.form, "list").mockImplementation(
     (request) => ok(input.pendingForms?.filter((item) => item.sessionID === request.sessionID) ?? []) as never,
   )
@@ -290,6 +319,7 @@ async function capture(input: Parameters<typeof run>[0]) {
   const stdout: string[] = []
   const stderr: string[] = []
   const exitCode = process.exitCode
+  process.exitCode = 0
   const stdoutWrite = spyOn(process.stdout, "write").mockImplementation((chunk) => {
     stdout.push(String(chunk))
     return true
@@ -302,13 +332,19 @@ async function capture(input: Parameters<typeof run>[0]) {
     await run(input)
     return { stdout: stdout.join(""), stderr: stderr.join(""), exitCode: process.exitCode }
   } finally {
-    process.exitCode = exitCode ?? 0
+    process.exitCode = exitCode
     stdoutWrite.mockRestore()
     stderrWrite.mockRestore()
   }
 }
 
+let previousExitCode: typeof process.exitCode
+beforeEach(() => {
+  previousExitCode = process.exitCode
+  process.exitCode = 0
+})
 afterEach(() => {
+  process.exitCode = previousExitCode
   mock.restore()
 })
 
@@ -513,6 +549,91 @@ describe("runNonInteractivePrompt", () => {
 
     expect(output).toEqual({ stdout: "", stderr: "", exitCode: 0 })
   })
+
+  test("capture isolates success and V1 suppression after a cancelled form and restores prior exit state", async () => {
+    expect(process.exitCode).toBe(0)
+    await run({
+      pendingForms: [form("frm_cancelled", "ses_1")],
+      turn: (messageID) => [prompted(messageID), settled()],
+    })
+    expect(process.exitCode).toBe(1)
+
+    const success = await capture({ turn: (messageID) => [prompted(messageID), settled()] })
+    expect(success).toEqual({ stdout: "", stderr: "", exitCode: 0 })
+    expect(process.exitCode).toBe(1)
+
+    const suppressed = await capture({
+      compatibility: "v1",
+      format: "json",
+      turn: (messageID) => [
+        prompted(messageID),
+        stepStarted(),
+        stepFailed("The provider response ended unexpectedly."),
+        executionFailed("The provider response ended unexpectedly."),
+      ],
+    })
+    expect(suppressed).toEqual({ stdout: "", stderr: "", exitCode: 0 })
+    expect(process.exitCode).toBe(1)
+  })
+
+  for (const decline of ["permission", "form"] as const) {
+    for (const source of ["live", "projected"] as const) {
+      test.each(["default", "json"] as const)(
+        `${decline} rejection suppresses the ${source} interruption error but retains exit 1 in %s`,
+        async (format) => {
+          const output = await capture({
+            format,
+            turn: (messageID) => [
+              prompted(messageID),
+              decline === "permission" ? permissionAsked() : formCreated(form("frm_declined", "ses_1")),
+              source === "live" ? settled("interrupted", "superseded") : settled(),
+            ],
+            messages: source === "projected" ? projectedFailure : undefined,
+          })
+
+          expect(output.exitCode).toBe(1)
+          expect(output.stdout).toBe("")
+          expect(output.stderr).not.toContain("Session interrupted: superseded")
+          expect(output.stderr).not.toContain("Projected step interrupted")
+          if (decline === "permission") {
+            expect(output.stderr).toContain("permission requested: shell (echo fixture); auto-rejecting")
+            return
+          }
+          expect(output.stderr).toBe("")
+        },
+      )
+    }
+  }
+
+  for (const source of ["live", "projected"] as const) {
+    test.each(["default", "json"] as const)(
+      `${source} errors without a declined prompt remain visible with exit 1 in %s`,
+      async (format) => {
+        const output = await capture({
+          format,
+          turn: (messageID) => [
+            prompted(messageID),
+            source === "live" ? settled("interrupted", "superseded") : settled(),
+          ],
+          messages: source === "projected" ? projectedFailure : undefined,
+        })
+        const message = source === "live" ? "Session interrupted: superseded" : "Projected step interrupted"
+
+        expect(output.exitCode).toBe(1)
+        if (format === "json") {
+          const events = output.stdout
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line))
+          expect(events).toEqual([expect.objectContaining({ type: "error", error: { type: "aborted", message } })])
+          expect(output.stderr).toBe("")
+          return
+        }
+        expect(output.stderr).toContain(message)
+        expect(output.stdout).toBe("")
+      },
+    )
+  }
 
   test("renders a native terminal failure snapshot when live progress was missed", async () => {
     const rendered: SessionMessageAssistantTool[] = []

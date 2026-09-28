@@ -2,6 +2,33 @@
 
 ## September 29 synchronization in progress
 
+The owner subsequently authorized the additional three official fixes through
+`7827dbe39630cbe3b3b7cab22f902b6f5e7cf74f`: wait for Agent/model readiness before
+submitting a startup prompt, suppress misleading run interruption errors after
+declined prompts, and deduplicate the open-project picker. This is the final
+frozen target for this delivery; the original target below records the first
+integration stage. The replacement candidate version is
+`2.0.18-custom-lite.20260929.2`.
+
+The extended upstream comparison contains 107 commits and 415 changed paths.
+The four-file follow-up merged without conflicts. Supplemental checks passed
+32 app-lifecycle cases (two existing Windows skips), 22 real-picker cases,
+24 noninteractive cases and five CLI stream-localization cases. The noninteractive
+fixture now isolates process exit state without weakening exit-code assertions;
+new cases cover decline-related error suppression and ordinary-error controls.
+A real-picker regression covers duplicate canonical project identities. Final
+CLI/TUI typechecks and repository lint passed. These source checks still require
+the replacement binary and same-session review below.
+
+Initial independent review rejected source `373d077a75` for S29-F1: mounted-row
+budgets counted headers omitted when ordinary tools were pending approval. The
+repair reproduced both real-render mismatches, then aligned budget visibility
+with the existing summary/tool projections. The full focused TUI suite passed
+130 tests with no failures/skips and 760 assertions; canonical TUI typecheck and
+six-file formatting passed. The same reviewer must recheck this repair and the
+final rebuilt artifact. The initial `.1` binary is not a deliverable: its scoped
+compiled checks passed, but it predates the repair and three additional fixes.
+
 The owner authorized a multi-agent local synchronization to frozen official V2
 `07338c5d48348f7fc3ba97c348f5f74d754e84b1` (2.0.18). The custom starting point is
 `b7cca2e5806ba2f8cc131452dccb1c6f6ba84b9e`; recovery tag
