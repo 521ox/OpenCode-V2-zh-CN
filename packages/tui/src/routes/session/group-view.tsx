@@ -248,7 +248,6 @@ function ActivityGroup(props: GroupProps) {
   const [hover, setHover] = createSignal(false)
   const entries = createMemo(() => groupLeaves(props.node))
   const summary = createMemo(() => summarizeActivity(props.node, props.message, props.pending, props.completed, t))
-  const executions = createMemo(() => executionEntries(props.node, (ref) => toolPart(props, ref)))
   // Low's outer summary must not hide the native execution collection's visible states.
   const visible = createMemo(() =>
     collapsedActivityEntries(props.node, {
@@ -257,7 +256,6 @@ function ActivityGroup(props: GroupProps) {
       pending: props.pending,
     }),
   )
-  const failed = () => summary().failed || executions().some(({ part }) => executionFailed(part))
   return (
     <Show
       when={ctx.groupExploration()}
@@ -271,7 +269,7 @@ function ActivityGroup(props: GroupProps) {
       <GroupAnchor groupID={disclosure.id()} active={summary().label !== ""}>
         <Show when={summary().label}>
           <InlineToolRow
-            icon={failed() ? "✗" : disclosure.expanded() ? "−" : "+"}
+            icon={disclosure.expanded() ? "−" : "+"}
             color={hover() ? theme.text.base : theme.text.muted}
             complete={true}
             pending={summary().label}
@@ -329,9 +327,7 @@ function InstructionsGroup(props: GroupProps) {
         {t(files() === 1 ? "session.instructionsFile" : "session.instructionsFiles", { count: files() })}
       </InlineToolRow>
       <Show when={disclosure.expanded()}>
-        <box flexDirection="column" gap={1} marginTop={1}>
-          <Children {...props} nodes={props.node.children} mode="normal" />
-        </box>
+        <Children {...props} nodes={props.node.children} mode="normal" />
       </Show>
     </GroupAnchor>
   )

@@ -30,14 +30,12 @@ test("activity labels localize every count without changing English defaults or 
   expect(activitySummary(items, 2)).toEqual({
     label: "2 commands, 1 edit, 1 thought, 1 read, 1 tool, 2 instructions",
     active: false,
-    failed: false,
   })
   expect(activitySummary(items, 2, false, t)).toEqual({
     label: "2 条命令, 1 次编辑, 1 次思考, 1 次读取, 1 次工具调用, 2 个指令文件",
     active: false,
-    failed: false,
   })
-  expect(activitySummary([], 0, false, t)).toEqual({ label: "", active: false, failed: false })
+  expect(activitySummary([], 0, false, t)).toEqual({ label: "", active: false })
 })
 
 test("busy activity labels translate chrome but retain raw tool names", () => {
@@ -65,16 +63,13 @@ test("subtree summary forwards the translator to finished counts and active fall
   expect(summarizeActivity(activity, () => open, [], false)).toEqual({
     label: "Running command…",
     active: true,
-    failed: false,
   })
   expect(summarizeActivity(activity, () => open, [], false, t)).toEqual({
     label: "正在运行命令…",
     active: true,
-    failed: false,
   })
   expect(summarizeActivity(activity, () => ({ ...message, content: [tool("shell")] }), [], true, t)).toEqual({
     label: "1 条命令",
     active: false,
-    failed: false,
   })
 })

@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import { Protocol } from "../route/protocol.js"
 import type { LLMRequest } from "../schema/index.js"
 import { OpenResponses } from "./open-responses.js"
-import { JsonObject, optionalArray, optionalNull, ProviderShared } from "./shared.js"
+import { JsonObject, optionalNull, ProviderShared } from "./shared.js"
 import { ResponsesHostedTools } from "./utils/responses-hosted-tools.js"
 import { ResponsesCompaction } from "./utils/responses-compaction.js"
 
@@ -38,7 +38,6 @@ const XAIResponsesHostedToolItem = Schema.Union([
 
 const XAIResponsesBody = Schema.Struct({
   ...OpenResponses.coreFields,
-  tools: optionalArray(Schema.Union([OpenResponses.Tool, WebSearchTool])),
   tool_choice: Schema.optional(
     Schema.Union([
       OpenResponses.ToolChoice,
@@ -52,7 +51,6 @@ const XAIResponsesBody = Schema.Struct({
       }),
     ]),
   ),
-  input: Schema.Array(Schema.Union([OpenResponses.InputItem, XAIResponsesHostedToolItem])),
   stream: Schema.Literal(true),
 })
 
@@ -63,7 +61,6 @@ const adapter = {
   restoreHostedToolItem: (item: unknown) => (Schema.is(XAIResponsesHostedToolItem)(item) ? item : undefined),
 } satisfies OpenResponses.ProviderAdapter
 
-const decodeBody = ProviderShared.validateWith(Schema.decodeUnknownEffect(XAIResponsesBody))
 const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LLMRequest) {
   if (request.providerOptions?.contextManagement !== undefined)
     return yield* ProviderShared.unsupportedOperation({
@@ -79,22 +76,22 @@ const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LL
     return yield* ProviderShared.invalidRequest("Hosted web search requires the native xAI Responses provider")
   const body = yield* OpenResponses.fromRequestWithAdapter(request, adapter)
   const choice = body.tool_choice
-  return yield* decodeBody({
+  return {
     ...body,
     tool_choice:
       typeof choice !== "object"
         ? choice
         : choice.type === "function"
           ? searches.some((tool) => tool.name === choice.name)
-            ? { type: "web_search" }
+            ? { type: "web_search" as const }
             : choice
           : {
               ...choice,
               tools: choice.tools.map((entry) =>
-                searches.some((tool) => tool.name === entry.name) ? { type: "web_search" } : entry,
+                searches.some((tool) => tool.name === entry.name) ? { type: "web_search" as const } : entry,
               ),
             },
-  })
+  }
 })
 
 const HOSTED_TOOLS = {

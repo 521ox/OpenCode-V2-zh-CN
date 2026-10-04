@@ -23,7 +23,11 @@ const local = ToolDefinition.make({
 
 describe("native hosted web search", () => {
   test("uses canonical route provider and protocol, not display provider, URL, route ID or compaction", () => {
-    expect(providers[0].model.route.id).toBe(providers[1].model.route.id)
+    expect(providers[0].model.route.id).toBe("openai-responses")
+    expect(providers[1].model.route.id).toBe("xai-responses")
+    const sharedID = providers[1].model.route.with({ id: providers[0].model.route.id }).model({ id: "grok-4.6" })
+    expect(OpenAI.supportsWebSearch(sharedID)).toBe(false)
+    expect(XAI.supportsWebSearch(sharedID)).toBe(true)
     for (const provider of providers) {
       expect(provider.supports(provider.model)).toBe(true)
       expect(provider.supports(LanguageModel.update(provider.model, { provider: "configured-alias" }))).toBe(true)

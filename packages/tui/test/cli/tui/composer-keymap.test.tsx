@@ -104,7 +104,7 @@ async function renderComposer(
   const app = await testRender(
     () => (
       <TestTuiContexts directory={directory}>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", keybinds }, { terminal: false })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en", keybinds })}>
           <I18nProvider>
             <Keymap.Provider>
               <ClientProvider api={createApi(calls.fetch)}>

@@ -75,12 +75,12 @@ function stepStarted(): V2Event {
   }
 }
 
-function permissionAsked(): V2Event {
+function permissionAsked(sessionID = "ses_1", id = "perm_declined"): V2Event {
   return {
     id: "evt_permission",
     created: 1,
     type: "permission.asked",
-    data: { id: "perm_declined", sessionID: "ses_1", action: "shell", resources: ["echo fixture"] },
+    data: { id, sessionID, action: "shell", resources: ["echo fixture"] },
   }
 }
 
@@ -237,6 +237,8 @@ async function run(input: {
   turn: (inboxID: string) => V2Event[]
   pendingForms?: FormInfo[]
   attached?: boolean
+  auto?: boolean
+  parents?: Record<string, string | undefined>
   format?: "default" | "json"
   compatibility?: "v1"
   cancel?: (input: { sessionID: string; formID: string }) => Promise<void>
@@ -270,6 +272,10 @@ async function run(input: {
   spyOn(sdk.permission, "list").mockImplementation(() => ok([]) as never)
   spyOn(sdk.permission, "reply").mockResolvedValue(undefined)
   spyOn(sdk.session, "interrupt").mockResolvedValue({ interrupted: true })
+  if (input.parents)
+    spyOn(sdk.session, "get").mockImplementation(
+      (request) => ok({ parentID: input.parents?.[request.sessionID] }) as never,
+    )
   spyOn(sdk.session.form, "list").mockImplementation(
     (request) => ok(input.pendingForms?.filter((item) => item.sessionID === request.sessionID) ?? []) as never,
   )
@@ -306,7 +312,7 @@ async function run(input: {
     files: [],
     thinking: false,
     format: input.format ?? "default",
-    auto: false,
+    auto: input.auto ?? false,
     attached: input.attached ?? false,
     compatibility: input.compatibility,
     renderTool: input.renderTool ?? (() => Promise.resolve()),
@@ -315,7 +321,7 @@ async function run(input: {
   return sdk
 }
 
-async function capture(input: Parameters<typeof run>[0]) {
+async function capture(input: Parameters<typeof run>[0], inspect?: (sdk: Awaited<ReturnType<typeof run>>) => void) {
   const stdout: string[] = []
   const stderr: string[] = []
   const exitCode = process.exitCode
@@ -329,7 +335,8 @@ async function capture(input: Parameters<typeof run>[0]) {
     return true
   })
   try {
-    await run(input)
+    const sdk = await run(input)
+    inspect?.(sdk)
     return { stdout: stdout.join(""), stderr: stderr.join(""), exitCode: process.exitCode }
   } finally {
     process.exitCode = exitCode
@@ -346,6 +353,7 @@ beforeEach(() => {
 afterEach(() => {
   process.exitCode = previousExitCode
   mock.restore()
+  process.exitCode = 0
 })
 
 describe("runNonInteractivePrompt", () => {
@@ -473,6 +481,7 @@ describe("runNonInteractivePrompt", () => {
     expect(sdk.form.list).toHaveBeenCalledWith({
       location: { directory: "/work tree" },
     })
+    expect(process.exitCode).toBe(1)
   })
 
   test("attach mode cancels only session-owned forms", async () => {
@@ -491,6 +500,7 @@ describe("runNonInteractivePrompt", () => {
       { sessionID: "global", formID: "frm_pending_global" },
       expect.anything(),
     )
+    expect(process.exitCode).toBe(1)
   })
 
   test("V1 JSON output flushes step_start before an unrelated step failure", async () => {
@@ -579,31 +589,162 @@ describe("runNonInteractivePrompt", () => {
   for (const decline of ["permission", "form"] as const) {
     for (const source of ["live", "projected"] as const) {
       test.each(["default", "json"] as const)(
-        `${decline} rejection suppresses the ${source} interruption error but retains exit 1 in %s`,
+        `${decline} rejection ${decline === "permission" ? "preserves" : "suppresses"} the ${source} interruption error with exit 1 in %s`,
         async (format) => {
-          const output = await capture({
-            format,
-            turn: (messageID) => [
-              prompted(messageID),
-              decline === "permission" ? permissionAsked() : formCreated(form("frm_declined", "ses_1")),
-              source === "live" ? settled("interrupted", "superseded") : settled(),
-            ],
-            messages: source === "projected" ? projectedFailure : undefined,
-          })
+          const output = await capture(
+            {
+              format,
+              turn: (messageID) => [
+                prompted(messageID),
+                decline === "permission" ? permissionAsked() : formCreated(form("frm_declined", "ses_1")),
+                source === "live" ? settled("interrupted", "superseded") : settled(),
+              ],
+              messages: source === "projected" ? projectedFailure : undefined,
+            },
+            (sdk) => {
+              expect(sdk.session.interrupt).not.toHaveBeenCalled()
+              if (decline === "permission") {
+                expect(sdk.permission.reply).toHaveBeenCalledTimes(1)
+                expect(sdk.permission.reply).toHaveBeenCalledWith({
+                  sessionID: "ses_1",
+                  requestID: "perm_declined",
+                  decision: "reject",
+                  message:
+                    "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+                })
+                expect(sdk.session.form.cancel).not.toHaveBeenCalled()
+                return
+              }
+              expect(sdk.permission.reply).not.toHaveBeenCalled()
+              expect(sdk.session.form.cancel).toHaveBeenCalledTimes(1)
+              expect(sdk.session.form.cancel).toHaveBeenCalledWith({
+                sessionID: "ses_1",
+                formID: "frm_declined",
+              })
+            },
+          )
 
           expect(output.exitCode).toBe(1)
-          expect(output.stdout).toBe("")
-          expect(output.stderr).not.toContain("Session interrupted: superseded")
-          expect(output.stderr).not.toContain("Projected step interrupted")
           if (decline === "permission") {
             expect(output.stderr).toContain("permission requested: shell (echo fixture); auto-rejecting")
+            const message = source === "live" ? "Session interrupted: superseded" : "Projected step interrupted"
+            if (format === "json") {
+              expect(
+                output.stdout
+                  .trim()
+                  .split("\n")
+                  .map((line) => JSON.parse(line)),
+              ).toEqual([
+                {
+                  type: "error",
+                  timestamp: source === "live" ? 0 : 3,
+                  sessionID: "ses_1",
+                  error: { type: "aborted", message },
+                },
+              ])
+              expect(output.stderr).not.toContain(message)
+              return
+            }
+            expect(output.stdout).toBe("")
+            expect(output.stderr).toContain(`Error: \u001b[0m${message}`)
             return
           }
+          expect(output.stdout).toBe("")
           expect(output.stderr).toBe("")
         },
       )
     }
   }
+
+  test.each(["default", "json"] as const)(
+    "permission rejection alone allows successful completion in %s",
+    async (format) => {
+      const output = await capture({ format, turn: (id) => [prompted(id), permissionAsked(), settled()] }, (sdk) => {
+        expect(sdk.permission.reply).toHaveBeenCalledTimes(1)
+        expect(sdk.permission.reply).toHaveBeenCalledWith({
+          sessionID: "ses_1",
+          requestID: "perm_declined",
+          decision: "reject",
+          message:
+            "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+        })
+        expect(sdk.session.interrupt).not.toHaveBeenCalled()
+      })
+      expect(output.exitCode).toBe(0)
+      expect(output.stdout).toBe("")
+      expect(output.stderr).toContain("permission requested: shell (echo fixture); auto-rejecting")
+      expect(output.stderr).not.toContain("Error:")
+    },
+  )
+
+  test("rejects owned child and grandchild asks with feedback but leaves unrelated asks alone", async () => {
+    const output = await capture(
+      {
+        parents: { ses_child: "ses_1", ses_grandchild: "ses_child", ses_foreign: undefined },
+        turn: (id) => [
+          prompted(id),
+          permissionAsked("ses_child", "perm_child"),
+          permissionAsked("ses_grandchild", "perm_grandchild"),
+          permissionAsked("ses_foreign", "perm_foreign"),
+          settled(),
+        ],
+      },
+      (sdk) => {
+        expect(sdk.permission.reply).toHaveBeenCalledTimes(2)
+        expect(sdk.permission.reply).toHaveBeenNthCalledWith(1, {
+          sessionID: "ses_child",
+          requestID: "perm_child",
+          decision: "reject",
+          message:
+            "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+        })
+        expect(sdk.permission.reply).toHaveBeenNthCalledWith(2, {
+          sessionID: "ses_grandchild",
+          requestID: "perm_grandchild",
+          decision: "reject",
+          message:
+            "This non-interactive run cannot ask the user for permission, so the request was rejected. Continue without this action.",
+        })
+        expect(sdk.session.interrupt).not.toHaveBeenCalled()
+      },
+    )
+    expect(output.exitCode).toBe(0)
+    expect(output.stdout).toBe("")
+    expect(output.stderr.match(/auto-rejecting/g)).toHaveLength(2)
+  })
+
+  test("auto approval sends once without rejection feedback or interruption", async () => {
+    const output = await capture({ auto: true, turn: (id) => [prompted(id), permissionAsked(), settled()] }, (sdk) => {
+      expect(sdk.permission.reply).toHaveBeenCalledTimes(1)
+      expect(sdk.permission.reply).toHaveBeenCalledWith({
+        sessionID: "ses_1",
+        requestID: "perm_declined",
+        decision: "once",
+      })
+      expect(sdk.session.interrupt).not.toHaveBeenCalled()
+    })
+    expect(output).toEqual({ stdout: "", stderr: "", exitCode: 0 })
+  })
+
+  test("V1 rejection interrupts without continuation feedback", async () => {
+    const output = await capture(
+      { compatibility: "v1", turn: (id) => [prompted(id), permissionAsked(), settled("interrupted", "superseded")] },
+      (sdk) => {
+        expect(sdk.permission.reply).toHaveBeenCalledTimes(1)
+        expect(sdk.permission.reply).toHaveBeenCalledWith({
+          sessionID: "ses_1",
+          requestID: "perm_declined",
+          decision: "reject",
+        })
+        expect(sdk.session.interrupt).toHaveBeenCalledTimes(1)
+        expect(sdk.session.interrupt).toHaveBeenCalledWith({ sessionID: "ses_1" })
+      },
+    )
+    expect(output.exitCode).toBe(0)
+    expect(output.stdout).toBe("")
+    expect(output.stderr).toContain("auto-rejecting")
+    expect(output.stderr).not.toContain("Session interrupted:")
+  })
 
   for (const source of ["live", "projected"] as const) {
     test.each(["default", "json"] as const)(

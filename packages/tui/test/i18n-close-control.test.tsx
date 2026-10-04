@@ -58,7 +58,7 @@ async function mount(input: { locale: "en" | "zh"; width?: number; content?: (di
   const app = await testRender(
     () => (
       <TestTuiContexts directory={root} paths={{ home: root, state: root, worktree: root }}>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: input.locale }, { terminal: false })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: input.locale })}>
           <I18nProvider>
             <Keymap.Provider>
               <ClientProvider api={createApi(calls.fetch)}>

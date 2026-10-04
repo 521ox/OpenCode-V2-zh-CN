@@ -62,7 +62,7 @@ test.each(["en", "zh"] as const)(
     const app = await testRender(
       () => (
         <TestTuiContexts directory={directory}>
-          <ConfigProvider config={createTuiResolvedConfig({ locale }, { terminal: false })}>
+          <ConfigProvider config={createTuiResolvedConfig({ locale })}>
             <I18nProvider>
               <Keymap.Provider>
                 <ClientProvider api={createApi(calls.fetch)}>

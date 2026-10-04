@@ -208,6 +208,49 @@ test.each([false, true])("production command menu keeps navigation visible acros
 })
 
 test.each([false, true])(
+  "production model menu navigates ASCII labels with home, arrows, and end (mono=%s)",
+  async (mono) => {
+    const app = await setup(mono)
+    try {
+      app.footer.event({
+        type: "models",
+        providers: [
+          {
+            id: "provider",
+            name: "Provider",
+            models: Object.fromEntries(
+              Array.from({ length: 22 }, (_, index) => [
+                `model-${index}`,
+                { name: `Model ${String(index).padStart(2, "0")}` },
+              ]),
+            ),
+          },
+        ],
+      })
+      await app.settle()
+      app.mockInput.pressKey("p", { ctrl: true })
+      await app.settle()
+      await app.mockInput.typeText("switch model")
+      app.mockInput.pressEnter()
+      await app.settle()
+      for (const [key, title] of [
+        ["END", "Model 21"],
+        ["HOME", "Model 00"],
+        ["ARROW_DOWN", "Model 01"],
+        ["ARROW_UP", "Model 00"],
+        ["END", "Model 21"],
+      ]) {
+        app.mockInput.pressKey(key)
+        await app.settle()
+        expect(app.selected()).toContain(title)
+      }
+    } finally {
+      app.cleanup()
+    }
+  },
+)
+
+test.each([false, true])(
   "production model menu keeps labels and current state before metadata (mono=%s)",
   async (mono) => {
     const app = await setup(mono)
@@ -234,16 +277,15 @@ test.each([false, true])(
       await app.mockInput.typeText("switch model")
       app.mockInput.pressEnter()
       await app.settle()
-      for (const [key, text] of [
-        ["HOME", "Model 01"],
-        ["ARROW_DOWN", "Model 02"],
-        ["ARROW_UP", "Model 01"],
-        ["END", title],
-      ]) {
-        app.mockInput.pressKey(key)
+      // Mixed-script ordering follows the host collation; navigate to the literal
+      // Chinese label without assuming it sorts before or after the ASCII labels.
+      app.mockInput.pressKey("HOME")
+      await app.settle()
+      for (let index = 0; index < 21 && !app.selected().includes(title); index++) {
+        app.mockInput.pressKey("ARROW_DOWN")
         await app.settle()
-        expect(app.selected()).toContain(text)
       }
+      expect(app.selected()).toContain(title)
       for (const [width, height] of sizes) {
         app.resize(width, height)
         await app.settle()

@@ -7,11 +7,8 @@ const entry = await import("../../../src/mini/entry.body")
 const config = await import("../../../src/config")
 const fixture = await import("../../fixture/tui-runtime")
 
-export function createTuiResolvedConfig(
-  input?: Parameters<typeof fixture.createTuiResolvedConfig>[0],
-  options?: Parameters<typeof fixture.createTuiResolvedConfig>[1],
-) {
-  return fixture.createTuiResolvedConfig({ ...input, locale: "en" }, options)
+export function createTuiResolvedConfig(input?: Parameters<typeof fixture.createTuiResolvedConfig>[0]) {
+  return fixture.createTuiResolvedConfig({ ...input, locale: "en" })
 }
 
 export function createSessionTransport(input: Parameters<typeof transport.createSessionTransport>[0]) {

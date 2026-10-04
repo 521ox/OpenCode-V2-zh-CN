@@ -55,9 +55,13 @@ describe("hosted search selection", () => {
     it.effect(`${effect} never leaves a duplicate local search`, () =>
       Effect.gen(function* () {
         const permission = yield* policy(effect)
-        const result = yield* HostedWebSearch.select(input).pipe(Effect.provideService(Permission.Service, permission))
-        expect([...result.tools.keys()]).toEqual(["read"])
-        expect(result.hosted?.name).toBe(effect === "allow" ? "web_search" : undefined)
+        for (const model of [native, XAI.responses("grok")]) {
+          const result = yield* HostedWebSearch.select({ ...input, model }).pipe(
+            Effect.provideService(Permission.Service, permission),
+          )
+          expect([...result.tools.keys()]).toEqual(["read"])
+          expect(result.hosted?.name).toBe(effect === "allow" ? "web_search" : undefined)
+        }
         expect(tools.has("websearch")).toBe(true)
       }),
     )
@@ -130,6 +134,7 @@ describe("hosted search selection", () => {
         }).model({ id: "gpt-5", provider: "openai" }),
         OpenAIResponses.route.with({ provider: "unknown" }).model({ id: "gpt-5", provider: "openai" }),
         OpenAIChat.route.model({ id: "gpt-5", provider: "openai" }),
+        XAI.chat("grok"),
         Azure.routes[0]!.model({ id: "gpt-5", provider: "openai" }),
       ]) {
         const result = yield* HostedWebSearch.select({ ...input, model })

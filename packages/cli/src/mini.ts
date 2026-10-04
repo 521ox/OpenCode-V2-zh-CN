@@ -35,7 +35,7 @@ export async function runMini(input: MiniCommandInput) {
   const locale = resolveLocale((await Promise.resolve(input.tuiConfig).catch(() => undefined))?.locale)
   try {
     validate(input, locale)
-    const result = await usingInteractiveStdin(async (terminal) => {
+    await usingInteractiveStdin(async (terminal) => {
       const initialInput = mergeInput(process.stdin.isTTY ? undefined : await readStdin(), input.prompt)
       const frontendTask = import("@opencode/tui/mini")
       const directory = localDirectory(locale)
@@ -129,7 +129,6 @@ export async function runMini(input: MiniCommandInput) {
         config: input.config,
       })
     })
-    if (result.exitCode !== 0) process.exit(result.exitCode)
   } catch (error) {
     if (error instanceof MiniInputError) fail(error.message, locale)
     if (error instanceof Error && error.message === INTERACTIVE_INPUT_ERROR)

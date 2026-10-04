@@ -108,7 +108,6 @@ export function activitySummary(
       .map(([name, count]) => t(labels[name][count === 1 ? 0 : 1], { count }))
       .join(", "),
     active: items.some((item) => isActive(item, closed)),
-    failed: items.some(failed),
   }
 }
 
@@ -116,12 +115,4 @@ function isActive(item: Item, closed: boolean) {
   if (item.part.type === "reasoning")
     return !closed && item.part.time?.completed === undefined && item.message.time.completed === undefined
   return item.part.state.status === "streaming" || item.part.state.status === "running"
-}
-
-function failed(item: Item) {
-  if (item.part.type !== "tool") return false
-  if (item.part.state.status === "error") return true
-  if (canonicalToolName(item.part.name) !== "execute" || item.part.state.status === "streaming") return false
-  const metadata = item.part.state.metadata
-  return metadata?.error === true || executeCalls(metadata?.toolCalls).some((call) => call.status === "error")
 }

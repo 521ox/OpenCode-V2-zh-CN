@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import { CompactionPart, LanguageModel, LLM, Message, ToolCallPart, Media } from "@opencode/ai"
 import { OpenAIResponses } from "@opencode/ai/protocols"
+import { XAI } from "@opencode/ai/providers"
+import { Agent } from "@opencode/schema/agent"
+import { Money } from "@opencode/schema/money"
 import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
@@ -483,6 +486,91 @@ it.effect("falls back to an earlier compatible native or local checkpoint", () =
     expect(local.initial).toBe("new native baseline")
     expect(local.entries.map((entry) => entry.message.type)).toEqual(["compaction", "user", "user", "system"])
     expect(local.entries[0]?.message).toMatchObject({ summary: "local summary" })
+  }),
+)
+
+it.effect("xAI route rename replays the original transcript with tool results instead of the old native window", () =>
+  Effect.gen(function* () {
+    const s = yield* setup
+    const current = SessionRunnerModel.resolved(XAI.responses("grok"), {
+      capabilities: { tools: true, input: ["text"], output: ["text"] },
+      cost: [],
+      limit: { context: 128_000, output: 4096 },
+    })
+    const provenance = SessionProviderContext.provenance(current)
+    if (!provenance) throw new Error("Fixture must have a concrete xAI endpoint")
+    expect(provenance.route).toBe("xai-responses")
+    const old = Schema.decodeUnknownSync(SessionProviderContext.Info)({
+      ...legacyContext,
+      provenance: { ...provenance, route: "openai-responses" },
+      messages: [
+        legacyMedia[0],
+        {
+          role: "assistant",
+          content: [{ type: "compaction", provider: "xai", encrypted: "opaque-xai-checkpoint", id: "cp_xai" }],
+        },
+      ],
+    })
+    const serialized = JSON.stringify(old)
+    expect(SessionProviderContext.compatible(old.provenance, provenance)).toBe(false)
+    yield* s.prepare
+    yield* s.prompt("original request before xAI checkpoint")
+    const assistantMessageID = SessionMessage.ID.create()
+    yield* s.bus.publish(SessionEvent.Step.Started, {
+      sessionID,
+      assistantMessageID,
+      agent: Agent.ID.make("build"),
+      model: current.ref,
+      started: 0,
+    })
+    yield* s.bus.publish(SessionEvent.Tool.Input.Started, {
+      sessionID,
+      assistantMessageID,
+      id: "call-original",
+      name: "read",
+    })
+    yield* s.bus.publish(SessionEvent.Tool.Called, {
+      sessionID,
+      assistantMessageID,
+      id: "call-original",
+      input: { path: "fixture.txt" },
+      executed: false,
+    })
+    yield* s.bus.publish(SessionEvent.Tool.Success, {
+      sessionID,
+      assistantMessageID,
+      id: "call-original",
+      metadata: {},
+      content: [{ type: "text", text: "original tool result must survive" }],
+      executed: false,
+    })
+    yield* s.bus.publish(SessionEvent.Step.Ended, {
+      sessionID,
+      assistantMessageID,
+      finish: "tool-calls",
+      cost: Money.USD.zero,
+      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    })
+    const before = toLLMMessages(yield* SessionHistory.load(s.db, sessionID, "local"), current.ref)
+    expect(before.flatMap((message) => message.content)).toContainEqual(
+      expect.objectContaining({ type: "tool-result", id: "call-original", name: "read" }),
+    )
+    expect(JSON.stringify(before)).toContain("original tool result must survive")
+    yield* s.compact(old)
+    yield* s.prompt("continue after xAI checkpoint")
+    const expanded = yield* SessionHistory.load(s.db, sessionID, provenance)
+    const replay = toLLMMessages(expanded, current.ref)
+    expect(expanded.some(SessionProviderContext.isCheckpoint)).toBe(false)
+    expect(replay.slice(0, before.length)).toEqual(before)
+    expect(replay).toHaveLength(before.length + 1)
+    expect(replay.at(-1)?.content).toEqual([Message.text("continue after xAI checkpoint")])
+    expect(replay).toEqual(toLLMMessages(yield* SessionHistory.load(s.db, sessionID, "local"), current.ref))
+    const store = yield* SessionStore.Service
+    expect((yield* store.messages({ sessionID })).find(SessionProviderContext.isCheckpoint)?.providerContext).toEqual(
+      old,
+    )
+    expect(yield* SessionProviderContext.validate(old)).toEqual(SessionProviderContext.decode(old))
+    expect(JSON.stringify(old)).toBe(serialized)
   }),
 )
 

@@ -1,5 +1,57 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## October 4 synchronization in progress
+
+The owner authorized a multi-agent local synchronization from custom
+`dc0d395d278f4fe17a62a5bd81dfb151fe597ddf` to frozen official V2
+`8380c864bf36d6860f8047ae94077c7d70e3af41` (2.0.22). The previous upstream
+`7827dbe39630cbe3b3b7cab22f902b6f5e7cf74f` comparison contains 244 commits
+and 2,276 changed paths, not the API's truncated 300-file list. Recovery tag
+`custom-lite-pre-sync-20261004` preserves the starting point. Formal source,
+installed executables, global configuration and user databases remain unchanged
+until applicable local delivery gates; activation and remote publication are
+separate actions, not implied by this synchronization.
+
+The owner explicitly approved adopting upstream native noninteractive permission
+rejection feedback: the denied operation remains denied, feedback goes to the
+model so it can continue, and later real interruptions remain visible. Regression
+expectations must distinguish this from form cancellation, auto mode and V1;
+those separate contracts are not silently redefined.
+
+The native xAI route rename keeps strict checkpoint provenance matching. A
+synthetic regression confirms complete original user/tool-call/tool-result
+history fallback, valid legacy media decoding and unchanged persisted payloads.
+Loss of checkpoint reuse can increase input size and bring normal compaction
+forward; live cost/performance is unmeasured. No old/new route alias bypass was
+introduced.
+
+The frozen dependency install completed with 2,427 packages and no lock mutation,
+using Bun 1.4.2 and OpenTUI 0.5.14. Source/runtime checks are in progress; successful
+focused suites do not constitute final type, generated-artifact, compiled-runtime
+or independent acceptance. The five previously excluded upstream workflows remain
+deleted. No final candidate has been accepted or exported for this task yet.
+
+The planned local candidate is `2.0.22-custom-lite.20261004.1`, latest channel,
+Windows x64 bytecode with embedded WebUI. The existing manual six-platform
+workflow's default advances to `2.0.22-zhcn.1`; this does not dispatch it.
+All fourteen scoped package typechecks now pass following test-fixture interface
+adaptations. Canonical Protocol generation/check passed, and repeated Client
+generation/check produced no content drift against its merged index. Root lint
+completed with exit 0, 12,975 style warnings and no errors; warnings are not
+represented as a clean lint report or silently mass-fixed.
+
+The focused session TUI suite passed 154 cases; native AI/Console suites passed
+474 cases; GUI/App/SessionUI/Desktop private storage checks passed 1,252 distinct
+cases. Core checks passed 106 selected cases (including native-tool cases also
+covered by CLI verification; totals must not double-count them). The owner-approved
+permission-feedback tests passed 37 CLI/ACP cases and two selected Core permission
+cases. Mini's locale-dependent ordering assumption was corrected only in tests:
+ASCII navigation and Chinese model selection remain independently asserted using
+real keyboard input, without overriding product collation. The final eight-file
+Mini/i18n combination passed 247 cases with six skips and zero failures; canonical
+TUI typecheck passed again. Original failed checks remain part of the temporary
+verification evidence, not concealed by the later results.
+
 ## September 29 accepted local synchronization
 
 Independent reviewer `ses_f15d53c10ffevlI661X7O29otg` returned

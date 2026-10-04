@@ -248,7 +248,28 @@ test("uses the active location for integration data without scoping credential r
   }
 })
 
-async function renderIntegration(activeLocation?: LocationRef, form?: FormFields) {
+test.each(["en", "zh"] as const)("reauthentication keeps account chrome localized in %s", async (locale) => {
+  const fixture = await renderIntegration(undefined, undefined, { locale, needsAuth: true })
+
+  try {
+    expect(fixture.app.captureCharFrame()).toContain(locale === "en" ? "Sign in required →" : "需要登录 →")
+    expect(fixture.app.captureCharFrame()).toContain("Personal")
+    fixture.app.mockInput.pressArrow("down")
+    fixture.app.mockInput.pressEnter()
+    await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof TextareaRenderable)
+    await fixture.app.waitForFrame((frame) => !frame.includes(locale === "en" ? "Connected accounts" : "已连接账户"))
+    expect(fixture.app.captureCharFrame()).toContain(locale === "en" ? "API key" : "API 密钥")
+    expect(fixture.requests).toEqual([])
+  } finally {
+    fixture.app.renderer.destroy()
+  }
+})
+
+async function renderIntegration(
+  activeLocation?: LocationRef,
+  form?: FormFields,
+  options: { locale?: "en" | "zh"; needsAuth?: boolean } = {},
+) {
   const events = createEventStream()
   const requests: Array<{ method: string; path: string; body?: unknown }> = []
   const locations: LocationRef[] = []
@@ -279,7 +300,15 @@ async function renderIntegration(activeLocation?: LocationRef, form?: FormFields
             id: "openai",
             name: "OpenAI",
             methods: [{ type: "key", label: "API key", form }],
-            connections: [...accounts, { type: "env", name: "OPENAI_API_KEY" }],
+            connections: [
+              ...accounts.map((account) => ({
+                ...account,
+                ...(options.needsAuth
+                  ? { status: { status: "needs_auth", message: "Provider requires sign-in" } }
+                  : {}),
+              })),
+              { type: "env", name: "OPENAI_API_KEY" },
+            ],
           },
         ],
       })
@@ -360,7 +389,7 @@ async function renderIntegration(activeLocation?: LocationRef, form?: FormFields
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: options.locale ?? "en" })}>
           <I18nProvider>
             <Keymap.Provider>
               <ToastProvider>
@@ -386,7 +415,10 @@ async function renderIntegration(activeLocation?: LocationRef, form?: FormFields
 
   app.renderer.start()
   await app.waitForFrame(
-    (frame) => frame.includes("Add account") && frame.includes("Personal") && frame.includes("Work"),
+    (frame) =>
+      frame.includes(options.locale === "zh" ? "添加账户" : "Add account") &&
+      frame.includes("Personal") &&
+      frame.includes("Work"),
   )
   await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
 

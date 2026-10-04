@@ -109,15 +109,19 @@ export function DialogIntegration(
       let category = t("main.integration.services")
       if (integration.id in INTEGRATION_PRIORITY) category = t("main.integration.popular")
       if (integration.metadata?.source === "mcp") category = "MCP"
+      const status = integration.connections[0]?.status
       return {
         title: integration.name,
         value: integration.id,
         description: methods.length === 0 ? t("main.integration.environment") : undefined,
-        footer: connectionSummary(integration) || undefined,
+        footer: status ? t("main.integration.signInRequired") : connectionSummary(integration) || undefined,
+        footerColor: status ? theme.text.feedback.warning.base : undefined,
         category,
         disabled: methods.length === 0 && credentials.length === 0,
         gutter:
-          integration.connections.length > 0 ? () => <text fg={theme.text.feedback.success.base}>✓</text> : undefined,
+          integration.connections.length > 0 && !status
+            ? () => <text fg={theme.text.feedback.success.base}>✓</text>
+            : undefined,
         onSelect: () => {
           if (credentials.length) return manageConnections(integration, methods, location, dialog, props.onConnected)
           return selectMethod(integration, methods, location, dialog, t, props.onConnected)
@@ -193,10 +197,15 @@ function manageConnections(
                   ? t("main.confirmAgain", { key: shortcuts.get("dialog.integration.delete") ?? "" })
                   : connection.label,
                 value: connection.id,
+                footer: connection.status ? t("main.integration.signInRequired") : undefined,
+                footerColor: connection.status ? theme.text.feedback.warning.base : undefined,
                 category: t("main.account.connected"),
                 bg: confirming ? theme.background.action.destructive.focused : undefined,
                 fg: confirming ? theme.text.action.destructive.focused : undefined,
                 onSelect: () => {
+                  if (connection.status?.url) return void openUrl(connection.status.url).catch(toast.error)
+                  if (connection.status)
+                    return selectMethod(current() ?? integration, methods, location, dialog, t, onConnected)
                   if (credentialConnections(current() ?? integration)[0]?.id === connection.id) return
                   void client.api.credential.activate({ credentialID: connection.id }).catch(toast.error)
                 },
