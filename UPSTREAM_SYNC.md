@@ -1,6 +1,33 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## October 4 synchronization in progress
+## October 4 accepted local synchronization
+
+Final independent review by `ses_ef9526c4efferTl32LLp0TFP9t` returned
+`APPROVE WITH DEFERRED RISKS` for build source
+`a177c8b2ebdecc23c4c1449f96e64a6107dd5440`. OCT4-E1 is closed: an isolated
+populated default-path database created and cold-read by the accepted 2.0.18
+binary was then read by the exact 2.0.22 candidate. Both sessions and all six
+completed synthetic messages retained their contents, order and original stored
+fields. DB/channel/XDG overrides were absent. Owned processes exited and private
+profiles were removed. This supplements, rather than replaces, cold-media and
+managed-service checks. No product-source repair was required; source-repair
+review cycles consumed are 0/1. The September 29 review remains unchanged.
+
+Accepted local artifact: `2.0.22-custom-lite.20261004.1`, latest channel,
+Windows x64, bytecode and complete embedded WebUI, Bun `1.4.2+744846f84`.
+Length: 209,913,856 bytes. SHA256:
+`752a3f0fef652b5182a648f5cf77bf4cd169aa1b53d55afda57a29d2d3f9808b`.
+Version, Chinese help, embedded runtime and official compiled service smoke
+passed. Service stop exited 1 with termination and registration removal verified;
+this is not a graceful-zero-exit guarantee. Final copy/export facts belong to the
+adjacent executable metadata, not an inferred completion claim in this record.
+
+Residuals: completed synthetic history is not unfinished-state, real-user upgrade
+or rollback coverage; strict xAI provenance can increase fallback input; real
+provider, browser-rendered extension graph, Electron runtime, compiled
+service-disabled standalone and six-platform release are outside local evidence.
+Lint warnings and the inherited AI schema-validation documentation discrepancy
+remain explicit. The history below describes earlier stages, not open blockers.
 
 The owner authorized a multi-agent local synchronization from custom
 `dc0d395d278f4fe17a62a5bd81dfb151fe597ddf` to frozen official V2
