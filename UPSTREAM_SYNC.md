@@ -1,6 +1,34 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## October 11 synchronization in progress
+## October 11 accepted local synchronization
+
+Independent reviewer `ses_ed893718cffes3cxllYnqhq58S` returned
+`APPROVE WITH DEFERRED RISKS` for source
+`91032d0dd8796b737924666889559fe0500d7a3a` and the exact Windows x64 artifact
+`2.0.26-custom-lite.20261011.1`: 214,710,272 bytes, SHA256
+`97d34a666022bb12d7d5239d19f7914bbd5ff70c938fe40409b4ef62d1126ba5`.
+OCT11-E1 and OCT11-E2 are closed. Source repair/re-review cycles used: 0/1.
+The earlier synchronization reviews remain unchanged. The paragraphs below record
+the integration sequence rather than outstanding acceptance blockers.
+
+The accepted 2.0.22 executable created and cold-read a populated private default
+database (two sessions, six completed synthetic messages), then this exact 2.0.26
+candidate read the same file. DB/channel/XDG/config-root overrides were absent;
+original fields, raw payloads, order, media and opaque/tool content were preserved.
+Version, actual UTF-8 Chinese help and embedded Bun revision passed. Official
+service smoke passed under external 180-second supervision, including anonymous
+WebUI, authenticated APIs, default database, election and registration cleanup.
+Winner stop exit was 1, loser exit 0; no graceful-zero-exit guarantee is implied.
+All recorded native processes and private profiles were cleaned. Final export
+and formal promotion facts belong to the executable sidecar.
+
+Deferred OCT11-P2-1: a callable hybrid Effect Standard Schema used for plugin
+output can reach unsupported JSON Schema conversion and fail registration. No
+shipped native-tool output consumer is affected. This was not expanded into a
+source-repair cycle. Historical WSL startup/descendant unknowns, lint warnings,
+platform non-coverage and prior tab/listener diagnostics remain recorded.
+Completed synthetic compatibility does not certify unfinished state, real-user
+migration, rollback, live-provider replay, browser/Electron or six-platform release.
 
 Authorized local synchronization: custom `e2e166b1905603b750f5c0bbfa808fdf6d73bca3`
 plus frozen official `4617210822bdbb31e5749751afbfb4584ccedac8` (2.0.26),
