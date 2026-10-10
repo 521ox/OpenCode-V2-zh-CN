@@ -6,6 +6,7 @@ import { useRoute, useRouteData } from "../../../context/route"
 import { useData } from "../../../context/data"
 import { useClient } from "../../../context/client"
 import { useTheme } from "../../../context/theme"
+import { useStorage } from "../../../context/storage"
 import { Locale } from "../../../util/locale"
 import { Keymap } from "../../../context/keymap"
 import { useComposerTab } from "./context"
@@ -33,7 +34,9 @@ export function SubagentsTab(props: { sessionID: string }) {
   const shortcuts = Keymap.useShortcuts()
 
   const session = createMemo(() => data.session.get(props.sessionID))
-  const [store, setStore] = createStore({ selected: 0, active: true })
+  const [store, setStore] = createStore({ selected: 0 })
+  // The session route remounts on navigation, so the filter lives in TUI memory and only ctrl+a changes it.
+  const [filter, updateFilter] = useStorage().memory("subagents-filter", { initial: { active: true } })
 
   const entries = createMemo<SubagentEntry[]>(() => {
     const current = session()
@@ -58,7 +61,7 @@ export function SubagentsTab(props: { sessionID: string }) {
       },
     )
 
-    return result.filter((entry) => (store.active ? entry.status === "running" : entry.status !== "running"))
+    return result.filter((entry) => (filter.active ? entry.status === "running" : entry.status !== "running"))
   })
 
   let selectedSessionID = ""
@@ -72,7 +75,7 @@ export function SubagentsTab(props: { sessionID: string }) {
     if (!active) {
       if (wasActive) {
         selectedSessionID = ""
-        setStore({ selected: 0, active: true })
+        setStore("selected", 0)
       }
       wasActive = false
       return
@@ -125,7 +128,7 @@ export function SubagentsTab(props: { sessionID: string }) {
             ? [{ label: t("session.interrupt"), shortcut: shortcuts.get("composer.subagent.interrupt") ?? "" }]
             : []),
           {
-            label: t(store.active ? "session.showInactive" : "session.showActive"),
+            label: t(filter.active ? "session.showInactive" : "session.showActive"),
             shortcut: shortcuts.get("composer.subagent.toggle-activity") ?? "",
           },
         ]
@@ -176,7 +179,8 @@ export function SubagentsTab(props: { sessionID: string }) {
         group: t("session.composer"),
         bind: "ctrl+a",
         run() {
-          setStore({ selected: 0, active: !store.active })
+          updateFilter((draft) => (draft.active = !draft.active))
+          setStore("selected", 0)
           scroll?.scrollTo(0)
         },
       },
@@ -198,7 +202,7 @@ export function SubagentsTab(props: { sessionID: string }) {
       <scrollbox scrollbarOptions={{ visible: false }} maxHeight={5} ref={(r: ScrollBoxRenderable) => (scroll = r)}>
         <Show
           when={entries().length > 0}
-          fallback={<text fg={theme.text.muted}> {t(store.active ? "session.noActive" : "session.noInactive")}</text>}
+          fallback={<text fg={theme.text.muted}> {t(filter.active ? "session.noActive" : "session.noInactive")}</text>}
         >
           <For each={entries()}>
             {(entry, index) => {

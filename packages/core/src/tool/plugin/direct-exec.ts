@@ -5,7 +5,7 @@ import type { Context } from "@opencode/plugin/effect/plugin"
 import { FSUtil } from "@opencode/util/fs-util"
 import { AppProcess } from "@opencode/util/process"
 import { Duration, Effect, Schema } from "effect"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
 import { FileAccess } from "../../file-access.js"
 import { Location } from "../../location.js"
@@ -18,12 +18,15 @@ const MAX_ARG_LENGTH = 4_096
 const MAX_ARGS_LENGTH = 32_768
 const MAX_OUTPUT_BYTES = 65_536
 
-export const Input = Schema.Struct({
-  id: Schema.String,
-  args: Schema.optional(Schema.Array(Schema.String)),
-  cwd: Schema.optional(Schema.String),
-  timeoutMs: Schema.optional(Schema.Number),
-}).annotate({ parseOptions: { onExcessProperty: "error" } })
+export const Input = Schema.toStandardSchemaV1(
+  Schema.Struct({
+    id: Schema.String,
+    args: Schema.optional(Schema.Array(Schema.String)),
+    cwd: Schema.optional(Schema.String),
+    timeoutMs: Schema.optional(Schema.Number),
+  }),
+  { parseOptions: { onExcessProperty: "error" } },
+)
 export const Output = Schema.Struct({
   status: Schema.Literal("exited"),
   id: Schema.String,

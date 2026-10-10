@@ -274,6 +274,24 @@ test("closes turn usage on the idle marker so steered steps share one footer", (
       previousCache: { read: 2_000, model: { id: "model", providerID: "provider" } },
     },
   ])
+  const failure: SessionMessageInfo = {
+    type: "idle",
+    id: "idle-failed",
+    outcome: "failed",
+    time: { created: 6 },
+    error: { type: "FixtureError", message: "Execution failed" },
+  }
+  const failed = reduceSessionRows([...messages, failure], new Set(), true)
+  expect(failed.slice(-2)).toEqual([
+    {
+      type: "turn-usage",
+      messageIDs: ["assistant-3", "assistant-4"],
+      previousCache: { read: 2_000, model: { id: "model", providerID: "provider" } },
+    },
+    { type: "message", messageID: "idle-failed" },
+  ])
+  expect(failed.filter((row) => row.type === "turn-usage")).toHaveLength(2)
+  expect(reduceSessionRows([...messages, failure, idle("idle-empty", 7)], new Set(), true)).toEqual(failed)
 })
 
 test("measures a marker-era turn from its first prompt across steers", () => {

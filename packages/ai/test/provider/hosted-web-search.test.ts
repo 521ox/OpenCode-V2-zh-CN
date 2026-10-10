@@ -156,6 +156,67 @@ describe("native hosted web search", () => {
         }),
       )
 
+      it.effect("resolves renamed hosted tools through named and allowed choices", () =>
+        Effect.gen(function* () {
+          const tool = ToolDefinition.make({ ...provider.tool, name: "find_sources" })
+          const named = yield* compileRequest(
+            LLM.request({
+              model: provider.model,
+              prompt: "Search",
+              tools: [local, tool],
+              toolChoice: ToolChoice.named(tool.name),
+            }),
+          )
+          expect(named.body.tool_choice).toEqual({ type: "web_search" })
+          const allowed = yield* compileRequest(
+            LLM.request({
+              model: provider.model,
+              prompt: "Search",
+              tools: [local, tool],
+              providerOptions: { allowedTools: { toolNames: [tool.name, local.name], mode: "required" } },
+            }),
+          )
+          expect(allowed.body.tool_choice).toEqual({
+            type: "allowed_tools",
+            mode: "required",
+            tools: [{ type: "web_search" }, { type: "function", name: "read" }],
+          })
+        }),
+      )
+
+      it.effect("retains a hosted search error before a failed response terminates the stream", () =>
+        Effect.gen(function* () {
+          const events = yield* Ref.make<LLMEvent[]>([])
+          const error = { code: "search_failed", message: "Search unavailable" }
+          const failure = yield* LLMClient.stream(
+            LLM.request({ model: provider.model, prompt: "Search", tools: [provider.tool] }),
+          ).pipe(
+            Stream.runForEach((event) => Ref.update(events, (values) => [...values, event])),
+            Effect.provide(
+              fixedResponse(
+                sseEvents(
+                  {
+                    type: "response.output_item.done",
+                    item: { type: "web_search_call", id: "ws_failed", status: "failed", error },
+                  },
+                  {
+                    type: "response.failed",
+                    response: { id: "resp_failed", error: { code: "server_error", message: "Unavailable" } },
+                  },
+                ),
+              ),
+            ),
+            Effect.flip,
+          )
+          const received = yield* Ref.get(events)
+          expect(received.filter(LLMEvent.is.toolResult)).toMatchObject([
+            { id: "ws_failed", providerExecuted: true, result: { type: "error", value: error } },
+          ])
+          expect(received.filter(LLMEvent.is.finish)).toEqual([])
+          expect(failure.reason._tag).toBe("ProviderInternal")
+        }),
+      )
+
       it.effect("parses hosted call/result events and replays them once without a local executor", () =>
         Effect.gen(function* () {
           const item = {

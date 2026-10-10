@@ -1,5 +1,6 @@
-import { Effect, Encoding, Schema } from "effect"
-import { Headers } from "effect/unstable/http"
+import { Effect, Schema } from "effect"
+import { Base64 } from "effect/encoding"
+import { Headers } from "effect/http"
 import { Route } from "../route/client.js"
 import { Auth } from "../route/auth.js"
 import { Endpoint } from "../route/endpoint.js"
@@ -171,7 +172,7 @@ const nativeImageTool = (tool: ToolDefinition) => {
   return Schema.is(OpenAIResponsesImageGenerationTool)(native) ? native : undefined
 }
 
-const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (tool: ToolDefinition, request: LLMRequest) {
+const lowerTool = Effect.fnUntraced(function* (tool: ToolDefinition, request: LLMRequest) {
   if (ProviderShared.isRecord(tool.native?.openai) && tool.native.openai.type === "web_search") {
     if (request.model.route.provider !== "openai")
       return yield* ProviderShared.invalidRequest("Hosted web search requires the native OpenAI Responses provider")
@@ -187,7 +188,7 @@ const lowerTool = Effect.fn("OpenAIResponses.lowerTool")(function* (tool: ToolDe
 
 // Native namespaces hold only function tools, so deeper levels flatten into
 // the leaf names the same way non-native protocols flatten the whole tree.
-const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (tool: ToolEntry, request: LLMRequest) {
+const lowerToolEntry = Effect.fnUntraced(function* (tool: ToolEntry, request: LLMRequest) {
   if (tool.type === "tool") return yield* lowerTool(tool, request)
   // OpenAI requires a namespace description; fall back to a generic one so a
   // missing description never blocks the request.
@@ -203,13 +204,17 @@ const lowerToolEntry = Effect.fn("OpenAIResponses.lowerToolEntry")(function* (to
 
 const lowerTools = (request: LLMRequest) => Effect.forEach(request.tools, (tool) => lowerToolEntry(tool, request))
 
-const lowerToolChoice = (toolChoice: NonNullable<LLMRequest["toolChoice"]>, tools: ReadonlyArray<ToolEntry>) =>
+const lowerToolChoice = (
+  toolChoice: NonNullable<LLMRequest["toolChoice"]>,
+  tools: ReadonlyArray<ToolEntry>,
+  searches: ReadonlySet<string>,
+) =>
   ProviderShared.matchToolChoice(NAME, toolChoice, {
     auto: () => "auto" as const,
     none: () => "none" as const,
     required: () => "required" as const,
     tool: (name) =>
-      tools.some((tool) => tool.type === "tool" && tool.name === name && Schema.is(WebSearchTool)(tool.native?.openai))
+      searches.has(name)
         ? ({ type: "web_search" } as const)
         : tools.some((tool) => tool.type === "tool" && tool.name === name && nativeImageTool(tool) !== undefined)
           ? ({ type: "image_generation" } as const)
@@ -223,11 +228,15 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
   const options = OpenResponsesOptions.resolve(request)
   const updates = resolveEffortUpdates(request, options.reasoningEffort)
   const allowed = OpenResponses.allowedToolChoice(request)
+  const tools = yield* lowerTools(request)
+  const searches = new Set(
+    request.tools.filter((_, index) => tools[index]?.type === "web_search").map((tool) => tool.name),
+  )
   return {
     ...(yield* OpenResponses.lowerConversation(updates.request, adapter)),
     ...OpenResponses.lowerGeneration(request, { ...options, reasoningEffort: updates.effort }),
     context_management: management?.map((edit) => ({ type: edit.type, compact_threshold: edit.compactThreshold })),
-    tools: request.tools.length === 0 ? undefined : yield* lowerTools(request),
+    tools: tools.length === 0 ? undefined : tools,
     tool_choice:
       request.tools.length === 0
         ? undefined
@@ -235,16 +244,11 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
           ? {
               ...allowed,
               tools: allowed.tools.map((choice) =>
-                request.tools.some(
-                  (tool) =>
-                    tool.type === "tool" && tool.name === choice.name && Schema.is(WebSearchTool)(tool.native?.openai),
-                )
-                  ? { type: "web_search" as const }
-                  : choice,
+                searches.has(choice.name) ? { type: "web_search" as const } : choice,
               ),
             }
           : request.toolChoice
-            ? yield* lowerToolChoice(request.toolChoice, request.tools)
+            ? yield* lowerToolChoice(request.toolChoice, request.tools, searches)
             : undefined,
   }
 })
@@ -272,10 +276,10 @@ const checkpointBody = {
   }),
 }
 
-const hostedToolResult = Effect.fn("OpenAIResponses.hostedToolResult")(function* (item: ResponsesHostedTools.Item) {
+const hostedToolResult = Effect.fnUntraced(function* (item: ResponsesHostedTools.Item) {
   const isError = item.error !== undefined && item.error !== null
   if (item.type === "image_generation_call" && item.result) {
-    yield* Effect.fromResult(Encoding.decodeBase64(item.result)).pipe(
+    yield* Effect.fromResult(Base64.decode(item.result)).pipe(
       Effect.mapError((cause) =>
         ProviderShared.eventError(ADAPTER, "OpenAI Responses returned invalid image base64", undefined, cause),
       ),

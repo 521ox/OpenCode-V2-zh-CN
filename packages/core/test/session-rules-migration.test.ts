@@ -25,14 +25,16 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
       yield* db.run(sql`INSERT INTO event VALUES ('ses_root', 0, 'session.created.1', ${creation})`)
       yield* db.run(sql`CREATE TABLE session_message (id text PRIMARY KEY, session_id text, data text)`)
       yield* db.run(sql`INSERT INTO session_message VALUES ('message', 'ses_root', '{"text":"completed history"}')`)
+      yield* db.run(sql`CREATE TABLE credential (id text PRIMARY KEY, integration_id text, value text)`)
       if (applied) {
         yield* db.run(sql`ALTER TABLE session_v2 ADD COLUMN start_directory text`)
         yield* db.run(sql`UPDATE session_v2 SET start_directory = '/persisted-root' WHERE id = 'ses_root'`)
       }
 
-      expect(migrations.slice(-2).map((entry) => entry.id)).toEqual([
+      expect(migrations.slice(-3).map((entry) => entry.id)).toEqual([
         "20260919120000_session_start_directory",
         "20260923013825_project_time_active",
+        "20261007190000_azure_cli_external_credential",
       ])
       yield* DatabaseMigration.apply(db)
       expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })

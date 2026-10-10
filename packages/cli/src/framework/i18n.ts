@@ -1,5 +1,5 @@
 import { Array, Option } from "effect"
-import { CliOutput } from "effect/unstable/cli"
+import { CliOutput } from "effect/cli"
 import { translate, type Key, type Locale } from "@opencode/tui/i18n"
 
 // Only owned help-description fields are translated, never rendered output or

@@ -3,12 +3,14 @@ import path from "node:path"
 import {
   allocateSmokePort,
   assertIdentity,
+  assertServerIdentity,
   cleanExit,
   redactSmokeDiagnostic,
   registeredOwnerIsLive,
   smokeEnv,
   smokeLogMarkers,
   smokeStderrTail,
+  verifyWebUi,
 } from "../script/service-smoke"
 
 describe("compiled service smoke contract", () => {
@@ -197,8 +199,8 @@ describe("compiled service smoke contract", () => {
     ])
   })
   test("accepts the elected native release identity", () => {
-    expect(() => assertIdentity(info, [101, 102], server, info.version)).not.toThrow()
-    expect(() => assertIdentity(info, [101, 102], server)).not.toThrow()
+    expect(() => assertIdentity(info, [101, 102], info.version)).not.toThrow()
+    expect(() => assertServerIdentity(info, server)).not.toThrow()
   })
   test("rejects unowned, incomplete, non-loopback and mismatched identities", () => {
     for (const patch of [
@@ -212,9 +214,44 @@ describe("compiled service smoke contract", () => {
     ])
       expect(() => assertIdentity({ ...info, ...patch }, [101, 102])).toThrow()
     expect(() => assertIdentity(info, [101, 101])).toThrow()
-    expect(() => assertIdentity(info, [101, 102], { ...server, pid: 102 })).toThrow()
-    expect(() => assertIdentity(info, [101, 102], { ...server, version: "local" })).toThrow()
-    expect(() => assertIdentity(info, [101, 102], server, "2.0.12")).toThrow()
+    expect(() => assertServerIdentity(info, { ...server, pid: 102 })).toThrow()
+    expect(() => assertServerIdentity(info, { ...server, version: "local" })).toThrow()
+    expect(() => assertIdentity(info, [101, 102], "2.0.12")).toThrow()
+  })
+  test("WebUI smoke reads the anonymous shell and its embedded module, rejecting an HTML asset fallback", async () => {
+    const requests: Array<{ path: string; authorization: string | null }> = []
+    let fallback = false
+    using listener = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(request) {
+        const pathname = new URL(request.url).pathname
+        requests.push({ path: pathname, authorization: request.headers.get("authorization") })
+        if (pathname === "/" || fallback)
+          return new Response('<html><script type="module" src="/_assets/app.js"></script></html>', {
+            headers: { "content-type": "text/html" },
+          })
+        return new Response('console.log("embedded")', { headers: { "content-type": "text/javascript" } })
+      },
+    })
+    await verifyWebUi(listener.url.toString())
+    expect(requests).toEqual([
+      { path: "/", authorization: null },
+      { path: "/_assets/app.js", authorization: null },
+    ])
+    fallback = true
+    await expect(verifyWebUi(listener.url.toString())).rejects.toThrow("Missing embedded WebUI module")
+  })
+  test("WebUI smoke rejects an external module before fetching it", async () => {
+    using listener = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () =>
+        new Response('<html><script type="module" src="https://example.invalid/app.js"></script></html>', {
+          headers: { "content-type": "text/html" },
+        }),
+    })
+    await expect(verifyWebUi(listener.url.toString())).rejects.toThrow("WebUI module is not embedded")
   })
   test("only a normal zero exit passes, never nonzero or timeout cleanup", async () => {
     await expect(cleanExit({ exited: Promise.resolve(0) }, 10)).resolves.toBe(0)

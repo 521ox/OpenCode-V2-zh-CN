@@ -71,10 +71,10 @@ const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LL
         "xAI requires explicit compaction through LLMClient.compact; automatic context management is not supported",
     })
   const tools = ProviderShared.flattenTools(request.tools)
-  const searches = tools.filter((tool) => Schema.is(WebSearchTool)(tool.native?.xai))
+  const body = yield* OpenResponses.fromRequestWithAdapter(request, adapter)
+  const searches = tools.filter((_, index) => body.tools?.[index]?.type === "web_search")
   if (searches.length > 0 && request.model.route.provider !== "xai")
     return yield* ProviderShared.invalidRequest("Hosted web search requires the native xAI Responses provider")
-  const body = yield* OpenResponses.fromRequestWithAdapter(request, adapter)
   const choice = body.tool_choice
   return {
     ...body,

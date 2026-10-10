@@ -6,36 +6,39 @@ import { Effect, Schema } from "effect"
 import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
 import { Permission } from "../../permission.js"
 
-export const Input = Schema.Struct({
-  search: Schema.optional(
-    Schema.Union([
-      Schema.Struct({
-        query: Schema.String.annotate({ description: "Program name, alias, path basename, or capability" }),
-        limit: Schema.optional(Schema.Number.annotate({ description: "Maximum matches (1-20, default 5)" })),
-      }).annotate({ parseOptions: { onExcessProperty: "error" } }),
-      Schema.Struct({
-        all: Schema.Literal(true).annotate({ description: "List every cataloged program name without details" }),
-      }).annotate({ parseOptions: { onExcessProperty: "error" } }),
-    ]),
-  ),
-  update: Schema.optional(
-    Schema.Union([
-      Schema.Struct({
-        mode: Schema.Literal("upsert"),
-        name: Schema.String,
-        path: Schema.String,
-        aliases: Schema.optional(Schema.Array(Schema.String)),
-        capabilities: Schema.optional(Schema.Array(Schema.String)),
-        source: EnvironmentToolsCatalog.Source,
-      }).annotate({ parseOptions: { onExcessProperty: "error" } }),
-      Schema.Struct({
-        mode: Schema.Literal("invalidate"),
-        id: Schema.String,
-        reason: Schema.Literals(["path_missing", "replaced", "user_requested", "other"]),
-      }).annotate({ parseOptions: { onExcessProperty: "error" } }),
-    ]),
-  ),
-}).annotate({ parseOptions: { onExcessProperty: "error" } })
+export const Input = Schema.toStandardSchemaV1(
+  Schema.Struct({
+    search: Schema.optional(
+      Schema.Union([
+        Schema.Struct({
+          query: Schema.String.annotate({ description: "Program name, alias, path basename, or capability" }),
+          limit: Schema.optional(Schema.Number.annotate({ description: "Maximum matches (1-20, default 5)" })),
+        }),
+        Schema.Struct({
+          all: Schema.Literal(true).annotate({ description: "List every cataloged program name without details" }),
+        }),
+      ]),
+    ),
+    update: Schema.optional(
+      Schema.Union([
+        Schema.Struct({
+          mode: Schema.Literal("upsert"),
+          name: Schema.String,
+          path: Schema.String,
+          aliases: Schema.optional(Schema.Array(Schema.String)),
+          capabilities: Schema.optional(Schema.Array(Schema.String)),
+          source: EnvironmentToolsCatalog.Source,
+        }),
+        Schema.Struct({
+          mode: Schema.Literal("invalidate"),
+          id: Schema.String,
+          reason: Schema.Literals(["path_missing", "replaced", "user_requested", "other"]),
+        }),
+      ]),
+    ),
+  }),
+  { parseOptions: { onExcessProperty: "error" } },
+)
 
 export const Output = Schema.Union([
   Schema.Struct({

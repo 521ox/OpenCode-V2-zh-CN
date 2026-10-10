@@ -23,7 +23,15 @@ import { useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner, SPINNER_FRAMES } from "../../component/spinner"
 import { PatchDiff } from "../../component/patch-diff"
 import { useTheme, useThemes } from "../../context/theme"
-import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA, MouseEvent } from "@opentui/core"
+import {
+  BoxRenderable,
+  ScrollBoxRenderable,
+  addDefaultParsers,
+  TextAttributes,
+  RGBA,
+  MouseEvent,
+  type Renderable,
+} from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
 import type {
   SessionMessageInfo,
@@ -120,7 +128,7 @@ import { INLINE_TOOL_ICON_WIDTH, InlineToolRow, ReasoningPart, TextPart, toolDis
 import { defaultVerbosity, type GroupKind, type SessionEntry } from "./grouping/session"
 import { SessionGroupView } from "./group-view"
 import { useEntryAnchor } from "./anchor-view"
-import { containsAnchor, createTimelineAnchors } from "./anchors"
+import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { summarizeActivity } from "./activity-summary"
 export { InlineToolRow } from "./message-parts"
@@ -381,6 +389,7 @@ export function Session(props: {
     firstJump()?.()
     if (!scroll || scroll.isDestroyed) return
     scroll.verticalScrollBar.off("change", updateAwayFromBottom)
+    scroll.content.off("resize", holdAnchor)
     saveScrollAnchor(true)
   })
   const [prompt, setPrompt] = createSignal<PromptRef>()
@@ -400,6 +409,16 @@ export function Session(props: {
         continuation()
       })
     })
+  }
+
+  // Keeps a toggled disclosure's header on its viewport row. The content resize fires inside the
+  // layout pass, before rows take their screen positions, so the correction lands in the same frame.
+  // Renderable positions are still stale at that point; read the computed layout instead.
+  let held: { node: Renderable; top: number } | undefined
+  const layoutTop = (node: Renderable): number =>
+    node === scroll.content || !node.parent ? 0 : node.getLayoutNode().getComputedTop() + layoutTop(node.parent)
+  const holdAnchor = () => {
+    if (held && !held.node.isDestroyed) scroll.scrollTo(layoutTop(held.node) - held.top)
   }
 
   // Tail-first transcript mounting: only the newest rows mount when the session opens. Older rows
@@ -1369,8 +1388,18 @@ export function Session(props: {
       value={{
         anchors,
         groupExpanded,
-        setGroupExpanded: (groupID, expanded) => {
-          sessionTabs.setGroupExpanded(sessionID, groupID, expanded)
+        setGroupExpanded: (id, expanded, anchor) => {
+          // A group that ends the transcript would open off screen while the reader follows the bottom.
+          const last = rows.findLast((row) => row.type !== "assistant-footer" && row.type !== "turn-usage")
+          const ending = last?.type === "group" && groupID(last, 0) === id
+          if (anchor && !(ending && !isAwayFromBottom())) {
+            const hold = { node: anchor, top: layoutTop(anchor) - scroll.scrollTop }
+            held = hold
+            afterLayout(() => {
+              if (held === hold) held = undefined
+            })
+          }
+          sessionTabs.setGroupExpanded(sessionID, id, expanded)
           afterLayout(saveScrollAnchor)
         },
         get width() {
@@ -1412,6 +1441,7 @@ export function Session(props: {
                   scroll = r
                   props.scrollRef?.(r)
                   scroll.verticalScrollBar.on("change", updateAwayFromBottom)
+                  scroll.content.on("resize", holdAnchor)
                 }}
                 viewportOptions={{
                   paddingRight: showScrollbar() ? 1 : 0,
@@ -1860,7 +1890,20 @@ function SessionMessageView(props: { message: SessionMessageInfo }) {
       <Match when={props.message.type === "compaction"}>
         <CompactionMessage message={props.message as Extract<SessionMessageInfo, { type: "compaction" }>} />
       </Match>
+      <Match when={props.message.type === "idle" ? props.message.error : undefined}>
+        {(error) => <ExecutionError error={error()} />}
+      </Match>
     </Switch>
+  )
+}
+
+function ExecutionError(props: { error: NonNullable<Extract<SessionMessageInfo, { type: "idle" }>["error"]> }) {
+  const { t } = useI18n()
+  const theme = useTheme()
+  return (
+    <box paddingLeft={3}>
+      <text fg={theme.text.feedback.error.base}>{t("session.error", { error: errorMessage(props.error) })}</text>
+    </box>
   )
 }
 
@@ -2362,9 +2405,11 @@ function UserMessage(props: { message: SessionMessageUser }) {
               ))
               return
             }
+            // The dialog outlives this row, whose props go stale when a resync drops the message.
+            const messageID = props.message.id
             dialog.replace(() => (
               <DialogMessage
-                messageID={props.message.id}
+                messageID={messageID}
                 sessionID={ctx.sessionID}
                 setPrompt={(value) => promptRef.current?.set(value)}
               />
@@ -2440,6 +2485,7 @@ function QueuedPromptDock(props: { prompts: { id: string; text: string }[]; onOp
 
   return (
     <box
+      marginBottom={1}
       border={["left"]}
       borderColor={theme.border.base}
       customBorderChars={SplitBorder.customBorderChars}
@@ -3193,6 +3239,12 @@ function Read(props: ToolProps) {
         part={props.part}
       >
         {t("session.read")} {pathFormatter.format(stringValue(props.input.path))}
+        <Show when={props.input.offset !== undefined || props.input.limit !== undefined}>
+          :{finiteNumber(props.input.offset) || 1}-
+          {props.input.limit
+            ? (finiteNumber(props.input.offset) || 1) + (finiteNumber(props.input.limit) || 0) - 1
+            : ""}
+        </Show>
       </InlineTool>
       <For each={loaded()}>
         {(filepath) => (
@@ -3393,7 +3445,11 @@ function Execute(props: ToolProps) {
   const hasRuntimeError = createMemo(() => props.metadata.error === true || props.part.state.status === "error")
   const outputPreview = createMemo(() => collapseToolOutput(output(), 4, 4 * Math.max(20, ctx.width - 6)).output)
   const showOutput = createMemo(() => output() && hasRuntimeError())
-  const openDetails = () => dialog.replace(() => <DialogExecute part={props.part} />)
+  const openDetails = () => {
+    // The dialog outlives this row, whose props go stale when a resync drops the message.
+    const part = props.part
+    dialog.replace(() => <DialogExecute part={part} />)
+  }
 
   return (
     <>

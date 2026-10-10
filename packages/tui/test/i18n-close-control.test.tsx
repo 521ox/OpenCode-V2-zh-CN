@@ -10,6 +10,8 @@ import { DataProvider } from "../src/context/data"
 import { Keymap } from "../src/context/keymap"
 import { LocationProvider } from "../src/context/location"
 import { RouteProvider } from "../src/context/route"
+import { TuiAppProvider } from "../src/context/runtime"
+import { StorageProvider } from "../src/context/storage"
 import { ThemeProvider } from "../src/context/theme"
 import { Composer } from "../src/routes/session/composer"
 import { DialogProvider, useDialog, type DialogContext } from "../src/ui/dialog"
@@ -58,27 +60,31 @@ async function mount(input: { locale: "en" | "zh"; width?: number; content?: (di
   const app = await testRender(
     () => (
       <TestTuiContexts directory={root} paths={{ home: root, state: root, worktree: root }}>
-        <ConfigProvider config={createTuiResolvedConfig({ locale: input.locale })}>
-          <I18nProvider>
-            <Keymap.Provider>
-              <ClientProvider api={createApi(calls.fetch)}>
-                <DataProvider directory={root}>
-                  <LocationProvider>
-                    <RouteProvider initialRoute={{ type: "session", sessionID: "parent" }}>
-                      <ThemeProvider mode={input.width === 40 ? "light" : "dark"} source={emptyThemeSource}>
-                        <ToastProvider>
-                          <DialogProvider>
-                            <Content />
-                          </DialogProvider>
-                        </ToastProvider>
-                      </ThemeProvider>
-                    </RouteProvider>
-                  </LocationProvider>
-                </DataProvider>
-              </ClientProvider>
-            </Keymap.Provider>
-          </I18nProvider>
-        </ConfigProvider>
+        <TuiAppProvider value={{ name: "test", version: "test", channel: "test" }}>
+          <StorageProvider>
+            <ConfigProvider config={createTuiResolvedConfig({ locale: input.locale })}>
+              <I18nProvider>
+                <Keymap.Provider>
+                  <ClientProvider api={createApi(calls.fetch)}>
+                    <DataProvider directory={root}>
+                      <LocationProvider>
+                        <RouteProvider initialRoute={{ type: "session", sessionID: "parent" }}>
+                          <ThemeProvider mode={input.width === 40 ? "light" : "dark"} source={emptyThemeSource}>
+                            <ToastProvider>
+                              <DialogProvider>
+                                <Content />
+                              </DialogProvider>
+                            </ToastProvider>
+                          </ThemeProvider>
+                        </RouteProvider>
+                      </LocationProvider>
+                    </DataProvider>
+                  </ClientProvider>
+                </Keymap.Provider>
+              </I18nProvider>
+            </ConfigProvider>
+          </StorageProvider>
+        </TuiAppProvider>
       </TestTuiContexts>
     ),
     { width: input.width ?? 100, height: 24, kittyKeyboard: true },

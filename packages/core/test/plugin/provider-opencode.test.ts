@@ -5,7 +5,7 @@ import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { Money } from "@opencode/schema/money"
 import { Effect, Layer, Stream } from "effect"
 import { TestClock } from "effect/testing"
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { Agent } from "@opencode/core/agent"
 import { App } from "@opencode/core/app"
 import { Config } from "@opencode/core/config"
@@ -41,6 +41,20 @@ const addPlugin = Effect.fn(function* () {
 const noRemoteConfig = HttpClient.make((request) =>
   Effect.succeed(HttpClientResponse.fromWeb(request, new Response(null, { status: 404 }))),
 )
+
+// Periodic Console checks run on TestClock, but a loopback request takes real time that `drain` does not wait for.
+// Calling the server's handler in-process keeps each check within `drain`.
+const inProcess = (server: { fetch: (request: Request) => Response | Promise<Response> }) =>
+  Effect.provideService(
+    HttpClient.HttpClient,
+    HttpClient.make((request) =>
+      HttpClientRequest.toWeb(request).pipe(
+        Effect.orDie,
+        Effect.flatMap((web) => Effect.promise(async () => server.fetch(web))),
+        Effect.map((response) => HttpClientResponse.fromWeb(request, response)),
+      ),
+    ),
+  )
 
 function consoleServer(orgID: string | null | undefined, unavailable = false) {
   const config: { authorization: string | null; orgID: string | null }[] = []
@@ -603,7 +617,7 @@ describe("OpencodePlugin", () => {
           yield* websearch.transform(() => {
             rebuilds.websearch++
           })
-          yield* addPlugin()
+          yield* addPlugin().pipe(inProcess(server))
           yield* drain
           const initial = { ...rebuilds }
           expect(state.requests).toBe(1)
@@ -724,6 +738,7 @@ describe("OpencodePlugin", () => {
                   }),
               }),
             ),
+            inProcess(server),
           )
           yield* drain
 
@@ -752,7 +767,7 @@ describe("OpencodePlugin", () => {
     ),
   )
 
-  it.effect("enforces organization policy statements from the Console", () =>
+  it.effect("ignores unsupported managed actions and keys while enforcing supported policies", () =>
     Effect.acquireUseRelease(
       Effect.sync(() =>
         Bun.serve({
@@ -762,12 +777,18 @@ describe("OpencodePlugin", () => {
               providers: { opencode: {} },
               experimental: {
                 policies: [
+                  { action: "future.use", resource: { names: ["anything"] }, effect: "future-effect", future: true },
                   { action: "provider.use", resource: "*", effect: "deny" },
                   { action: "provider.use", resource: "opencode", effect: "allow" },
-                  { action: "permission", resource: "shell:sudo *", effect: "deny", audience: "ignored" },
+                  { action: "tool.use", resource: "shell:*", effect: "deny" },
+                  { action: "tool.use", resource: "shell:git *", effect: "allow" },
+                  { action: "permission", resource: "*", effect: "deny" },
+                  { action: "tool.use", resource: "shell:sudo *", effect: "deny", audience: "ignored" },
+                  { action: "integration.use", resource: "mcp:restricted", effect: "deny" },
                 ],
-                unknown: true,
+                unknown: { future: true },
               },
+              future: { unknown: true },
             }),
         }),
       ),
@@ -794,14 +815,94 @@ describe("OpencodePlugin", () => {
             statements: [
               { action: "provider.use", resource: "*", effect: "deny" },
               { action: "provider.use", resource: "opencode", effect: "allow" },
-              { action: "permission", resource: "shell:sudo *", effect: "deny" },
+              { action: "tool.use", resource: "shell:*", effect: "deny" },
+              { action: "tool.use", resource: "shell:git *", effect: "allow" },
+              { action: "tool.use", resource: "shell:sudo *", effect: "deny" },
+              { action: "integration.use", resource: "mcp:restricted", effect: "deny" },
             ],
             organization: "Acme",
           })
+          const hooks = yield* PluginHooks.Service
+          const decision = yield* hooks.trigger("permission", "evaluate", {
+            sessionID: Session.ID.make("ses_tool_policy"),
+            action: "shell",
+            resources: ["sudo ls"],
+            effect: "allow",
+          })
+          expect(decision.effect).toBe("deny")
+          expect(decision.message).toBe("Blocked by Acme's policy")
+          expect(
+            (yield* hooks.trigger("permission", "evaluate", {
+              sessionID: Session.ID.make("ses_tool_policy"),
+              action: "shell",
+              resources: ["git status"],
+              effect: "ask",
+            })).effect,
+          ).toBe("ask")
           expect(yield* catalog.get(Provider.ID.anthropic)).toBeUndefined()
           expect(yield* catalog.get(Provider.ID.opencode)).toBeDefined()
         }),
       (server) => Effect.promise(() => server.stop(true)),
+    ),
+  )
+
+  it.effect("refreshes past future-only policies while retaining config on malformed supported statements", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const state: { policies: unknown[] } = {
+          policies: [{ action: "tool.use", resource: "shell:sudo *", effect: "deny" }],
+        }
+        const server = Bun.serve({
+          port: 0,
+          fetch: () => Response.json({ providers: { opencode: {} }, experimental: { policies: state.policies } }),
+        })
+        return { server, state }
+      }),
+      ({ server, state }) =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          const managed = yield* ManagedPolicy.Service
+          const providers = yield* Provider.Service
+          const sudo: ConfigPolicy.Info = { action: "tool.use", resource: "shell:sudo *", effect: "deny" }
+          const env: ConfigPolicy.Info = { action: "tool.use", resource: "edit:*.env", effect: "deny" }
+          yield* credentials.create({
+            integrationID: Integration.ID.make("opencode"),
+            value: Credential.Key.make({
+              type: "key",
+              key: "secret",
+              metadata: { server: server.url.origin, orgID: "org_acme", orgName: "Acme" },
+            }),
+          })
+          yield* addPlugin().pipe(inProcess(server))
+          yield* drain
+          expect(managed.current()).toEqual({ statements: [sudo], organization: "Acme" })
+
+          for (const malformed of [
+            { action: "tool.use", resource: "shell:*", effect: "future-effect" },
+            { action: "tool.use", resource: 42, effect: "deny" },
+            { action: "tool.use", effect: "deny" },
+            null,
+            {},
+          ]) {
+            state.policies = [env, malformed]
+            yield* TestClock.adjust("1 minute")
+            yield* drain
+            expect(managed.current()).toEqual({ statements: [sudo], organization: "Acme" })
+            expect(yield* providers.get(Provider.ID.opencode)).toBeDefined()
+          }
+
+          state.policies = [{ action: "future.use", future: { values: [true] } }]
+          yield* TestClock.adjust("1 minute")
+          yield* drain
+          expect(managed.current()).toEqual({ statements: [], organization: "Acme" })
+          expect(yield* providers.get(Provider.ID.opencode)).toBeDefined()
+
+          state.policies = [{ action: "future.use", effect: { next: true } }, env]
+          yield* TestClock.adjust("1 minute")
+          yield* drain
+          expect(managed.current()).toEqual({ statements: [env], organization: "Acme" })
+        }),
+      ({ server }) => Effect.promise(() => server.stop(true)),
     ),
   )
 
@@ -839,13 +940,13 @@ describe("OpencodePlugin", () => {
                 metadata: { server: server.url.origin, orgID, orgName },
               }),
             })
-          const sudo: ConfigPolicy.Info = { action: "permission", resource: "shell:sudo *", effect: "deny" }
-          const env: ConfigPolicy.Info = { action: "permission", resource: "edit:*.env", effect: "deny" }
+          const sudo: ConfigPolicy.Info = { action: "tool.use", resource: "shell:sudo *", effect: "deny" }
+          const env: ConfigPolicy.Info = { action: "tool.use", resource: "edit:*.env", effect: "deny" }
           yield* providers.transform(() => {
             rebuilds.count++
           })
           const alpha = yield* account("org_alpha", "Alpha")
-          yield* addPlugin()
+          yield* addPlugin().pipe(inProcess(server))
           yield* drain
           const initial = rebuilds.count
           expect(state.requests).toBe(1)
@@ -918,7 +1019,7 @@ describe("OpencodePlugin", () => {
               )
             return Response.json({
               providers: {},
-              experimental: { policies: [{ action: "permission", resource: "shell:sudo *", effect: "deny" }] },
+              experimental: { policies: [{ action: "tool.use", resource: "shell:sudo *", effect: "deny" }] },
             })
           },
         })
@@ -933,8 +1034,8 @@ describe("OpencodePlugin", () => {
             integrations
               .get(Integration.ID.make("opencode"))
               .pipe(Effect.map((integration) => integration?.connections[0]?.status))
-          const sudo: ConfigPolicy.Info = { action: "permission", resource: "shell:sudo *", effect: "deny" }
-          const env: ConfigPolicy.Info = { action: "permission", resource: "edit:*.env", effect: "deny" }
+          const sudo: ConfigPolicy.Info = { action: "tool.use", resource: "shell:sudo *", effect: "deny" }
+          const env: ConfigPolicy.Info = { action: "tool.use", resource: "edit:*.env", effect: "deny" }
           const account = yield* credentials.create({
             integrationID: Integration.ID.make("opencode"),
             value: Credential.Key.make({
@@ -943,7 +1044,7 @@ describe("OpencodePlugin", () => {
               metadata: { server: `${server.url.origin}/console`, orgID: "org_acme", orgName: "Acme" },
             }),
           })
-          yield* addPlugin()
+          yield* addPlugin().pipe(inProcess(server))
           yield* drain
           expect(yield* status()).toBeUndefined()
 
@@ -1047,7 +1148,7 @@ describe("OpencodePlugin", () => {
             state.body ??
             Response.json({
               providers: {},
-              experimental: { policies: [{ action: "permission", resource: "shell:sudo *", effect: "deny" }] },
+              experimental: { policies: [{ action: "tool.use", resource: "shell:sudo *", effect: "deny" }] },
             }),
         })
         return { server, state }
@@ -1057,12 +1158,12 @@ describe("OpencodePlugin", () => {
           const credentials = yield* Credential.Service
           const integrations = yield* Integration.Service
           const managed = yield* ManagedPolicy.Service
-          const sudo: ConfigPolicy.Info = { action: "permission", resource: "shell:sudo *", effect: "deny" }
+          const sudo: ConfigPolicy.Info = { action: "tool.use", resource: "shell:sudo *", effect: "deny" }
           yield* credentials.create({
             integrationID: Integration.ID.make("opencode"),
             value: Credential.Key.make({ type: "key", key: "secret", metadata: { server: server.url.origin } }),
           })
-          yield* addPlugin()
+          yield* addPlugin().pipe(inProcess(server))
           yield* drain
 
           for (const body of [
@@ -1078,6 +1179,30 @@ describe("OpencodePlugin", () => {
         }),
       ({ server }) => Effect.promise(() => server.stop(true)),
     ),
+  )
+
+  it.effect("releases unread Console config responses when the fetch completes", () =>
+    Effect.gen(function* () {
+      const credentials = yield* Credential.Service
+      const signals: AbortSignal[] = []
+      const state = { status: 404 }
+      const http = HttpClient.make((request, _url, signal) => {
+        signals.push(signal)
+        return Effect.succeed(HttpClientResponse.fromWeb(request, new Response("unavailable", state)))
+      })
+      yield* credentials.create({
+        integrationID: Integration.ID.make("opencode"),
+        value: Credential.Key.make({ type: "key", key: "secret", metadata: { server: "https://console.test" } }),
+      })
+      yield* addPlugin().pipe(Effect.provideService(HttpClient.HttpClient, http))
+      yield* drain
+      state.status = 503
+      yield* TestClock.adjust("1 minute")
+      yield* drain
+
+      // An unreleased response is only aborted when garbage collected, which fails outside a request on workerd.
+      expect(signals.map((signal) => signal.aborted)).toEqual([true, true])
+    }),
   )
 
   it.effect("reports a rejected Console refresh token as signed out without removing the credential", () =>
@@ -1155,7 +1280,7 @@ describe("OpencodePlugin", () => {
           })
           const status = () =>
             integrations.get(Integration.ID.make("opencode")).pipe(Effect.map((item) => item?.connections[0]?.status))
-          yield* addPlugin()
+          yield* addPlugin().pipe(inProcess(server))
           yield* drain
 
           expect(yield* status()).toEqual({ status: "needs_auth", message: "Reconnect OpenCode Console to continue" })

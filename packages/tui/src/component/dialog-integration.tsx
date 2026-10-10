@@ -1,4 +1,5 @@
-import { TextAttributes } from "@opentui/core"
+import { ScrollBoxRenderable, TextareaRenderable, TextAttributes } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/solid"
 import type {
   ConnectionInfo,
   IntegrationCommandConnectOutput,
@@ -12,7 +13,8 @@ import type {
   LocationRef,
 } from "@opencode/client"
 import { openUrl } from "@opencode/util/open"
-import { createEffect, createMemo, createSignal, onCleanup, onMount, Show, untrack } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, untrack } from "solid-js"
+import { createStore } from "solid-js/store"
 import { useClipboard } from "../context/clipboard"
 import { useData } from "../context/data"
 import { useClient } from "../context/client"
@@ -25,9 +27,17 @@ import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
 import { errorMessage } from "../util/error"
-import { formLabel, formToggleMultiselect, formValidateValue, type FormAnswerField } from "../util/form"
 import { useI18n } from "../context/i18n"
-import { type Key, type Translator } from "../i18n"
+import { translate, type Key, type Translator } from "../i18n"
+import {
+  formInitialValues,
+  formLabel,
+  formRows,
+  formSelected,
+  formToggleMultiselect,
+  formValidateValue,
+  type FormAnswerField,
+} from "../util/form"
 
 const INTEGRATION_PRIORITY: Record<string, number> = {
   "opencode-go": 0,
@@ -69,10 +79,16 @@ export function credentialConnections(integration: IntegrationInfo) {
   )
 }
 
-export function connectionSummary(integration: IntegrationInfo) {
-  return integration.connections
-    .map((connection) => (connection.type === "credential" ? connection.label : `$${connection.name}`))
-    .join(", ")
+// A count keeps several long labels from squeezing the integration name off the row.
+export function connectionSummary(
+  integration: IntegrationInfo,
+  t: Translator<Key> = (key, params) => translate("en", key, params),
+) {
+  const connections = integration.connections
+  if (connections.length > 1) return t("main.integration.connections", { count: connections.length })
+  const connection = connections[0]
+  if (!connection) return ""
+  return connection.type === "credential" ? connection.label : `$${connection.name}`
 }
 
 export function DialogIntegration(
@@ -114,7 +130,7 @@ export function DialogIntegration(
         title: integration.name,
         value: integration.id,
         description: methods.length === 0 ? t("main.integration.environment") : undefined,
-        footer: status ? t("main.integration.signInRequired") : connectionSummary(integration) || undefined,
+        footer: status ? t("main.integration.signInRequired") : connectionSummary(integration, t) || undefined,
         footerColor: status ? theme.text.feedback.warning.base : undefined,
         category,
         disabled: methods.length === 0 && credentials.length === 0,
@@ -308,7 +324,62 @@ function openMethod(
     ))
     return
   }
+  if (method.type === "external") {
+    void beginExternal(integration, method, location, dialog, t, onConnected)
+    return
+  }
   void beginOAuth(integration, method, location, dialog, t, onConnected)
+}
+
+async function beginExternal(
+  integration: IntegrationInfo,
+  method: Extract<ConnectMethod, { type: "external" }>,
+  location: LocationRef,
+  dialog: ReturnType<typeof useDialog>,
+  t: Translator<Key>,
+  onConnected?: OnIntegrationConnected,
+) {
+  const answer = method.form ? await formAnswer(dialog, method.label, method.form, t) : undefined
+  if (answer === null) return
+  dialog.replace(() => (
+    <ExternalStarting
+      integration={integration}
+      method={method}
+      location={location}
+      answer={answer}
+      onConnected={onConnected}
+    />
+  ))
+}
+
+function ExternalStarting(props: {
+  integration: IntegrationInfo
+  method: Extract<ConnectMethod, { type: "external" }>
+  location: LocationRef
+  answer?: FormAnswer
+  onConnected?: OnIntegrationConnected
+}) {
+  const { t } = useI18n()
+  const data = useData()
+  const dialog = useDialog()
+  const client = useClient()
+  const toast = useToast()
+
+  onMount(() => {
+    void client.api.integration.connect
+      .external({
+        integrationID: props.integration.id,
+        location: locationQuery(props.location),
+        methodID: props.method.id,
+        ...(props.answer ? { answer: props.answer } : {}),
+      })
+      .then(() => connected(props.integration, props.location, data, dialog, toast, t, props.onConnected))
+      .catch((cause) => {
+        toast.show({ variant: "error", message: errorMessage(cause) })
+        dialog.clear()
+      })
+  })
+  return <OAuthView title={props.method.label} message={t("main.integration.connecting")} />
 }
 
 async function beginKey(
@@ -842,6 +913,13 @@ async function selectAnswer(
   field: Extract<FormAnswerField, { type: "boolean" | "string" }>,
   t: Translator<Key>,
 ): Promise<FormValue | undefined | typeof CANCELLED> {
+  if (field.type === "string" && field.custom)
+    return new Promise((resolve) => {
+      dialog.replace(
+        () => <StringChoiceField field={field} onSubmit={resolve} />,
+        () => resolve(CANCELLED),
+      )
+    })
   const options = () =>
     field.type === "boolean"
       ? field.default === false
@@ -858,18 +936,12 @@ async function selectAnswer(
           value: option.value as FormValue,
           description: option.description,
         }))
-  const choice = await new Promise<FormValue | typeof CUSTOM | undefined | typeof CANCELLED>((resolve) => {
+  return new Promise<FormValue | undefined | typeof CANCELLED>((resolve) => {
     dialog.replace(
       () => (
-        <DialogSelect<FormValue | typeof CUSTOM | undefined>
+        <DialogSelect<FormValue | undefined>
           title={formLabel(field) || title}
-          options={[
-            ...options(),
-            ...(field.type === "string" && field.custom
-              ? [{ title: t("main.answer.custom"), value: CUSTOM as typeof CUSTOM }]
-              : []),
-            ...(!field.required ? [{ title: t("main.skip"), value: undefined }] : []),
-          ]}
+          options={[...options(), ...(!field.required ? [{ title: t("main.skip"), value: undefined }] : [])]}
           current={field.type === "string" ? field.default : undefined}
           onSelect={(option) => resolve(option.value)}
         />
@@ -877,11 +949,162 @@ async function selectAnswer(
       () => resolve(CANCELLED),
     )
   })
-  if (choice === CUSTOM) {
-    if (field.type !== "string") return CANCELLED
-    return textAnswer(dialog, title, field, t, "")
+}
+
+function StringChoiceField(props: {
+  field: Extract<FormAnswerField, { type: "string" }>
+  onSubmit: (value: string | undefined) => void
+}) {
+  const { t } = useI18n()
+  const dialog = useDialog()
+  const theme = useTheme().surface("dialog")
+  const dimensions = useTerminalDimensions()
+  const rows = formRows(props.field)
+  const count = rows.length + (props.field.required ? 1 : 2)
+  const [store, setStore] = createStore({
+    selected: formSelected(props.field, props.field.default),
+    editing: false,
+    text: formInitialValues([props.field]).custom[props.field.key] ?? "",
+    error: "",
+  })
+  const [textarea, setTextarea] = createSignal<TextareaRenderable>()
+  let scroll: ScrollBoxRenderable | undefined
+  createEffect(() => {
+    const row = scroll?.getChildren()[store.selected]
+    if (row) scroll?.scrollChildIntoView(row.id)
+  })
+  const fg = (index: number) => (store.selected === index ? theme.text.formfield.focused : theme.text.formfield.base)
+  const submit = (value: string | undefined) => {
+    const invalid = formValidateValue(props.field, value, t)
+    if (invalid) return setStore("error", invalid)
+    props.onSubmit(value)
   }
-  return choice
+  const select = (index: number) => {
+    setStore({ selected: index, error: "" })
+    if (index === rows.length) return setStore("editing", true)
+    submit(index < rows.length ? String(rows[index].value) : undefined)
+  }
+  const back = () => setStore({ editing: false, text: textarea()?.plainText ?? store.text, error: "" })
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    enabled: !store.editing,
+    commands: [
+      {
+        id: "dialog.select.prev",
+        title: t("session.previousAnswer"),
+        group: t("session.form"),
+        run: () => setStore("selected", (store.selected + count - 1) % count),
+      },
+      {
+        id: "dialog.select.next",
+        title: t("session.nextAnswer"),
+        group: t("session.form"),
+        run: () => setStore("selected", (store.selected + 1) % count),
+      },
+      {
+        id: "dialog.select.submit",
+        title: t("session.selectAnswer"),
+        group: t("session.form"),
+        run: () => select(store.selected),
+      },
+    ],
+  }))
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    priority: 1,
+    target: textarea,
+    enabled: store.editing,
+    commands: [
+      {
+        id: "dialog.prompt.submit",
+        title: t("main.answer.submit"),
+        group: t("session.form"),
+        run: () => submit(textarea()?.plainText.trim() || undefined),
+      },
+      { bind: "escape", title: t("main.answer.back"), group: t("session.form"), run: back },
+    ],
+  }))
+  return (
+    <box paddingLeft={4} paddingRight={4} paddingBottom={1} gap={1}>
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
+          {formLabel(props.field)}
+        </text>
+        <text fg={theme.text.muted} onMouseUp={() => (store.editing ? back() : dialog.clear())}>
+          {" × "}
+        </text>
+      </box>
+      <Show when={props.field.description}>{(description) => <text fg={theme.text.muted}>{description()}</text>}</Show>
+      <scrollbox
+        gap={1}
+        height={Math.min(
+          count + rows.filter((row) => row.description).length,
+          Math.max(3, Math.floor(dimensions().height / 2) - 6),
+        )}
+        scrollbarOptions={{ visible: false }}
+        ref={(value: ScrollBoxRenderable) => {
+          scroll = value
+        }}
+      >
+        <For each={rows}>
+          {(row, index) => (
+            <box onMouseUp={() => select(index())}>
+              <text fg={fg(index())}>
+                {index() + 1}. {row.label}
+              </text>
+              <Show when={row.description}>
+                {(description) => (
+                  <box paddingLeft={3}>
+                    <text fg={theme.text.muted}>{description()}</text>
+                  </box>
+                )}
+              </Show>
+            </box>
+          )}
+        </For>
+        <box flexDirection="row" gap={1} onMouseUp={() => select(rows.length)}>
+          <text fg={fg(rows.length)}>{rows.length + 1}.</text>
+          <Show
+            when={store.editing}
+            fallback={<text fg={fg(rows.length)}>{store.text || t("main.answer.custom")}</text>}
+          >
+            <textarea
+              height={1}
+              flexGrow={1}
+              wrapMode="none"
+              initialValue={store.text}
+              placeholder={props.field.placeholder ?? t("main.answer.custom")}
+              placeholderColor={theme.text.muted}
+              textColor={theme.text.formfield.focused}
+              focusedTextColor={theme.text.formfield.focused}
+              cursorColor={theme.text.formfield.focused}
+              ref={(value: TextareaRenderable) => {
+                setTextarea(value)
+                value.traits = { status: "ANSWER" }
+                queueMicrotask(() => {
+                  if (value.isDestroyed) return
+                  value.focus()
+                  value.gotoLineEnd()
+                })
+              }}
+              onContentChange={() => {
+                const text = textarea()?.plainText ?? ""
+                setStore("text", text)
+                if (store.error && !formValidateValue(props.field, text.trim() || undefined, t)) setStore("error", "")
+              }}
+            />
+          </Show>
+        </box>
+        <Show when={!props.field.required}>
+          <text fg={fg(rows.length + 1)} onMouseUp={() => select(rows.length + 1)}>
+            {rows.length + 2}. {t("main.skip")}
+          </text>
+        </Show>
+      </scrollbox>
+      <Show when={store.error}>{(error) => <text fg={theme.text.feedback.error.base}>{error()}</text>}</Show>
+      <text fg={theme.text.muted}>{t(store.editing ? "main.answer.editHint" : "main.answer.selectHint")}</text>
+    </box>
+  )
 }
 
 function textAnswer(
@@ -889,7 +1112,6 @@ function textAnswer(
   title: string,
   field: Extract<FormAnswerField, { type: "string" | "number" | "integer" }>,
   t: Translator<Key>,
-  initial = field.default === undefined ? undefined : String(field.default),
 ): Promise<FormValue | undefined | typeof CANCELLED> {
   return new Promise<FormValue | undefined | typeof CANCELLED>((resolve) => {
     dialog.replace(
@@ -900,7 +1122,7 @@ function textAnswer(
           <DialogPrompt
             title={formLabel(field) || title}
             placeholder={field.type === "string" ? field.placeholder : undefined}
-            value={initial}
+            value={field.default === undefined ? undefined : String(field.default)}
             onConfirm={(input) => {
               const text = input.trim()
               const value = text === "" && !field.required ? undefined : field.type === "string" ? text : Number(text)

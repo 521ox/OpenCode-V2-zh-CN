@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { InputRenderable, TextareaRenderable } from "@opentui/core"
-import type { FormFields, LocationRef } from "@opencode/client"
+import type { FormFields, IntegrationInfo, LocationRef } from "@opencode/client"
 import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
@@ -13,7 +13,7 @@ import { Keymap } from "../../../src/context/keymap"
 import { LocationProvider, useLocation } from "../../../src/context/location"
 import { ThemeProvider } from "../../../src/context/theme"
 import { DialogProvider, useDialog } from "../../../src/ui/dialog"
-import { ToastProvider } from "../../../src/ui/toast"
+import { Toast, ToastProvider } from "../../../src/ui/toast"
 import { emptyThemeSource } from "../../fixture/fixture"
 import { createApi, createEventStream, createFetch, json } from "../../fixture/tui-client"
 import { TestTuiContexts } from "../../fixture/tui-environment"
@@ -248,6 +248,95 @@ test("uses the active location for integration data without scoping credential r
   }
 })
 
+test.each(["en", "zh"] as const)(
+  "custom integration answers preserve drafts and submit values in %s",
+  async (locale) => {
+    const fixture = await renderIntegration(
+      undefined,
+      [
+        {
+          type: "string",
+          key: "region",
+          title: "Provider region",
+          required: true,
+          custom: true,
+          options: [{ label: "Provider default", value: "default" }],
+        },
+      ],
+      { locale },
+    )
+
+    try {
+      fixture.app.mockInput.pressEnter()
+      const custom = locale === "en" ? "Type your own answer" : "输入自己的答案"
+      await fixture.app.waitForFrame((frame) => frame.includes(custom))
+      expect(fixture.app.captureCharFrame()).toContain(locale === "en" ? "enter confirm" : "enter 确认")
+      expect(fixture.app.captureCharFrame()).toContain("Provider region")
+      fixture.app.mockInput.pressArrow("down")
+      fixture.app.mockInput.pressEnter()
+      await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof TextareaRenderable)
+      await fixture.app.mockInput.typeText("private-region")
+      fixture.app.mockInput.pressEscape()
+      await fixture.app.waitForFrame(
+        (frame) => frame.includes("private-region") && frame.includes(locale === "en" ? "enter confirm" : "enter 确认"),
+      )
+      expect(fixture.requests).toEqual([])
+      fixture.app.mockInput.pressEnter()
+      await fixture.app.waitFor(() => fixture.app.renderer.currentFocusedEditor instanceof TextareaRenderable)
+      const textarea = fixture.app.renderer.currentFocusedEditor
+      if (!(textarea instanceof TextareaRenderable)) throw new Error("expected custom answer editor")
+      expect(textarea.plainText).toBe("private-region")
+      fixture.app.mockInput.pressEnter()
+      await fixture.app.waitForFrame((frame) => frame.includes("API key") && !frame.includes("Provider region"))
+      await fixture.app.mockInput.typeText("test-key")
+      fixture.app.mockInput.pressEnter()
+      await fixture.app.waitFor(() => fixture.requests.length === 1)
+      expect(fixture.requests).toEqual([
+        {
+          method: "POST",
+          path: "/api/integration/openai/connect/key",
+          body: { key: "test-key", answer: { region: "private-region" } },
+        },
+      ])
+    } finally {
+      fixture.app.renderer.destroy()
+    }
+  },
+)
+
+test.each(["en", "zh"] as const)(
+  "external integration submits defaults and reports completion in %s",
+  async (locale) => {
+    const fixture = await renderIntegration(undefined, undefined, {
+      locale,
+      methods: [
+        {
+          type: "external",
+          id: "external-signin",
+          label: "Provider sign-in",
+          form: [{ type: "string", key: "region", hidden: true, default: "private-region" }],
+        },
+      ],
+    })
+    try {
+      fixture.app.mockInput.pressEnter()
+      await fixture.app.waitFor(() => fixture.requests.length === 1)
+      expect(fixture.requests).toEqual([
+        {
+          method: "POST",
+          path: "/api/integration/openai/connect/external",
+          body: { methodID: "external-signin", answer: { region: "private-region" } },
+        },
+      ])
+      await fixture.app.waitForFrame((frame) => frame.includes(locale === "en" ? "Connected OpenAI" : "已连接 OpenAI"))
+      expect(fixture.reads.model).toBeGreaterThan(0)
+      expect(fixture.reads.provider).toBeGreaterThan(0)
+    } finally {
+      fixture.app.renderer.destroy()
+    }
+  },
+)
+
 test.each(["en", "zh"] as const)("reauthentication keeps account chrome localized in %s", async (locale) => {
   const fixture = await renderIntegration(undefined, undefined, { locale, needsAuth: true })
 
@@ -268,7 +357,7 @@ test.each(["en", "zh"] as const)("reauthentication keeps account chrome localize
 async function renderIntegration(
   activeLocation?: LocationRef,
   form?: FormFields,
-  options: { locale?: "en" | "zh"; needsAuth?: boolean } = {},
+  options: { locale?: "en" | "zh"; needsAuth?: boolean; methods?: IntegrationInfo["methods"] } = {},
 ) {
   const events = createEventStream()
   const requests: Array<{ method: string; path: string; body?: unknown }> = []
@@ -299,7 +388,7 @@ async function renderIntegration(
           {
             id: "openai",
             name: "OpenAI",
-            methods: [{ type: "key", label: "API key", form }],
+            methods: options.methods ?? [{ type: "key", label: "API key", form }],
             connections: [
               ...accounts.map((account) => ({
                 ...account,
@@ -314,7 +403,10 @@ async function renderIntegration(
       })
     }
 
-    if (request.method === "POST" && url.pathname === "/api/integration/openai/connect/key") {
+    if (
+      request.method === "POST" &&
+      ["/api/integration/openai/connect/key", "/api/integration/openai/connect/external"].includes(url.pathname)
+    ) {
       requests.push({ method: request.method, path: url.pathname, body: await request.json() })
       return new Response(null, { status: 204 })
     }
@@ -400,6 +492,7 @@ async function renderIntegration(
                         <DialogProvider>
                           <Probe />
                         </DialogProvider>
+                        <Toast />
                       </ThemeProvider>
                     </LocationProvider>
                   </DataProvider>

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { IntegrationInfo } from "@opencode/client"
+import { translate } from "../../../../src/i18n"
 import {
   connectionSummary,
   connectMethods,
@@ -76,7 +77,22 @@ describe("credentialConnections", () => {
 })
 
 describe("connectionSummary", () => {
-  test("shows credential labels and environment variables", () => {
+  test("localizes counts while retaining provider labels and environment names", () => {
+    const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) =>
+      translate("zh", key, params)
+    const value = integration({
+      id: "example",
+      name: "Example",
+      connections: [
+        { type: "credential", method: "key", id: "cred_1", label: "Work" },
+        { type: "env", name: "EXAMPLE_KEY" },
+      ],
+    })
+    expect(connectionSummary(value, t)).toBe("2 个连接")
+    expect(connectionSummary({ ...value, connections: value.connections.slice(0, 1) }, t)).toBe("Work")
+    expect(connectionSummary({ ...value, connections: value.connections.slice(1) }, t)).toBe("$EXAMPLE_KEY")
+  })
+  test("counts several connections", () => {
     expect(
       connectionSummary(
         integration({
@@ -88,6 +104,6 @@ describe("connectionSummary", () => {
           ],
         }),
       ),
-    ).toBe("Work, $EXAMPLE_KEY")
+    ).toBe("2 connections")
   })
 })

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Context, Option } from "effect"
-import { CliError, CliOutput, type HelpDoc } from "effect/unstable/cli"
+import { CliError, CliOutput, type HelpDoc } from "effect/cli"
 import { cliFormatter } from "../src/framework/i18n"
 
 const doc: HelpDoc.HelpDoc = {

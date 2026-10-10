@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import { Context, Deferred, Effect, Fiber, Layer, Schema } from "effect"
 import { Document, Event, Info } from "@opencode/schema/config"
+import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { OpenAI } from "@opencode/ai/providers"
 import { ToolDefinition } from "@opencode/ai"
 import { Agent } from "@opencode/core/agent"
@@ -10,7 +11,7 @@ import { ConfigPolicyPlugin } from "@opencode/core/config/plugin/policy"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { OpencodePlugin } from "@opencode/core/plugin/provider/opencode"
-import { HttpClient, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientResponse } from "effect/http"
 import { Database } from "@opencode/core/database/database"
 import { Location } from "@opencode/core/location"
 import { ManagedPolicy } from "@opencode/core/managed-policy"
@@ -25,10 +26,10 @@ import { HostedWebSearch } from "@opencode/core/session/hosted-web-search"
 import { WebSearch } from "@opencode/core/websearch"
 import { testEffect } from "./lib/effect"
 import { drain } from "./lib/clock"
-import { PluginTestLayer, pluginTestLayer } from "./plugin/fixture"
+import { PluginTestLayer, makePluginTestLayer } from "./plugin/fixture"
 
 const it = testEffect(PluginTestLayer)
-const document = (policies: { action: "permission" | "provider.use"; resource: string; effect: "allow" | "deny" }[]) =>
+const document = (policies: ConfigPolicy.Info[]) =>
   new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({ experimental: { policies } }) })
 const setup = Effect.gen(function* () {
   const plugin = yield* Plugin.Service
@@ -82,7 +83,7 @@ for (const lateStatus of [503, 200, 404]) {
         const open = Effect.fn(function* (status: number, pending: boolean) {
           const context = yield* Layer.build(
             Layer.fresh(
-              pluginTestLayer([
+              makePluginTestLayer(undefined, [
                 ManagedPolicy.node.replace(Layer.succeed(ManagedPolicy.Service, managed)),
                 Credential.node.replace(Layer.succeed(Credential.Service, credentials)),
               ]),
@@ -104,7 +105,7 @@ for (const lateStatus of [503, 200, 404]) {
                         providers: {},
                         experimental: {
                           policies: [
-                            { action: "permission", resource: "websearch:*", effect: pending ? "allow" : "deny" },
+                            { action: "tool.use", resource: "websearch:*", effect: pending ? "allow" : "deny" },
                           ],
                         },
                       })
@@ -128,7 +129,7 @@ for (const lateStatus of [503, 200, 404]) {
         const b = yield* open(nextStatus === "disconnect" ? 200 : nextStatus, false)
         const expected = managed.current()
         expect(expected.statements).toEqual(
-          nextStatus === 200 ? [{ action: "permission", resource: "websearch:*", effect: "deny" }] : [],
+          nextStatus === 200 ? [{ action: "tool.use", resource: "websearch:*", effect: "deny" }] : [],
         )
         yield* Deferred.succeed(release, undefined)
         const a = yield* Fiber.join(pending)
@@ -167,7 +168,7 @@ for (const initialFailure of [true, false]) {
         const response = { status, deny: true }
         const context = yield* Layer.build(
           Layer.fresh(
-            pluginTestLayer([
+            makePluginTestLayer(undefined, [
               ManagedPolicy.node.replace(Layer.succeed(ManagedPolicy.Service, managed)),
               Credential.node.replace(Layer.succeed(Credential.Service, credentials)),
             ]),
@@ -181,9 +182,7 @@ for (const initialFailure of [true, false]) {
                 ? Response.json({
                     providers: {},
                     experimental: {
-                      policies: response.deny
-                        ? [{ action: "permission", resource: "websearch:*", effect: "deny" }]
-                        : [],
+                      policies: response.deny ? [{ action: "tool.use", resource: "websearch:*", effect: "deny" }] : [],
                     },
                   })
                 : new Response(null, { status: response.status }),
@@ -213,7 +212,7 @@ for (const initialFailure of [true, false]) {
       const check = (denied: boolean) =>
         Effect.gen(function* () {
           expect(managed.current().statements).toEqual(
-            denied ? [{ action: "permission", resource: "websearch:*", effect: "deny" }] : [],
+            denied ? [{ action: "tool.use", resource: "websearch:*", effect: "deny" }] : [],
           )
           for (const location of [a, b]) {
             expect(yield* location.permission.preauthorizeHostedSearch(location.input)).toBe(denied ? "ask" : "allow")
@@ -247,7 +246,7 @@ for (const initialFailure of [true, false]) {
 for (const policies of [
   [],
   [{ action: "provider.use" as const, resource: "other", effect: "deny" as const }],
-  [{ action: "permission" as const, resource: "read:secret*", effect: "deny" as const }],
+  [{ action: "tool.use" as const, resource: "read:secret*", effect: "deny" as const }],
 ]) {
   it.effect(`real config policy allows hosted search with unrelated policies: ${JSON.stringify(policies)}`, () =>
     Effect.gen(function* () {
@@ -283,7 +282,7 @@ for (const resource of ["*", "websearch:*", "websearch:private*", "*private:*"])
         .pipe(Effect.flip)
       expect(error).toBeInstanceOf(Permission.BlockedError)
       expect(yield* permission.list()).toEqual([])
-    }).pipe(Effect.provide(Config.testLayer([document([{ action: "permission", resource, effect: "deny" }])]))),
+    }).pipe(Effect.provide(Config.testLayer([document([{ action: "tool.use", resource, effect: "deny" }])]))),
   )
 }
 
@@ -294,7 +293,7 @@ it.live("real config policy reload changes blanket authorization without replaci
     const bus = yield* Bus.Service
     expect((yield* select).hosted?.name).toBe("web_search")
     for (const effect of ["deny", "allow"] as const) {
-      yield* config.setEntries([document([{ action: "permission", resource: "websearch:*", effect }])])
+      yield* config.setEntries([document([{ action: "tool.use", resource: "websearch:*", effect }])])
       yield* bus.publish(Event.Updated, {})
       const expected = effect === "deny" ? "ask" : "allow"
       for (let attempt = 0; attempt < 200; attempt++) {
@@ -322,8 +321,8 @@ it.effect("ordered blanket allow can supersede a deny, but global deny overrides
     Effect.provide(
       Config.testLayer([
         document([
-          { action: "permission", resource: "websearch:private*", effect: "deny" },
-          { action: "permission", resource: "websearch:*", effect: "allow" },
+          { action: "tool.use", resource: "websearch:private*", effect: "deny" },
+          { action: "tool.use", resource: "websearch:*", effect: "allow" },
         ]),
       ]),
     ),
@@ -338,8 +337,8 @@ it.effect("user-global query deny cannot be superseded by repository blanket all
   }).pipe(
     Effect.provide(
       Config.testLayer([
-        document([{ action: "permission", resource: "websearch:private*", effect: "deny" }]),
-        document([{ action: "permission", resource: "websearch:*", effect: "allow" }]),
+        document([{ action: "tool.use", resource: "websearch:private*", effect: "deny" }]),
+        document([{ action: "tool.use", resource: "websearch:*", effect: "allow" }]),
       ]),
     ),
   ),
@@ -356,7 +355,7 @@ for (const resource of ["*", "websearch:*", "websearch:private*", "*private:*"])
       expect((yield* select).hosted?.name).toBe("web_search")
       yield* managed.set({
         organization: "Acme",
-        statements: [{ action: "permission", resource, effect: "deny" }],
+        statements: [{ action: "tool.use", resource, effect: "deny" }],
       })
       expect(yield* permission.preauthorizeHostedSearch(input)).toBe("ask")
       const selected = yield* select
@@ -371,9 +370,7 @@ for (const resource of ["*", "websearch:*", "websearch:private*", "*private:*"])
       yield* managed.set({ statements: [] })
       expect((yield* select).hosted?.name).toBe("web_search")
     }).pipe(
-      Effect.provide(
-        Config.testLayer([document([{ action: "permission", resource: "websearch:*", effect: "allow" }])]),
-      ),
+      Effect.provide(Config.testLayer([document([{ action: "tool.use", resource: "websearch:*", effect: "allow" }])])),
     ),
   )
 }
@@ -383,10 +380,10 @@ it.effect("organization exceptions lift only proven blanket restrictions and ret
     const { input, permission, select } = yield* setup
     const managed = yield* ManagedPolicy.Service
     expect(yield* permission.preauthorizeHostedSearch(input)).toBe("ask")
-    yield* managed.set({ statements: [{ action: "permission", resource: "websearch:public*", effect: "allow" }] })
+    yield* managed.set({ statements: [{ action: "tool.use", resource: "websearch:public*", effect: "allow" }] })
     yield* permission.assert({ ...input, action: "websearch", resources: ["public query"] })
     expect((yield* select).hosted).toBeUndefined()
-    yield* managed.set({ statements: [{ action: "permission", resource: "websearch:*", effect: "allow" }] })
+    yield* managed.set({ statements: [{ action: "tool.use", resource: "websearch:*", effect: "allow" }] })
     expect((yield* select).hosted?.name).toBe("web_search")
     const hooks = yield* PluginHooks.Service
     const registration = yield* hooks.register("permission", "evaluate", (event) =>
@@ -404,7 +401,7 @@ it.effect("organization exceptions lift only proven blanket restrictions and ret
     yield* managed.set({ statements: [] })
     expect((yield* select).hosted).toBeUndefined()
   }).pipe(
-    Effect.provide(Config.testLayer([document([{ action: "permission", resource: "websearch:*", effect: "deny" }])])),
+    Effect.provide(Config.testLayer([document([{ action: "tool.use", resource: "websearch:*", effect: "deny" }])])),
   ),
 )
 
@@ -414,7 +411,7 @@ for (const owner of ["agent", "session"] as const) {
       Effect.gen(function* () {
         const { input, permission, select } = yield* setup
         const managed = yield* ManagedPolicy.Service
-        yield* managed.set({ statements: [{ action: "permission", resource: "websearch:*", effect: "allow" }] })
+        yield* managed.set({ statements: [{ action: "tool.use", resource: "websearch:*", effect: "allow" }] })
         const saved = yield* PermissionSaved.Service
         const location = yield* Location.Service
         yield* saved.add({ projectID: location.project.id, action: "websearch", resources: ["*"] })
@@ -437,9 +434,7 @@ for (const owner of ["agent", "session"] as const) {
         expect(selected.tools.size).toBe(0)
         expect(yield* permission.list()).toEqual([])
       }).pipe(
-        Effect.provide(
-          Config.testLayer([document([{ action: "permission", resource: "websearch:*", effect: "deny" }])]),
-        ),
+        Effect.provide(Config.testLayer([document([{ action: "tool.use", resource: "websearch:*", effect: "deny" }])])),
       ),
     )
   }

@@ -9,6 +9,8 @@ import { DataProvider, useData } from "../src/context/data"
 import { Keymap } from "../src/context/keymap"
 import { LocationProvider } from "../src/context/location"
 import { RouteProvider, useRoute } from "../src/context/route"
+import { TuiAppProvider } from "../src/context/runtime"
+import { StorageProvider } from "../src/context/storage"
 import { ThemeProvider } from "../src/context/theme"
 import { Composer } from "../src/routes/session/composer"
 import { DialogProvider } from "../src/ui/dialog"
@@ -16,10 +18,12 @@ import { ToastProvider } from "../src/ui/toast"
 import { createApi, createEventStream, createFetch, directory, json } from "./fixture/tui-client"
 import { TestTuiContexts } from "./fixture/tui-environment"
 import { createTuiResolvedConfig } from "./fixture/tui-runtime"
+import { tmpdir } from "./fixture/fixture"
 
 test.each(["en", "zh"] as const)(
   "subagent panel displays the canonical ID and keeps its target in %s",
   async (locale) => {
+    await using state = await tmpdir()
     const parentID = "ses_parent_0123456789abcdef"
     const childID = "ses_child_0123456789abcdefghijklmnopqrstuvwxyz"
     const parent = {
@@ -61,28 +65,32 @@ test.each(["en", "zh"] as const)(
     }
     const app = await testRender(
       () => (
-        <TestTuiContexts directory={directory}>
-          <ConfigProvider config={createTuiResolvedConfig({ locale })}>
-            <I18nProvider>
-              <Keymap.Provider>
-                <ClientProvider api={createApi(calls.fetch)}>
-                  <DataProvider directory={directory}>
-                    <LocationProvider>
-                      <RouteProvider initialRoute={{ type: "session", sessionID: parentID }}>
-                        <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
-                          <ToastProvider>
-                            <DialogProvider>
-                              <Content />
-                            </DialogProvider>
-                          </ToastProvider>
-                        </ThemeProvider>
-                      </RouteProvider>
-                    </LocationProvider>
-                  </DataProvider>
-                </ClientProvider>
-              </Keymap.Provider>
-            </I18nProvider>
-          </ConfigProvider>
+        <TestTuiContexts directory={directory} paths={{ state: state.path }}>
+          <TuiAppProvider value={{ name: "test", version: "test", channel: "test" }}>
+            <StorageProvider>
+              <ConfigProvider config={createTuiResolvedConfig({ locale })}>
+                <I18nProvider>
+                  <Keymap.Provider>
+                    <ClientProvider api={createApi(calls.fetch)}>
+                      <DataProvider directory={directory}>
+                        <LocationProvider>
+                          <RouteProvider initialRoute={{ type: "session", sessionID: parentID }}>
+                            <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>
+                              <ToastProvider>
+                                <DialogProvider>
+                                  <Content />
+                                </DialogProvider>
+                              </ToastProvider>
+                            </ThemeProvider>
+                          </RouteProvider>
+                        </LocationProvider>
+                      </DataProvider>
+                    </ClientProvider>
+                  </Keymap.Provider>
+                </I18nProvider>
+              </ConfigProvider>
+            </StorageProvider>
+          </TuiAppProvider>
         </TestTuiContexts>
       ),
       { width: 140, height: 20, kittyKeyboard: true },

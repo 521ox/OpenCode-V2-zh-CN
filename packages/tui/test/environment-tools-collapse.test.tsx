@@ -354,6 +354,7 @@ test("finished execution labels remain neutral for nonzero exits and tool errors
   await f.ready()
   const frame = f.setup.captureCharFrame()
   expect(frame).toContain("Executions finished — 2 calls")
+  expect(frame.split("\n").find((line) => line.includes("Executions finished — 2 calls"))).toContain("✗")
   expect(frame).toContain("nonzero")
   expect(frame).toContain("Synthetic execution failed")
   expect(frame).not.toContain("success")

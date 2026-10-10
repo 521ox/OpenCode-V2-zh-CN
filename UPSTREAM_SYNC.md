@@ -1,5 +1,47 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## October 11 synchronization in progress
+
+Authorized local synchronization: custom `e2e166b1905603b750f5c0bbfa808fdf6d73bca3`
+plus frozen official `4617210822bdbb31e5749751afbfb4584ccedac8` (2.0.26),
+from previous upstream `8380c864bf36d6860f8047ae94077c7d70e3af41`.
+The exact comparison contains 235 commits and 2,254 changed paths. Recovery tag:
+`custom-lite-pre-sync-20261011`. This task does not authorize automatic activation
+or remote publication. Candidate: `2.0.26-custom-lite.20261011.1`, latest channel,
+Windows x64 bytecode and embedded WebUI. Bun remains 1.4.2; Effect adopts 4.0.1
+and OpenTUI adopts 0.5.17 from the frozen target.
+
+Native search keeps strict adapter capability and tool-choice handling while
+reusing canonical lowering instead of duplicate schema probes. Core retains
+cross-Location active-connection serialization alongside official policy-change
+notifications and tool.use policy semantics. Scoped tests exercise full subagent
+results after the specified Location eviction; this is not universal lifecycle
+coverage. Existing permissions, protected rules and cleanup instructions remain.
+
+TUI execution groups retain their custom failure mark; other groups adopt official
+icons. A one-line projection correction retains error-bearing idle messages for
+the existing ExecutionError component while keeping ordinary idle markers hidden
+and usage flushing unchanged. Actual en/zh App tests and usage tests cover this
+integration repair; it is not represented as already fixed in the official target.
+
+Canonical migration generation/check passed without new migrations or changes to
+the 50 historical migration bodies. The custom session-start-directory migration
+and new official Azure external-credential migration are both registered. Protocol
+and Client generation/check passed, with repeated output stable and matching the
+frozen official target. Fourteen scoped package typechecks passed. AI runtime:
+611 passes; CLI: 231 passes and nine platform skips; final TUI: 249 passes.
+Peripheral tests: 1,457 passes and one skip. Core counts and retained initial
+failures are recorded in the delivery verification evidence, without summing
+overlapping reruns. Canonical lint exited 0 with warnings; it is not zero-warning.
+
+An isolation exception is explicitly retained: an inherited GUI test invoked the
+installed default WSL distro using a login shell to assign a variable and printf.
+Its direct child exited 0, but startup-script effects and Linux descendants are
+unknown. No further distro probe or shutdown was performed; no assertion of fully
+private fixtures is made for that batch. Future checks exclude this discovery path.
+Browser/Electron E2E and live-provider behavior remain unverified. Compiled old
+default-database compatibility, runtime smoke and independent review are pending.
+
 ## October 4 accepted local synchronization
 
 Final independent review by `ses_ef9526c4efferTl32LLp0TFP9t` returned

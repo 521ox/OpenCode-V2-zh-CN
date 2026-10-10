@@ -378,7 +378,7 @@ export function reduceSessionRows(
     if (message.type !== "assistant") {
       if (message.type === "idle") {
         flushTurn(rows)
-        return rows
+        if (!message.error) return rows
       }
       if (message.type === "synthetic" && !message.description?.trim()) return rows
       if (message.type === "compaction" && message.status === "completed" && usage) usage.previousTurnCache = undefined

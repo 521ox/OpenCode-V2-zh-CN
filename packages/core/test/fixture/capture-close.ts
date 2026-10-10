@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { EventEmitter } from "node:events"
 import { PassThrough } from "node:stream"
 import { Cause, Effect, Exit, PlatformError, Stream } from "effect"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 
 const mode = process.argv[2]
 const combined = process.argv[3] === "true"

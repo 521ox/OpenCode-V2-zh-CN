@@ -46,6 +46,7 @@ async function main() {
     assertIdentity(
       info,
       processes.map((child) => child.pid),
+      process.env.RELEASE_VERSION,
     )
     if (new URL(info.url).port !== String(port)) throw new Error("Registered service did not bind the selected port")
     const credential = btoa(`opencode:${info.password}`)
@@ -56,12 +57,7 @@ async function main() {
     console.log(
       `Ready identity: pidMatches=${serverInfo.pid === info.pid}, versionMatches=${serverInfo.version === info.version}, expectedVersionMatches=${process.env.RELEASE_VERSION === undefined || serverInfo.version === process.env.RELEASE_VERSION}`,
     )
-    assertIdentity(
-      info,
-      processes.map((child) => child.pid),
-      serverInfo,
-      process.env.RELEASE_VERSION,
-    )
+    assertServerIdentity(info, serverInfo)
     stage = "query-authenticated GET /api/info"
     const tokenInfo = await fetch(new URL(`/api/info?auth_token=${token}`, info.url), {
       signal: AbortSignal.timeout(5_000),
@@ -76,12 +72,7 @@ async function main() {
     console.log(
       `Query identity: pidMatches=${queryInfo.pid === info.pid}, versionMatches=${queryInfo.version === info.version}`,
     )
-    assertIdentity(
-      info,
-      processes.map((child) => child.pid),
-      queryInfo,
-      process.env.RELEASE_VERSION,
-    )
+    assertServerIdentity(info, queryInfo)
     stage = "query-authenticated GET /openapi.json"
     const tokenOpenApi = await fetch(new URL(`/openapi.json?auth_token=${token}`, info.url), {
       signal: AbortSignal.timeout(5_000),
@@ -89,28 +80,8 @@ async function main() {
     console.log(`${stage}: expected 200, actual ${tokenOpenApi.status}`)
     if (tokenOpenApi.status !== 200) throw new Error("Compiled application rejected query authentication")
     if (!(await tokenOpenApi.json()).openapi) throw new Error("Invalid OpenAPI document")
-    stage = "embedded WebUI HTML"
-    const html = await fetch(new URL("/", info.url), { headers, signal: AbortSignal.timeout(5_000) })
-    console.log(`${stage}: expected 200, actual ${html.status}`)
-    if (html.status !== 200 || !html.headers.get("content-type")?.includes("text/html"))
-      throw new Error("Missing embedded WebUI HTML")
-    const body = await html.text()
-    const tags = body.match(/<script\b[^>]*>/gi) ?? []
-    const module = tags
-      .find((tag) => /\btype\s*=\s*["']module["']/i.test(tag))
-      ?.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]
-    if (!body.trim() || !module) throw new Error("Missing embedded WebUI module reference")
-    const url = new URL(module, info.url)
-    if (url.origin !== new URL(info.url).origin) throw new Error("WebUI module is not embedded")
-    stage = "embedded WebUI module"
-    const asset = await fetch(url, { headers, signal: AbortSignal.timeout(5_000) })
-    console.log(`${stage}: expected 200, actual ${asset.status}`)
-    if (
-      asset.status !== 200 ||
-      !/(javascript|ecmascript)/i.test(asset.headers.get("content-type") ?? "") ||
-      !(await asset.text()).trim()
-    )
-      throw new Error("Missing embedded WebUI module")
+    stage = "anonymous embedded WebUI HTML and module"
+    await verifyWebUi(info.url)
     stage = "dynamic plugin discovery"
     if ((await pluginIDs(info.url, headers)).includes("smoke")) throw new Error("Smoke plugin existed before creation")
     const plugin = path.join(root, ".opencode", "plugins", "smoke.ts")
@@ -498,7 +469,7 @@ export function smokeEnv(root: string, inherited: NodeJS.ProcessEnv): NodeJS.Pro
   }
 }
 
-export function assertIdentity(info: typeof Service.Info.Type, pids: number[], server?: ServerInfo, expected?: string) {
+export function assertIdentity(info: typeof Service.Info.Type, pids: number[], expected?: string) {
   if (
     !info.id ||
     !info.password ||
@@ -518,10 +489,34 @@ export function assertIdentity(info: typeof Service.Info.Type, pids: number[], s
     url.password
   )
     throw new Error("Registration is not an owned loopback endpoint")
-  if (server && (server.pid !== info.pid || server.version !== info.version))
-    throw new Error("Server info does not match registration")
-  if (expected !== undefined && (info.version !== expected || (server && server.version !== expected)))
+  if (expected !== undefined && info.version !== expected)
     throw new Error("Compiled release version does not match RELEASE_VERSION")
+}
+
+export function assertServerIdentity(info: typeof Service.Info.Type, server: ServerInfo) {
+  if (server.pid !== info.pid || server.version !== info.version)
+    throw new Error("Server info does not match registration")
+}
+
+export async function verifyWebUi(base: string) {
+  const html = await fetch(new URL("/", base), { signal: AbortSignal.timeout(5_000) })
+  if (html.status !== 200 || !html.headers.get("content-type")?.includes("text/html"))
+    throw new Error("Missing embedded WebUI HTML")
+  const body = await html.text()
+  const tags = body.match(/<script\b[^>]*>/gi) ?? []
+  const module = tags
+    .find((tag) => /\btype\s*=\s*["']module["']/i.test(tag))
+    ?.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]
+  if (!module) throw new Error("Missing embedded WebUI module reference")
+  const url = new URL(module, base)
+  if (url.origin !== new URL(base).origin) throw new Error("WebUI module is not embedded")
+  const asset = await fetch(url, { signal: AbortSignal.timeout(5_000) })
+  if (
+    asset.status !== 200 ||
+    !/(javascript|ecmascript)/i.test(asset.headers.get("content-type") ?? "") ||
+    !(await asset.text()).trim()
+  )
+    throw new Error("Missing embedded WebUI module")
 }
 
 export async function cleanExit(

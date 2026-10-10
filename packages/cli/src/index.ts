@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { ensurePluginRuntime } from "@opencode/plugin/runtime"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
 import { getErrorReported } from "effect/Runtime"
@@ -17,6 +18,8 @@ import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "./heap"
 import { CpuProfile } from "./cpu-profile"
 import { translate } from "@opencode/tui/i18n"
+
+ensurePluginRuntime()
 
 if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   const { askpass } = await import("./ssh-askpass")
