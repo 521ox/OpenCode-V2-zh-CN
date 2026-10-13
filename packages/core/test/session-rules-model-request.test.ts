@@ -104,7 +104,7 @@ it.effect("combines parent cache affinity, hosted search and protected root rule
     ])
     for (const kind of ["compaction", "generate", "title"] as const) {
       const auxiliary = yield* requests[kind](input)
-      expect(JSON.stringify(auxiliary.request.system)).not.toContain("Session rules context data")
+      expect(JSON.stringify(auxiliary.request.system)).not.toContain("Session working-memory context")
       expect(auxiliary.request.tools.map((tool) => tool.name)).not.toContain("web_search")
     }
   }).pipe(Effect.provideService(SessionModelTransport.Service, transport)),

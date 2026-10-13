@@ -34,6 +34,16 @@ Repeated unchanged loads retain the existing instruction read/diff/render behavi
 
 ### Protected Session rules location
 
+The injected guidance treats this location as compact session working memory,
+not a general document directory or chronological log. Live conversation takes
+priority; agents read relevant memory only when continuation facts are missing
+or uncertain, and write only information that needs to survive continuation.
+One compact current-state note is preferred. Shared writers coordinate ownership,
+preserve unrelated active work, and verify stale facts before consequential action.
+Memory grants no additional permissions or project requirements. This changes
+prompt guidance only: the `rules_directory` field, path and resolution remain
+compatible, and existing memory files are not automatically changed or deleted.
+
 Normal Agent requests receive a protected system context naming
 `<root-session-start-directory>/.opencode/rules/<root-session-id>`. Descendants
 share the root location through persisted parent lineage. Session movement does

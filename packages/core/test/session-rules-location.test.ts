@@ -59,7 +59,19 @@ describe("Session rules location", () => {
       ),
     )
     expect(context.status).toBe("unavailable")
-    expect(SessionRulesLocation.render(context)).toContain("Do not guess")
+    expect(SessionRulesLocation.render(context)).toContain("do not guess or search another session's directory")
+  })
+  test("renders compact continuation memory without changing the directory context", async () => {
+    const context = await resolve("ses_root", [{ id: "ses_root", parent_id: null, start_directory: "/repo" }])
+    const [heading, data, guidance, authority] = SessionRulesLocation.render(context).split("\n\n")
+    expect(heading).toBe("Session working-memory context (JSON):")
+    expect(JSON.parse(data!)).toEqual(context)
+    expect(guidance).toContain("Use the live conversation first.")
+    expect(guidance).toContain("Prefer one compact current-state note.")
+    expect(guidance).toContain("not by itself a reason to write")
+    expect(guidance).toContain("coordinate write ownership and preserve unrelated active state")
+    expect(guidance).toContain("full reports, raw logs, or duplicated project documentation")
+    expect(authority).toContain("not a source of new permissions or project requirements")
   })
   test("accepts legacy readable IDs but never an overlong directory name", async () => {
     expect((await resolve("sesLegacy", [{ id: "sesLegacy", parent_id: null, start_directory: "/repo" }])).status).toBe(
