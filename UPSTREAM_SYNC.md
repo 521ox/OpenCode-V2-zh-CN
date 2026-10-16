@@ -1,5 +1,35 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## October 16 accepted candidate
+
+Independent review `ses_ebd1f85d3ffedgpAk4yUUzZ18T` returned
+`APPROVE WITH DEFERRED RISKS` for source
+`917f5f463a2b09bb9d27e4eabeed26c1031af777` and Windows x64 candidate
+`2.0.30-custom-lite.20261016.1`, latest channel, Bun `1.4.2+744846f84`,
+bytecode and complete embedded WebUI. Length: 215,525,376 bytes; SHA256:
+`af7a7ac03f7283e16abcda57d10e3231bcb367a6c1ed28b8be6a914935d09930`.
+Source repair/re-review usage is 0/1. Earlier review records remain unchanged.
+
+Final compiled run `run-3b05640231d145848afb6b7775848df8` passed NativeArch,
+version, UTF-8 Chinese help, embedded runtime and supervised service checks.
+The accepted 2.0.26 executable created and cold-read a populated private default
+database; the candidate then read the same file, preserving original project,
+session and message fields, raw payloads and order, including start_directory.
+The new nullable project.time_archived column was verified. Database/channel/XDG/
+config-root selectors were absent and ProgramData was private. All recorded test
+processes exited and private profiles were removed. Service winner stop exit was
+1 under the existing termination contract, not a graceful-zero-exit claim.
+
+Deferred risks: OCT11-P2-1 hybrid Effect output-schema registration compatibility;
+existing partial --session help localization; Unix/macOS system-root isolation;
+the excluded Desktop auto-download batch and initial TUI environment unknowns;
+lint/listener diagnostics and platform non-coverage. Completed synthetic history
+does not establish unfinished-state, real-user migration/rollback, live-provider
+or browser/Electron acceptance. The first compiled run's overwritten raw probe
+output remains incomplete evidence, superseded by a complete fresh second run.
+Formal promotion/export facts are recorded separately in executable sidecars.
+No activation or remote publication follows from this local acceptance.
+
 ### October 16 source verification update
 
 Before compilation, fourteen scoped canonical package typechecks passed. Core's
