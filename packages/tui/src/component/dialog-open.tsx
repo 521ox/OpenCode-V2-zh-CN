@@ -2,7 +2,7 @@ import { batch, createEffect, createMemo, createResource, createSignal, onCleanu
 import type { OpenCodeEvent, SessionInfo } from "@opencode/client"
 import path from "path"
 import { useTerminalDimensions } from "@opentui/solid"
-import { dialogWidth, useDialog } from "../ui/dialog"
+import { DIALOG_LIST_INSET, dialogWidth, useDialog } from "../ui/dialog"
 import { DialogSelect, dialogSelectContentWidth, type DialogSelectRef } from "../ui/dialog-select"
 import { DialogPrompt } from "../ui/dialog-prompt"
 import { useRoute } from "../context/route"
@@ -240,7 +240,9 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
       .list()
       .filter((project) => project.canonical !== "/")
       // Historical project identities can share a checkout. The list is newest-active first.
-      .filter((project, index, projects) => projects.findIndex((item) => item.canonical === project.canonical) === index)
+      .filter(
+        (project, index, projects) => projects.findIndex((item) => item.canonical === project.canonical) === index,
+      )
       .map((project) => ({ directory: project.canonical, project }))
       .map((item) => {
         const title =
@@ -264,8 +266,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
           } as OpenTarget,
           category: t("main.projects"),
           gutter:
-            item.directory === current.directory ||
-            item.directory === location.current?.project.canonical
+            item.directory === current.directory || item.directory === location.current?.project.canonical
               ? () => <text fg={theme.text.formfield.selected}>●</text>
               : undefined,
         }
@@ -356,7 +357,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
             onFilter={setFilter}
             emptyView={
               <Show when={!recent.loading && !projects.loading}>
-                <box paddingLeft={4} paddingRight={4}>
+                <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
                   <text fg={theme.text.muted}>{t("main.open.empty")}</text>
                 </box>
               </Show>
@@ -425,7 +426,7 @@ export function DialogOpen(props: { sessions: SessionInfo[]; onLoad: (sessions: 
             ]}
             footerHints={[...(projectID() ? [{ title: t("main.worktree.new"), label: "ctrl+n" }] : [])]}
             noMatchView={
-              <box paddingLeft={4} paddingRight={4}>
+              <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
                 <text fg={theme.text.muted}>
                   {projectID()
                     ? worktrees.loading

@@ -1,12 +1,21 @@
-import { TextareaRenderable, TextAttributes } from "@opentui/core"
+import { TextareaRenderable } from "@opentui/core"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
-import { useDialog, type DialogSize } from "./dialog"
+import { DialogFooter, DialogHeader, DialogLayout, useDialog, type DialogSize } from "./dialog"
 import { Show, createEffect, createSignal, onMount, type JSX } from "solid-js"
 import { Spinner } from "../component/spinner"
 import { useConfig } from "../config"
 import { useRenderer } from "@opentui/solid"
 import { useI18n } from "../context/i18n"
+
+export type DialogPromptAction = {
+  title: string
+  /** Keymap command id, bound while the prompt input is focused and shown in the footer. */
+  command: string
+  /** Keymap command title, e.g. for help listings. Defaults to `title`. */
+  commandTitle?: string
+  onTrigger: (prompt: { setValue: (value: string) => void }) => void
+}
 
 export type DialogPromptProps = {
   title: string
@@ -16,6 +25,7 @@ export type DialogPromptProps = {
   value?: string
   busy?: boolean
   busyText?: string
+  actions?: DialogPromptAction[]
   onConfirm?: (value: string) => void
   onCancel?: () => void
 }
@@ -25,7 +35,6 @@ export function DialogPrompt(props: DialogPromptProps) {
   const dialog = useDialog()
   const renderer = useRenderer()
   const theme = useTheme().surface("dialog")
-  const shortcuts = Keymap.useShortcuts()
   const config = useConfig().data
   const [textareaTarget, setTextareaTarget] = createSignal<TextareaRenderable>()
   let textarea: TextareaRenderable
@@ -33,6 +42,13 @@ export function DialogPrompt(props: DialogPromptProps) {
   function confirm() {
     if (props.busy) return
     props.onConfirm?.(textarea.plainText)
+  }
+
+  const handle = {
+    setValue(value: string) {
+      textarea.setText(value)
+      textarea.gotoLineEnd()
+    },
   }
 
   Keymap.createLayer(() => ({
@@ -48,6 +64,12 @@ export function DialogPrompt(props: DialogPromptProps) {
         group: t("main.group.dialog"),
         run: confirm,
       },
+      ...(props.actions ?? []).map((action) => ({
+        id: action.command,
+        title: action.commandTitle ?? action.title,
+        group: t("main.group.dialog"),
+        run: () => action.onTrigger(handle),
+      })),
     ],
   }))
 
@@ -98,20 +120,30 @@ export function DialogPrompt(props: DialogPromptProps) {
   })
 
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          {props.title}
-        </text>
-        <text
-          fg={theme.text.muted}
-          onMouseUp={() => {
+    <DialogLayout
+      header={
+        <DialogHeader
+          title={props.title}
+          onClose={() => {
             if (!props.busy) (props.onCancel ?? dialog.clear)()
           }}
-        >
-          {" × "}
-        </text>
-      </box>
+        />
+      }
+      footer={
+        <Show when={!props.busy} fallback={<text fg={theme.text.muted}>{t("main.processing")}</text>}>
+          <DialogFooter
+            actions={[
+              { title: t("main.submit"), command: "dialog.prompt.submit", onTrigger: confirm },
+              ...(props.actions ?? []).map((action) => ({
+                title: action.title,
+                command: action.command,
+                onTrigger: () => action.onTrigger(handle),
+              })),
+            ]}
+          />
+        </Show>
+      }
+    >
       <box gap={1}>
         {props.description?.()}
         <textarea
@@ -133,15 +165,6 @@ export function DialogPrompt(props: DialogPromptProps) {
           <Spinner color={theme.text.muted}>{props.busyText ?? t("main.working")}</Spinner>
         </Show>
       </box>
-      <box paddingBottom={1} gap={1} flexDirection="row">
-        <Show when={!props.busy} fallback={<text fg={theme.text.muted}>{t("main.processing")}</text>}>
-          <Show when={shortcuts.get("dialog.prompt.submit")}>
-            <text fg={theme.text.base}>
-              {shortcuts.get("dialog.prompt.submit")} <span style={{ fg: theme.text.muted }}>{t("main.submit")}</span>
-            </text>
-          </Show>
-        </Show>
-      </box>
-    </box>
+    </DialogLayout>
   )
 }

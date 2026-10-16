@@ -81,7 +81,7 @@ test.each(["en", "zh"] as const)("btw responsive dialog controls (%s)", async (l
       expect(frame).toContain("/btw")
       expect(frame).toContain("Answer line 1")
       expect(frame).toContain("×")
-      expect(frame).toContain(locale === "en" ? "j/k ↑/↓ scroll" : "j/k ↑/↓ 滚动")
+      expect(frame).toContain(locale === "en" ? "scroll j/k ↑/↓" : "滚动 j/k ↑/↓")
       const scroll = scrollbox(app.renderer.root)
       expect(scroll).toBeDefined()
       expect(scroll!.height).toBe(Math.max(8, Math.floor(height * 0.6)))

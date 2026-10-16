@@ -767,7 +767,7 @@ describe("OpencodePlugin", () => {
     ),
   )
 
-  it.effect("ignores unsupported managed actions and keys while enforcing supported policies", () =>
+  it.effect("merges legacy and top-level managed policies while ignoring unsupported actions, effects, and keys", () =>
     Effect.acquireUseRelease(
       Effect.sync(() =>
         Bun.serve({
@@ -779,15 +779,16 @@ describe("OpencodePlugin", () => {
                 policies: [
                   { action: "future.use", resource: { names: ["anything"] }, effect: "future-effect", future: true },
                   { action: "provider.use", resource: "*", effect: "deny" },
-                  { action: "provider.use", resource: "opencode", effect: "allow" },
                   { action: "tool.use", resource: "shell:*", effect: "deny" },
                   { action: "tool.use", resource: "shell:git *", effect: "allow" },
+                  { action: "tool.use", resource: "shell:git status", effect: "future-effect" },
                   { action: "permission", resource: "*", effect: "deny" },
                   { action: "tool.use", resource: "shell:sudo *", effect: "deny", audience: "ignored" },
                   { action: "integration.use", resource: "mcp:restricted", effect: "deny" },
                 ],
                 unknown: { future: true },
               },
+              policies: [{ action: "provider.use", resource: "opencode", effect: "allow" }],
               future: { unknown: true },
             }),
         }),
@@ -814,11 +815,11 @@ describe("OpencodePlugin", () => {
           expect(managed.current()).toEqual({
             statements: [
               { action: "provider.use", resource: "*", effect: "deny" },
-              { action: "provider.use", resource: "opencode", effect: "allow" },
               { action: "tool.use", resource: "shell:*", effect: "deny" },
               { action: "tool.use", resource: "shell:git *", effect: "allow" },
               { action: "tool.use", resource: "shell:sudo *", effect: "deny" },
               { action: "integration.use", resource: "mcp:restricted", effect: "deny" },
+              { action: "provider.use", resource: "opencode", effect: "allow" },
             ],
             organization: "Acme",
           })
@@ -846,7 +847,7 @@ describe("OpencodePlugin", () => {
     ),
   )
 
-  it.effect("refreshes past future-only policies while retaining config on malformed supported statements", () =>
+  it.effect("refreshes past future-only policies while retaining config on malformed statements", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => {
         const state: { policies: unknown[] } = {
@@ -854,7 +855,7 @@ describe("OpencodePlugin", () => {
         }
         const server = Bun.serve({
           port: 0,
-          fetch: () => Response.json({ providers: { opencode: {} }, experimental: { policies: state.policies } }),
+          fetch: () => Response.json({ providers: { opencode: {} }, policies: state.policies }),
         })
         return { server, state }
       }),
@@ -878,7 +879,6 @@ describe("OpencodePlugin", () => {
           expect(managed.current()).toEqual({ statements: [sudo], organization: "Acme" })
 
           for (const malformed of [
-            { action: "tool.use", resource: "shell:*", effect: "future-effect" },
             { action: "tool.use", resource: 42, effect: "deny" },
             { action: "tool.use", effect: "deny" },
             null,
@@ -890,6 +890,11 @@ describe("OpencodePlugin", () => {
             expect(managed.current()).toEqual({ statements: [sudo], organization: "Acme" })
             expect(yield* providers.get(Provider.ID.opencode)).toBeDefined()
           }
+
+          state.policies = [env, { action: "tool.use", resource: "shell:*", effect: "future-effect" }]
+          yield* TestClock.adjust("1 minute")
+          yield* drain
+          expect(managed.current()).toEqual({ statements: [env], organization: "Acme" })
 
           state.policies = [{ action: "future.use", future: { values: [true] } }]
           yield* TestClock.adjust("1 minute")
@@ -920,7 +925,7 @@ describe("OpencodePlugin", () => {
             state.requests++
             if (state.status !== 200) return new Response("Unavailable", { status: state.status })
             const policies = state.policies[request.headers.get("x-org-id") ?? ""]
-            return Response.json({ providers: {}, ...(policies ? { experimental: { policies } } : {}) })
+            return Response.json({ providers: {}, ...(policies ? { policies } : {}) })
           },
         })
         return { server, state }

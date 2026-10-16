@@ -76,6 +76,11 @@ export function modelSelection(input?: string, variant?: string) {
   }
 }
 
+// V1 had a single MCP timeout, so a bare number bounds every phase.
+export function migrateMcpTimeout(timeout: number) {
+  return { startup: timeout, catalog: timeout, execution: timeout }
+}
+
 export function migrateMcp(info: ConfigMCPV1.Info) {
   const disabled = info.enabled === undefined ? undefined : !info.enabled
   if (info.type === "local")
@@ -85,7 +90,7 @@ export function migrateMcp(info: ConfigMCPV1.Info) {
       cwd: info.cwd,
       environment: info.environment,
       disabled,
-      timeout: info.timeout === undefined ? undefined : { catalog: info.timeout, execution: info.timeout },
+      timeout: info.timeout === undefined ? undefined : migrateMcpTimeout(info.timeout),
     }
   return {
     type: info.type,
@@ -99,7 +104,7 @@ export function migrateMcp(info: ConfigMCPV1.Info) {
       redirect_uri: info.oauth.redirectUri,
     },
     disabled,
-    timeout: info.timeout === undefined ? undefined : { catalog: info.timeout, execution: info.timeout },
+    timeout: info.timeout === undefined ? undefined : migrateMcpTimeout(info.timeout),
   }
 }
 
@@ -110,17 +115,20 @@ export function migrateProvider(sourceID: string, info: ConfigProviderV1.Info) {
 }
 
 function migrateStandardProvider(info: ConfigProviderV1.Info) {
-  const options = ConfigProviderOptionsV1.provider(info.options ?? {})
+  // V1 `setCacheKey` toggled `prompt_cache_key` for the whole provider; it is not a provider package setting.
+  const { setCacheKey, ...rest } = info.options ?? {}
+  const options = ConfigProviderOptionsV1.provider(rest)
   return {
     name: info.name,
     env: info.env,
-    package: info.npm ? Provider.aisdk(info.npm) : undefined,
+    package: info.npm ? packageSpecifier(info.npm) : undefined,
+    compatibility: setCacheKey === undefined ? undefined : { supportsPromptCacheKey: setCacheKey },
     settings: info.api ? { ...options.settings, baseURL: info.api } : info.options ? options.settings : undefined,
     headers: info.options && options.headers,
     body: info.options && options.body,
     models:
       info.models &&
-      Object.fromEntries(Object.entries(info.models).map(([name, model]) => [name, migrateModel(model)])),
+      Object.fromEntries(Object.entries(info.models).map(([name, model]) => [name, migrateModel(model, info.npm)])),
   }
 }
 
@@ -159,6 +167,12 @@ function migrateGoogleVertexAnthropicProvider(info: ConfigProviderV1.Info) {
   }
 }
 
+// Built-in provider routes are already native package specifiers; only npm packages load through the AI SDK.
+function packageSpecifier(npm: string) {
+  const name = Provider.packageName(npm)
+  return name.startsWith("@opencode/ai/") ? name : Provider.aisdk(npm)
+}
+
 // Renames retired provider IDs in V1 fields and the shared top-level model.
 export function providerID(input: string) {
   if (input === "azure-cognitive-services") return "azure"
@@ -166,7 +180,7 @@ export function providerID(input: string) {
   return input
 }
 
-function migrateModel(info: typeof ConfigProviderV1.Model.Type) {
+function migrateModel(info: typeof ConfigProviderV1.Model.Type, npm: string | undefined) {
   const disableThinkingBlockBinding =
     info.options?.thinking?.blockBinding === false || info.options?.reasoningConfig?.blockBinding === false
   const options = info.options && { ...info.options }
@@ -185,7 +199,13 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type) {
     }
   }
 
-  const settings = options && ConfigProviderOptionsV1.model(options)
+  const compatible = (info.provider?.npm ?? npm) === "@ai-sdk/openai-compatible"
+  const split = (input: Record<string, unknown>) =>
+    compatible
+      ? ConfigProviderOptionsV1.compatibleModel(input)
+      : { settings: ConfigProviderOptionsV1.model(input), body: undefined }
+  const migrated = options && split(options)
+  const settings = migrated?.settings
   const compatibility = Model.compatibility(info.interleaved)
   const costs = info.cost && [
     {
@@ -220,16 +240,14 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type) {
     compatibility: disableThinkingBlockBinding
       ? { ...compatibility, supportsThinkingBlockBinding: false }
       : compatibility,
-    package: info.provider?.npm ? Provider.aisdk(info.provider.npm) : undefined,
+    package: info.provider?.npm ? packageSpecifier(info.provider.npm) : undefined,
     settings: info.provider?.api ? { ...settings, baseURL: info.provider.api } : settings,
     capabilities,
     headers: info.headers,
+    body: migrated?.body,
     variants:
       info.variants &&
-      Object.entries(info.variants).map(([id, options]) => ({
-        id,
-        settings: ConfigProviderOptionsV1.model(options),
-      })),
+      Object.entries(info.variants).map(([id, options]) => ({ id, ...split(options) })),
     cost: costs,
     disabled: info.status === "deprecated" ? true : undefined,
     limit: info.limit && {

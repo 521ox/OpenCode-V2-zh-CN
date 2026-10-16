@@ -31,10 +31,11 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         yield* db.run(sql`UPDATE session_v2 SET start_directory = '/persisted-root' WHERE id = 'ses_root'`)
       }
 
-      expect(migrations.slice(-3).map((entry) => entry.id)).toEqual([
+      expect(migrations.slice(-4).map((entry) => entry.id)).toEqual([
         "20260919120000_session_start_directory",
         "20260923013825_project_time_active",
         "20261007190000_azure_cli_external_credential",
+        "20261010180456_project_time_archived",
       ])
       yield* DatabaseMigration.apply(db)
       expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })
@@ -68,7 +69,12 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         session_id: "ses_root",
         data: '{"text":"completed history"}',
       })
-      expect(yield* db.get(sql`SELECT * FROM project`)).toEqual({ id: "project", time_updated: 456, time_active: 789 })
+      expect(yield* db.get(sql`SELECT * FROM project`)).toEqual({
+        id: "project",
+        time_updated: 456,
+        time_active: 789,
+        time_archived: null,
+      })
       expect(yield* db.all(sql`SELECT id FROM migration ORDER BY id`)).toEqual(
         migrations.map((entry) => ({ id: entry.id })),
       )

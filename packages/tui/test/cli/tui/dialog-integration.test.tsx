@@ -270,7 +270,7 @@ test.each(["en", "zh"] as const)(
       fixture.app.mockInput.pressEnter()
       const custom = locale === "en" ? "Type your own answer" : "输入自己的答案"
       await fixture.app.waitForFrame((frame) => frame.includes(custom))
-      expect(fixture.app.captureCharFrame()).toContain(locale === "en" ? "enter confirm" : "enter 确认")
+      expect(fixture.app.captureCharFrame()).toContain(locale === "en" ? "Confirm enter" : "确认 enter")
       expect(fixture.app.captureCharFrame()).toContain("Provider region")
       fixture.app.mockInput.pressArrow("down")
       fixture.app.mockInput.pressEnter()
@@ -278,7 +278,7 @@ test.each(["en", "zh"] as const)(
       await fixture.app.mockInput.typeText("private-region")
       fixture.app.mockInput.pressEscape()
       await fixture.app.waitForFrame(
-        (frame) => frame.includes("private-region") && frame.includes(locale === "en" ? "enter confirm" : "enter 确认"),
+        (frame) => frame.includes("private-region") && frame.includes(locale === "en" ? "Confirm enter" : "确认 enter"),
       )
       expect(fixture.requests).toEqual([])
       fixture.app.mockInput.pressEnter()

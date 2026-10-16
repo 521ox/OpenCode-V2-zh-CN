@@ -1,5 +1,79 @@
 # Maintaining the Minimal Custom V2 Branch
 
+### October 16 source verification update
+
+Before compilation, fourteen scoped canonical package typechecks passed. Core's
+missing permission-fixture method and CLI isolation-test type mismatches were
+corrected without changing their production interfaces or weakening assertions.
+Canonical root lint exited 0 with 1,312 warnings and no errors, plus the recorded
+unused-suppression diagnostic. The focused TUI suite passed 461 cases in a fresh
+clear-env profile with private ProgramData; its earlier environment assumptions
+remain unproven rather than retroactively certified. Core has 403 distinct passing
+focused cases; CLI/Client have 158 passes and one platform skip, with overlapping
+repair reruns recorded separately. Canonical migration, Protocol and Client checks
+passed; all 51 migration bodies remain unchanged and output regeneration is stable.
+
+Peripheral execution produced 2,174 compliant passes, with nine explicit filters.
+An additional Desktop batch's 44 runner passes are excluded from no-install
+acceptance: importing Electron triggered its automatic binary download. The
+identified task-created dist/path.txt were removed after checking process exit;
+lock and existing top-level package files were unchanged. Full dependency-tree
+byte equality was not established. No repeat Desktop execution is implied.
+This incident is not concealed by the otherwise successful test output. Browser,
+Electron runtime, cross-platform system-root isolation and publication remain
+outside the local Windows acceptance claim. Compiled compatibility and independent
+review are still pending for the exact candidate.
+
+## October 16 frozen synchronization — in progress
+
+Custom starting point: `c292e252d1e85b003972ebd7e7b8b68e6e30987a`.
+Previous official: `4617210822bdbb31e5749751afbfb4584ccedac8` (2.0.26).
+The frozen official target is `eeec76bb620f9bee8cab89c5a3a88e315539645b`
+on **`dev`**, source version 2.0.30 with Bun 1.4.2. Official V2 development is
+now followed on `dev`, not the historical `v2` branch. The exact official range
+contains 1,593 commits, including merged history rather than 1,593 new features;
+the net tree comparison contains 1,597 changed paths.
+
+Integration worktree: `D:\opencode-local-build\opencode-v2-custom-sync-20261016`.
+The maintained delivery worktree remains
+`D:\opencode-local-build\opencode-v2-custom-lite`. Planned candidate:
+`2.0.30-custom-lite.20261016.1`, `latest` channel, Windows x64 bytecode with the
+complete embedded WebUI. This record does not establish a successful build,
+compiled-runtime acceptance, final integrated review or local delivery. Existing
+accepted sources, artifacts and review/repair budgets below remain historical
+facts, not checks rerun for this candidate. Activation and remote publication
+remain separate actions.
+
+Retained integration requirements include Chinese/English chrome, native catalog
+and direct execution with their existing permission boundaries, complete trusted
+child results and navigation, permission-gated native hosted search, legacy-media
+reading, task-owned cleanup guidance, and the bounded existing-owner repairs.
+The October 13 Session-rules guidance remains compact continuation working memory,
+not a general document store or chronological log. Conversation-first selective
+reads, current-state writes and shared-writer coordination do not change the
+`rules_directory` field, root creation-directory lineage or rules path.
+OCT11-P2-1 remains deferred; it is not represented as fixed by this target.
+
+Canonical Core migration generation/check, Protocol generation/check and Client
+generation/check passed. Repeated output was byte-stable across all 15 owned
+outputs. The two historical migration sets have an exact union of **51** bodies;
+all remain unchanged, with no new migration. Registration retains both custom
+`session_v2.start_directory` and official `project.time_archived`. The generated
+full schema was checked only in SQLite `:memory:`; this does not establish
+historical replay, real-user migration, unfinished-state or rollback compatibility.
+Detailed generation evidence belongs to this task's `generation-report.md` and
+`generation-evidence.json`, not duplicated in this maintenance record.
+
+Windows verification must isolate both per-user and machine-level configuration:
+clear the child environment, use explicit private HOME/USERPROFILE, XDG,
+APPDATA/LOCALAPPDATA and TEMP paths, and set **nonempty private `ProgramData` and
+`ALLUSERSPROFILE`** so discovery cannot fall back to `C:\ProgramData`. The recorded
+generation slice used those private roots. Do not probe WSL, use live user
+databases or credentials, contact providers, or replace the installed service.
+Browser/Electron, Linux/macOS/ARM64 native execution, six-platform publication and
+live-provider behavior are not verified by this in-progress record. Earlier
+isolation exceptions and other acceptance limits below remain unchanged.
+
 ## October 11 accepted local synchronization
 
 Independent reviewer `ses_ed893718cffes3cxllYnqhq58S` returned
@@ -1215,7 +1289,7 @@ Do not use an implicit `git pull` in the current delivery worktree.
 1. Confirm the custom worktree is clean and identify the last accepted checkpoint.
    Preserve any new work as scoped commits before integration. Keep a named local
    recovery ref and, when needed, a Git bundle on separate storage.
-2. Fetch the official `v2` branch, record its exact target SHA, and inspect the
+2. Fetch the official `dev` branch, record its exact target SHA, and inspect the
    upstream range before merging. Read the target revision's `AGENTS.md`, actual
    runtime/dependency versions, migration changes and affected owner contracts.
 3. Create a separate integration branch/worktree from the accepted custom
@@ -1240,9 +1314,9 @@ Example starting commands, not executed by this checkpoint:
 ```powershell
 # From a clean custom worktree; choose a unique integration name and directory.
 git status --short
-git fetch origin v2
-git rev-parse origin/v2
-git log --oneline custom-lite-base-20260919..origin/v2
+git fetch origin dev
+git rev-parse origin/dev
+git log --oneline <previous-official-sha>..<reviewed-official-sha>
 git worktree add -b sync-next-v2 <new-worktree-path> v2-custom-lite
 
 # In the new worktree, use the exact SHA reviewed above.
@@ -1257,13 +1331,14 @@ verification environments.
 
 ## Verification and generation boundaries
 
-- Use the package-manager version in the target root manifest. Current baseline:
-  Bun 1.4.2, TypeScript 5.8.2, Effect 4.0.0-rc.112, Solid 1.9.15, OpenTUI 0.5.10.
+- Use the package-manager version in the target root manifest. October 16 frozen
+  target: Bun 1.4.2, TypeScript 5.8.2, Effect 4.0.1, Solid 1.9.15, OpenTUI 0.5.17.
   Preserve the lockfile; do not upgrade dependencies merely while organizing Git.
 - Run tests from their package directories, never the repository-root test script.
-  Use private HOME/USERPROFILE/XDG/APPDATA/TEMP paths and synthetic data, clear
-  credentials, and use only owned loopback services. Do not let a CLI test discover
-  or replace the real managed service.
+  Use private HOME/USERPROFILE/XDG/APPDATA/LOCALAPPDATA/TEMP paths and synthetic
+  data. On Windows also set nonempty private ProgramData/ALLUSERSPROFILE roots.
+  Clear credentials and use only owned loopback services. Do not let a CLI test
+  discover or replace the real managed service, or invoke the default WSL distro.
 - Select focused tests from the commit map and affected upstream seams. Run
   `bun typecheck` in affected packages during iteration. The repository's canonical
   full lint/type gate is `bun run check`; record its actual result when used.

@@ -686,6 +686,7 @@ function startServer(options: WireOptions, changed: () => void) {
   }
 
   const http = Bun.serve({
+    hostname: "127.0.0.1",
     port: 0,
     fetch: (req) =>
       record(req)

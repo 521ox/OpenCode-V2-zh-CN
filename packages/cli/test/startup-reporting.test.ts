@@ -11,7 +11,7 @@ test.each([
   async (locale, banner) => {
     await using root = await tmpdir()
     await Promise.all(
-      ["cwd", "home", "temp", "config", "cache", "data", "state", "appdata", "localappdata"].map((name) =>
+      ["cwd", "home", "temp", "config", "cache", "data", "state", "appdata", "localappdata", "program-data"].map((name) =>
         mkdir(path.join(root.path, name)),
       ),
     )
@@ -38,6 +38,7 @@ test.each([
           USERPROFILE: path.join(root.path, "home"),
           APPDATA: path.join(root.path, "appdata"),
           LOCALAPPDATA: path.join(root.path, "localappdata"),
+          ProgramData: path.join(root.path, "program-data"),
           TEMP: path.join(root.path, "temp"),
           TMP: path.join(root.path, "temp"),
           TMPDIR: path.join(root.path, "temp"),

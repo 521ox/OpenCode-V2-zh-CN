@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
+import { ConfigDiscovery } from "../../core/src/config/discovery"
+import { isolatedEnv } from "./fixture/environment"
 import {
   allocateSmokePort,
   assertIdentity,
@@ -100,6 +102,8 @@ describe("compiled service smoke contract", () => {
       Path: "fixture-path",
       SystemRoot: "fixture-windows",
       COMSPEC: "fixture-shell",
+      ProgramData: "host-machine-config",
+      PROGRAMDATA: "host-machine-config-uppercase",
       GH_TOKEN: "secret",
       ANTHROPIC_API_KEY: "secret",
       HTTP_PROXY: "secret",
@@ -116,6 +120,9 @@ describe("compiled service smoke contract", () => {
     expect(env.Path).toBe("fixture-path")
     expect(env.SystemRoot).toBe("fixture-windows")
     expect(env.COMSPEC).toBe("fixture-shell")
+    expect(env.ProgramData).toBe(path.join(root, "program-data"))
+    expect(env.PROGRAMDATA).toBeUndefined()
+    expect(ConfigDiscovery.systemDirectory("win32", env).toString()).toBe(path.join(root, "program-data", "opencode"))
     for (const key of [
       "GH_TOKEN",
       "ANTHROPIC_API_KEY",
@@ -146,6 +153,27 @@ describe("compiled service smoke contract", () => {
     expect(env.OPENCODE_DISABLE_AUTOUPDATE).toBe("true")
     expect(env.OPENCODE_PRINT_LOGS).toBe("1")
     expect(env.OPENCODE_LOG_LEVEL).toBe("ERROR")
+  })
+
+  test("CLI fixture isolates machine and explicit config while preserving test overrides", () => {
+    const root = path.resolve("private-cli")
+    const previous = { ProgramData: process.env.ProgramData, OPENCODE_CONFIG: process.env.OPENCODE_CONFIG }
+    process.env.ProgramData = "host-machine-config"
+    process.env.OPENCODE_CONFIG = "host-explicit-config.json"
+    try {
+      const env: NodeJS.ProcessEnv = isolatedEnv(root)
+      expect(env.ProgramData).toBe(path.join(root, "program-data"))
+      expect(env.OPENCODE_CONFIG).toBeUndefined()
+      expect(ConfigDiscovery.systemDirectory("win32", env).toString()).toBe(path.join(root, "program-data", "opencode"))
+      expect(env.OPENCODE_CONFIG_PROJECT_DISABLE).toBe(process.env.OPENCODE_CONFIG_PROJECT_DISABLE)
+      const explicit = path.join(root, "explicit.json")
+      expect(isolatedEnv(root, { OPENCODE_CONFIG: explicit }).OPENCODE_CONFIG).toBe(explicit)
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
   })
 
   const info = {

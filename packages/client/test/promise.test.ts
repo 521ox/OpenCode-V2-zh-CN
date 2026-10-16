@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test"
-import { isSessionNotFoundError, isUnauthorizedError, OpenCode } from "../src/promise/index"
+import {
+  isSessionNotFoundError,
+  isUnauthorizedError,
+  OpenCode,
+  type SessionCompactOutput,
+  type SessionCreateOutput,
+  type SessionPromptOutput,
+  type SessionSyntheticOutput,
+} from "../src/promise/index"
 
 test("exposes every standard HTTP API group", () => {
   const client = OpenCode.make({ baseUrl: "http://localhost:3000" })
@@ -41,13 +49,13 @@ test("exposes every standard HTTP API group", () => {
   expect(Object.keys(client.message)).toEqual(["list"])
   expect(Object.keys(client.integration)).toEqual(["list", "get", "wellknown", "connect", "oauth", "command"])
   expect(Object.keys(client.integration.wellknown)).toEqual(["add"])
-  expect(Object.keys(client.integration.connect)).toEqual(["key"])
+  expect(Object.keys(client.integration.connect)).toEqual(["key", "external"])
   expect(Object.keys(client.integration.oauth)).toEqual(["connect", "status", "complete", "cancel"])
   expect(Object.keys(client.integration.command)).toEqual(["connect", "status", "cancel"])
   expect(Object.keys(client.websearch)).toEqual(["providers", "query"])
   expect(Object.keys(client.file)).toEqual(["read", "list", "find", "write"])
   expect(client.file.write).toBeFunction()
-  expect(Object.keys(client.vcs)).toEqual(["get", "base", "status", "branch", "diff"])
+  expect(Object.keys(client.vcs)).toEqual(["init", "get", "base", "status", "branch", "diff"])
   expect(Object.keys(client.vcs.branch)).toEqual(["list"])
   expect(client.vcs.branch.list).toBeFunction()
   expect(Object.keys(client.pty)).toEqual(["list", "create", "get", "update", "remove", "connect"])
@@ -112,6 +120,25 @@ test("requests join against the base URL pathname", async () => {
 
   await client.server.info()
   expect(request?.url).toBe("http://localhost:8888/ws/abc/api/info")
+})
+
+test("vcs.init sends location and optional provider in the query and accepts no content", async () => {
+  const requests: Request[] = []
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:3000",
+    fetch: async (input, init) => {
+      requests.push(new Request(input, init))
+      return new Response(null, { status: 204 })
+    },
+  })
+
+  expect(await client.vcs.init({ location: { directory: "/work tree" }, provider: "hg" })).toBeUndefined()
+  expect(await client.vcs.init()).toBeUndefined()
+  expect(requests.map((request) => [request.method, request.url])).toEqual([
+    ["POST", "http://localhost:3000/api/vcs/init?location%5Bdirectory%5D=%2Fwork+tree&provider=hg"],
+    ["POST", "http://localhost:3000/api/vcs/init"],
+  ])
+  expect(await requests[0].text()).toBe("")
 })
 
 test("vcs.base and committed diffs preserve location and explicit base on the wire", async () => {
@@ -349,6 +376,36 @@ test("credential.activate uses the public HTTP contract", async () => {
 
   expect(request?.method).toBe("POST")
   expect(request?.url).toBe("http://localhost:3000/api/credential/cred_work/activate")
+})
+
+test("external integration connections preserve method, form answer, label and location", async () => {
+  let request: Request | undefined
+  const client = OpenCode.make({
+    baseUrl: "http://localhost:3000",
+    fetch: async (input, init) => {
+      request = new Request(input, init)
+      return new Response(null, { status: 204 })
+    },
+  })
+
+  expect(
+    await client.integration.connect.external({
+      integrationID: "fixture/external",
+      methodID: "environment",
+      answer: { profile: "fixture", enabled: true },
+      label: "Fixture credential",
+      location: { directory: "/tmp/project" },
+    }),
+  ).toBeUndefined()
+  expect(request?.method).toBe("POST")
+  expect(request?.url).toBe(
+    "http://localhost:3000/api/integration/fixture%2Fexternal/connect/external?location%5Bdirectory%5D=%2Ftmp%2Fproject",
+  )
+  expect(await request?.json()).toEqual({
+    methodID: "environment",
+    answer: { profile: "fixture", enabled: true },
+    label: "Fixture credential",
+  })
 })
 
 test("integration connections optionally submit a form answer", async () => {
@@ -969,7 +1026,7 @@ test("session methods use the public HTTP contract", async () => {
     delivery: "queue",
     resume: false,
   })
-  await client.session.compact({ sessionID: "ses_test" })
+  const compacted = await client.session.compact({ sessionID: "ses_test" })
   await client.session.wait({ sessionID: "ses_test" })
   const context = await client.session.context({ sessionID: "ses_test" })
   const log = []
@@ -984,7 +1041,9 @@ test("session methods use the public HTTP contract", async () => {
   expect(admitted.id).toBe("msg_test")
   expect(generated.text).toBe("A transient answer")
   expect(interrupted).toEqual({ interrupted: true })
-  expect(synthetic).toMatchObject({ type: "synthetic", data: { text: "Completed" }, delivery: "queue" })
+  expect(admitted.payload).toEqual({ text: "Hello" })
+  expect(synthetic).toMatchObject({ type: "synthetic", payload: { text: "Completed" }, delivery: "queue" })
+  expect(compacted).toEqual(compactionAdmission.data)
   expect(context).toEqual([])
   expect(log).toEqual([modelSwitchedEvent, synced])
   expect(message).toEqual(modelSwitchedMessage)
@@ -1076,38 +1135,40 @@ const session = {
     title: "Test",
     location: { directory: "/tmp/project" },
   },
-}
+} satisfies { data: SessionCreateOutput }
 
 const admission = {
   data: {
     id: "msg_test",
     sessionID: "ses_test",
     type: "user",
-    data: { text: "Hello" },
+    payload: { text: "Hello" },
     delivery: "steer",
     time: { created: 1_717_171_717_000 },
   },
-}
+} satisfies { data: SessionPromptOutput }
 
 const syntheticAdmission = {
   data: {
     id: "msg_synthetic",
     sessionID: "ses_test",
     type: "synthetic",
-    data: { text: "Completed" },
+    payload: { text: "Completed" },
     delivery: "queue",
     time: { created: 1_717_171_717_000 },
   },
-}
+} satisfies { data: SessionSyntheticOutput }
 
 const compactionAdmission = {
   data: {
     type: "compaction",
     id: "msg_compaction",
     sessionID: "ses_test",
+    payload: {},
+    delivery: "steer",
     time: { created: 1_717_171_717_000 },
   },
-}
+} satisfies { data: SessionCompactOutput }
 
 const modelSwitchedMessage = {
   id: "msg_model",

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode",
   "description": "AI-powered development tool",
-  "version": "2.0.26",
+  "version": "2.0.30",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.2",
@@ -38,6 +38,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
+      "packages/plugins/*",
       "services/*",
       "packages/console/*",
       "packages/stats/*"
@@ -68,7 +69,6 @@
       "@tsconfig/node22": "22.0.2",
       "@tsconfig/bun": "1.0.9",
       "@cloudflare/workers-types": "4.20251008.0",
-      "@openauthjs/openauth": "0.0.0-20250322224806",
       "@pierre/diffs": "1.5.1",
       "opentui-spinner": "0.0.7",
       "@solid-primitives/event-listener": "2.4.6",
@@ -184,6 +184,7 @@
     "@ff-labs/fff-bun@0.10.5": "patches/@ff-labs%2Ffff-bun@0.10.5.patch",
     "ghostty-web@github:anomalyco/ghostty-web#83c0a07": "patches/ghostty-web@0.3.0.patch",
     "vite@8.2.2": "patches/vite@8.2.2.patch",
-    "@modelcontextprotocol/client@2.0.0": "patches/@modelcontextprotocol%2Fclient@2.0.0.patch"
+    "@modelcontextprotocol/client@2.0.0": "patches/@modelcontextprotocol%2Fclient@2.0.0.patch",
+    "@corvu/drawer@0.2.4": "patches/@corvu%2Fdrawer@0.2.4.patch"
   }
 }

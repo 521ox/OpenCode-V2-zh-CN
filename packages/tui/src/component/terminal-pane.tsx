@@ -308,6 +308,7 @@ export function TerminalPane(props: {
       >
         <>
           <embeddedTerminal
+            transparentBackground={themes.currentTokens().background.raised.base.a === 0}
             ref={(value) => {
               terminal = value
               props.onFocusRequest?.(() => {

@@ -1,9 +1,8 @@
-import { TextAttributes } from "@opentui/core"
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import type { UpdateState } from "../context/update-notification"
-import { useDialog } from "../ui/dialog"
+import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { errorMessage } from "../util/error"
 import { Spinner } from "./spinner"
 import { useI18n } from "../context/i18n"
@@ -91,74 +90,74 @@ export function DialogUpdate(props: {
   }))
 
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          {state().type === "installing"
-            ? t("main.update.updating")
-            : state().type === "available" || state().type === "failed"
-              ? t("main.update.available")
-              : t("main.update")}
-        </text>
-        <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          {" × "}
-        </text>
-      </box>
-      <box paddingBottom={1}>
-        <Show when={state()} keyed>
-          {(current) => (
-            <Switch>
-              <Match when={current.type === "checking"}>
-                <Spinner shimmer={theme.text.base}>{t("main.update.checking")}</Spinner>
-              </Match>
-              <Match when={current.type === "available"}>
-                <text fg={theme.text.muted}>{t("main.update.hint")}</text>
-              </Match>
-              <Match when={current.type === "installing"}>
-                <Spinner shimmer={theme.text.base}>
-                  {current.type === "installing" ? t("main.update.installing", { version: current.version }) : ""}
-                </Spinner>
-              </Match>
-              <Match when={current.type === "installed"}>
-                <text fg={theme.text.muted} wrapMode="word">
-                  {t("main.update.success")}
-                </text>
-              </Match>
-              <Match when={current.type === "current"}>
-                <text fg={theme.text.muted}>{t("main.update.current")}</text>
-              </Match>
-              <Match when={current.type === "unavailable"}>
-                <text fg={theme.text.muted} wrapMode="word">
-                  {current.type === "unavailable" ? current.message : ""}
-                </text>
-              </Match>
-              <Match when={current.type === "failed" || current.type === "check-failed"}>
-                <text fg={theme.text.feedback.error.base}>
-                  {current.type === "failed" || current.type === "check-failed" ? current.message : ""}
-                </text>
-              </Match>
-            </Switch>
-          )}
+    <DialogLayout
+      header={
+        <DialogHeader
+          title={
+            state().type === "installing"
+              ? t("main.update.updating")
+              : state().type === "available" || state().type === "failed"
+                ? t("main.update.available")
+                : t("main.update")
+          }
+        />
+      }
+      footer={
+        <Show when={buttons().length > 0}>
+          <box flexDirection="row" justifyContent="flex-end">
+            <For each={buttons()}>
+              {(button, index) => (
+                <box
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={active() === index() ? theme.background.action.primary.focused : undefined}
+                  onMouseUp={() => void button.run()}
+                >
+                  <text fg={active() === index() ? theme.text.action.primary.focused : theme.text.muted}>
+                    {t(button.label)}
+                  </text>
+                </box>
+              )}
+            </For>
+          </box>
         </Show>
-      </box>
-      <Show when={buttons().length > 0}>
-        <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
-          <For each={buttons()}>
-            {(button, index) => (
-              <box
-                paddingLeft={1}
-                paddingRight={1}
-                backgroundColor={active() === index() ? theme.background.action.primary.focused : undefined}
-                onMouseUp={() => void button.run()}
-              >
-                <text fg={active() === index() ? theme.text.action.primary.focused : theme.text.muted}>
-                  {t(button.label)}
-                </text>
-              </box>
-            )}
-          </For>
-        </box>
+      }
+    >
+      <Show when={state()} keyed>
+        {(current) => (
+          <Switch>
+            <Match when={current.type === "checking"}>
+              <Spinner shimmer={theme.text.base}>{t("main.update.checking")}</Spinner>
+            </Match>
+            <Match when={current.type === "available"}>
+              <text fg={theme.text.muted}>{t("main.update.hint")}</text>
+            </Match>
+            <Match when={current.type === "installing"}>
+              <Spinner shimmer={theme.text.base}>
+                {current.type === "installing" ? t("main.update.installing", { version: current.version }) : ""}
+              </Spinner>
+            </Match>
+            <Match when={current.type === "installed"}>
+              <text fg={theme.text.muted} wrapMode="word">
+                {t("main.update.success")}
+              </text>
+            </Match>
+            <Match when={current.type === "current"}>
+              <text fg={theme.text.muted}>{t("main.update.current")}</text>
+            </Match>
+            <Match when={current.type === "unavailable"}>
+              <text fg={theme.text.muted} wrapMode="word">
+                {current.type === "unavailable" ? current.message : ""}
+              </text>
+            </Match>
+            <Match when={current.type === "failed" || current.type === "check-failed"}>
+              <text fg={theme.text.feedback.error.base}>
+                {current.type === "failed" || current.type === "check-failed" ? current.message : ""}
+              </text>
+            </Match>
+          </Switch>
+        )}
       </Show>
-    </box>
+    </DialogLayout>
   )
 }

@@ -31,11 +31,14 @@ const environment = {
   OPENCODE_CONFIG: undefined,
   OPENCODE_CONFIG_CONTENT: undefined,
   TMPDIR: temporary,
-  ...(process.platform === "win32" ? { USERPROFILE: home, TMP: temporary, TEMP: temporary } : {}),
+  ...(process.platform === "win32"
+    ? { USERPROFILE: home, ProgramData: path.join(home, "program-data"), TMP: temporary, TEMP: temporary }
+    : {}),
 }
 
 const child = Bun.spawn({
-  cmd: [process.execPath, "test", "--only-failures", ...process.argv.slice(2)],
+  // The 30s default timeout matches cli and tui; npm.test's Git package installs ran past Bun's 5s default on Windows.
+  cmd: [process.execPath, "test", "--only-failures", "--timeout=30000", ...process.argv.slice(2)],
   env: environment,
   stdin: "inherit",
   stdout: "inherit",

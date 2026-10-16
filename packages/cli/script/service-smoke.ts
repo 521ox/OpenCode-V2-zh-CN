@@ -451,6 +451,7 @@ export function smokeEnv(root: string, inherited: NodeJS.ProcessEnv): NodeJS.Pro
     USERPROFILE: root,
     APPDATA: path.join(root, "config"),
     LOCALAPPDATA: path.join(root, "data"),
+    ProgramData: path.join(root, "program-data"),
     TMP: path.join(root, "tmp"),
     TEMP: path.join(root, "tmp"),
     TMPDIR: path.join(root, "tmp"),

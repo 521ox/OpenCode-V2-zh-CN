@@ -30,7 +30,7 @@ import { PluginTestLayer, makePluginTestLayer } from "./plugin/fixture"
 
 const it = testEffect(PluginTestLayer)
 const document = (policies: ConfigPolicy.Info[]) =>
-  new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({ experimental: { policies } }) })
+  new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({ policies }) })
 const setup = Effect.gen(function* () {
   const plugin = yield* Plugin.Service
   const host = yield* PluginHost.make(plugin)

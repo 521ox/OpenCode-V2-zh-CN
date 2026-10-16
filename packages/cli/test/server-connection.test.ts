@@ -13,6 +13,7 @@ test("resolution groups Effect-native lifecycle operations only for the managed 
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-server-resolution-"))
   const id = "server-resolution-test"
   const server = Bun.serve({
+    hostname: "127.0.0.1",
     port: 0,
     fetch() {
       return Response.json({

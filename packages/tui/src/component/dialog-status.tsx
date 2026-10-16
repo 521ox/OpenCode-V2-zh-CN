@@ -1,6 +1,5 @@
-import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
-import { useDialog } from "../ui/dialog"
+import { DialogHeader, DialogLayout } from "../ui/dialog"
 import { useData } from "../context/data"
 import { For, Match, Switch, Show, createMemo } from "solid-js"
 import { useI18n } from "../context/i18n"
@@ -9,7 +8,6 @@ export function DialogStatus() {
   const { t } = useI18n()
   const data = useData()
   const theme = useTheme().surface("dialog")
-  const dialog = useDialog()
 
   const mcp = createMemo(() => data.location.mcp.server.list() ?? [])
   const color = (status: string) => {
@@ -19,15 +17,7 @@ export function DialogStatus() {
     return theme.text.muted
   }
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
-          {t("main.status")}
-        </text>
-        <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          {" × "}
-        </text>
-      </box>
+    <DialogLayout header={<DialogHeader title={t("main.status")} />}>
       <Show when={mcp().length > 0} fallback={<text fg={theme.text.base}>{t("main.mcp.empty")}</text>}>
         <box>
           <text fg={theme.text.base}>{t("main.mcp.count", { count: mcp().length })}</text>
@@ -55,6 +45,6 @@ export function DialogStatus() {
           </For>
         </box>
       </Show>
-    </box>
+    </DialogLayout>
   )
 }

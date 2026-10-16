@@ -726,11 +726,6 @@ export function Session(props: {
         footerHints={[{ title: t("session.steer"), label: "enter" }]}
       />
     ))
-  const unavailable = (feature: string) => {
-    toast.show({ message: t("session.unavailable", { feature }), variant: "error", duration: 5000 })
-    dialog.clear()
-  }
-
   const alignMessage = (messageID: string, top: number) => {
     scroll.stickyScroll = false
     setNavigationMessage(messageID)
@@ -940,14 +935,6 @@ export function Session(props: {
   ])
 
   const baseCommands = createMemo(() => [
-    {
-      title: t("session.share"),
-      id: "session.share",
-      suggested: route.type === "session",
-      group: "Session",
-      slash: { name: "share" },
-      run: () => unavailable(t("session.share")),
-    },
     {
       title: t("session.rename"),
       id: "session.rename",

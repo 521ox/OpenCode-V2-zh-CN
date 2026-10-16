@@ -155,11 +155,7 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
                 },
               },
             ]}
-            footer={
-              <Show when={focusedError()}>
-                <text fg={theme.text.muted}>{t("main.mcp.viewError")}</text>
-              </Show>
-            }
+            footerHints={focusedError() ? [{ title: t("main.mcp.viewError"), label: "enter" }] : []}
           />
         }
       >

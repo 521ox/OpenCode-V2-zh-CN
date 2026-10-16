@@ -5,12 +5,16 @@ import path from "node:path"
 // so every spawned CLI process would transpile the source from scratch. Share one cache instead.
 export const transpilerCache = path.join(os.tmpdir(), "opencode-test-transpiler-cache")
 
-export function isolatedEnv(root: string, overrides: Record<string, string | undefined> = {}) {
+export function isolatedEnv(root: string, overrides: Record<string, string | undefined> = {}): NodeJS.ProcessEnv {
   return {
-    ...process.env,
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !["programdata", "opencode_config"].includes(key.toLowerCase())),
+    ),
     BUN_RUNTIME_TRANSPILER_CACHE_PATH: transpilerCache,
     HOME: root,
+    ProgramData: path.join(root, "program-data"),
     OPENCODE_CLI_CONFIG_CONTENT: undefined,
+    OPENCODE_CONFIG: undefined,
     OPENCODE_CONFIG_CONTENT: "{}",
     OPENCODE_CONFIG_DIR: path.join(root, "config"),
     OPENCODE_DB: path.join(root, "opencode.db"),
