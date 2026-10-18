@@ -208,7 +208,7 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
             ]}
             footerHints={[
               ...(pluginError(focusedEntry()) && !focusedTui()
-                ? [{ title: i18n.t("feature.plugins.viewError"), label: "enter" }]
+                ? [{ title: i18n.t("feature.plugins.viewError"), label: "enter", group: "primary" as const }]
                 : []),
               {
                 title: i18n.t(showInternal() ? "feature.plugins.hideInternal" : "feature.plugins.showInternal"),

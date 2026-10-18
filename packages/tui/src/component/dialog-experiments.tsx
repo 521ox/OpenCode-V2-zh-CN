@@ -1,25 +1,33 @@
 import { createMemo, createSignal } from "solid-js"
-import { useConfig } from "../config"
+import { useConfig, useNewDesigns } from "../config"
 import { DIALOG_LIST_INSET } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { useTheme } from "../context/theme"
 import { useToast } from "../ui/toast"
 import { useI18n } from "../context/i18n"
+import type { Key } from "../i18n"
 
 type Experiment = {
   id: string
-  title: string
-  description: string
+  title: Key
+  description: Key
 }
 
 // In-flight features anyone can opt into. Each entry is temporary: an
 // experiment either graduates (delete the entry, make the behavior
 // unconditional) or dies (delete the entry and the branch it gated).
-export const experiments: Experiment[] = []
+export const experiments: Experiment[] = [
+  {
+    id: "new-designs",
+    title: "main.experiments.newDesigns",
+    description: "main.experiments.newDesignsDescription",
+  },
+]
 
 export function DialogExperiments() {
   const { t } = useI18n()
   const config = useConfig()
+  const newDesigns = useNewDesigns()
   const theme = useTheme()
   const toast = useToast()
   const [selected, setSelected] = createSignal<Experiment>()
@@ -29,8 +37,8 @@ export function DialogExperiments() {
 
   const options = createMemo(() =>
     experiments.map((experiment) => ({
-      title: experiment.title,
-      searchText: experiment.description,
+      title: t(experiment.title),
+      searchText: t(experiment.description),
       footer: enabled(experiment) ? t("main.value.on") : t("main.value.off"),
       value: experiment,
     })),
@@ -44,7 +52,7 @@ export function DialogExperiments() {
     setSaving(true)
     await config
       .update((draft) => {
-        if (!draft.experimental || typeof draft.experimental !== "object") draft.experimental = {}
+        draft.experimental ??= {}
         draft.experimental[experiment.id] = next
       })
       .catch(toast.error)
@@ -63,7 +71,7 @@ export function DialogExperiments() {
           <text fg={theme.text.muted}>{t("main.experiments.empty")}</text>
         </box>
       }
-      footerHints={experiments.length > 0 ? [{ title: t("main.change"), label: "←/→" }] : []}
+      footerHints={experiments.length > 0 && !newDesigns() ? [{ title: t("main.change"), label: "←/→" }] : []}
       bindings={
         experiments.length > 0
           ? [

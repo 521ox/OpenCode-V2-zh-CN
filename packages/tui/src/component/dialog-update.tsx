@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
 import { Keymap } from "../context/keymap"
+import { useNewDesigns } from "../config"
 import { useTheme } from "../context/theme"
 import type { UpdateState } from "../context/update-notification"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
@@ -20,6 +21,7 @@ export function DialogUpdate(props: {
   const { t } = useI18n()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
+  const newDesigns = useNewDesigns()
   const [error, setError] = createSignal<string>()
   const [active, setActive] = createSignal(0)
   const controller = new AbortController()
@@ -75,9 +77,9 @@ export function DialogUpdate(props: {
         bind: "return",
         title: t("main.update.confirm"),
         group: t("main.group.dialog"),
-        run: () => void buttons()[active()]?.run(),
+        run: () => void buttons()[newDesigns() ? buttons().length - 1 : active()]?.run(),
       },
-      ...["left", "right", "tab", "shift+tab"].map((bind) => ({
+      ...(newDesigns() ? [] : ["left", "right", "tab", "shift+tab"]).map((bind) => ({
         bind,
         title: bind === "left" || bind === "shift+tab" ? t("main.update.previous") : t("main.update.next"),
         group: t("main.group.dialog"),
@@ -102,7 +104,16 @@ export function DialogUpdate(props: {
           }
         />
       }
-      footer={
+      footer={{
+        actions: {
+          primary: buttons().map((button, index) => ({
+            title: button.label.toLowerCase(),
+            key: index === buttons().length - 1 ? "enter" : undefined,
+            onTrigger: () => void button.run(),
+          })),
+        },
+      }}
+      legacyFooter={
         <Show when={buttons().length > 0}>
           <box flexDirection="row" justifyContent="flex-end">
             <For each={buttons()}>

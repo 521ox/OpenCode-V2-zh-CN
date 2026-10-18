@@ -15,6 +15,7 @@ import type {
 import { openUrl } from "@opencode/util/open"
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, untrack } from "solid-js"
 import { createStore } from "solid-js/store"
+import { useNewDesigns } from "../config"
 import { useClipboard } from "../context/clipboard"
 import { useData } from "../context/data"
 import { useClient } from "../context/client"
@@ -64,6 +65,8 @@ const CANCELLED = Symbol("cancelled")
 const CUSTOM = Symbol("custom")
 const OPEN = Symbol("open")
 const SUBMIT = Symbol("submit")
+// Device-flow codes such as "R283-GOUEO"; when present they are copied instead of the URL.
+const OAUTH_CODE = /[A-Z0-9]{4}-[A-Z0-9]{4,5}/
 
 export function integrationOptions(list: IntegrationInfo[]) {
   return list.toSorted(
@@ -186,6 +189,7 @@ function manageConnections(
     const toast = useToast()
     const theme = useTheme().surface("dialog")
     const shortcuts = Keymap.useShortcuts()
+    const newDesigns = useNewDesigns()
     const [deleting, setDeleting] = createSignal<string>()
     const [selected, setSelected] = createSignal(methods.length ? "add" : credentialConnections(integration)[0]?.id)
     const current = createMemo(() =>
@@ -264,7 +268,7 @@ function manageConnections(
           },
           {
             command: "dialog.integration.delete",
-            title: t("main.delete"),
+            title: newDesigns() ? t("main.integration.removeAccount") : t("main.delete"),
             hidden: selected() === "add",
             disabled: (option) => !option || option.value === "add",
             onTrigger: (option) => {
@@ -302,16 +306,20 @@ function selectMethod(
   onConnected?: OnIntegrationConnected,
 ) {
   if (methods.length === 1) return openMethod(integration, methods[0], location, dialog, t, onConnected)
-  dialog.replace(() => (
-    <DialogSelect
-      title={t("main.integration.connect", { name: integration.name })}
-      options={methods.map((method) => ({
-        title: method.type === "key" ? (method.label ?? t("main.apiKey")) : method.label,
-        value: method.type === "key" ? "key" : method.id,
-        onSelect: () => openMethod(integration, method, location, dialog, t, onConnected),
-      }))}
-    />
-  ))
+  dialog.replace(() => {
+    const newDesigns = useNewDesigns()
+    return (
+      <DialogSelect
+        title={t("main.integration.connect", { name: integration.name })}
+        renderFilter={!newDesigns()}
+        options={methods.map((method) => ({
+          title: method.type === "key" ? (method.label ?? t("main.apiKey")) : method.label,
+          value: method.type === "key" ? "key" : method.id,
+          onSelect: () => openMethod(integration, method, location, dialog, t, onConnected),
+        }))}
+      />
+    )
+  })
 }
 
 function openMethod(
@@ -683,37 +691,37 @@ function OAuthAuto(props: {
   const client = useClient()
   const toast = useToast()
   const clipboard = useClipboard()
+  const newDesigns = useNewDesigns()
   let timer: ReturnType<typeof setTimeout> | undefined
   let settled = false
+
+  const open = () => {
+    openUrl(props.attempt.url).catch(() =>
+      toast.show({
+        message: t("main.integration.browserFailed"),
+        variant: "error",
+      }),
+    )
+  }
+
+  const copy = () => {
+    const value = props.attempt.instructions.match(OAUTH_CODE)?.[0] ?? props.attempt.url
+    clipboard
+      .write(value)
+      .then(() => toast.show({ message: t("main.copied"), variant: "info" }))
+      .catch(toast.error)
+  }
 
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
       {
-        bind: "o",
+        bind: newDesigns() ? "return" : "o",
         title: t("main.integration.authOpen"),
         group: t("main.group.dialog"),
-        run: () => {
-          openUrl(props.attempt.url).catch(() =>
-            toast.show({
-              message: t("main.integration.browserFailed"),
-              variant: "error",
-            }),
-          )
-        },
+        run: open,
       },
-      {
-        bind: "c",
-        title: t("main.integration.authCopy"),
-        group: t("main.group.dialog"),
-        run: () => {
-          const value = props.attempt.instructions.match(/[A-Z0-9]{4}-[A-Z0-9]{4,5}/)?.[0] ?? props.attempt.url
-          clipboard
-            .write(value)
-            .then(() => toast.show({ message: t("main.copied"), variant: "info" }))
-            .catch(toast.error)
-        },
-      },
+      { bind: "c", title: t("main.integration.authCopy"), group: t("main.group.dialog"), run: copy },
     ],
   }))
 
@@ -765,8 +773,8 @@ function OAuthAuto(props: {
       url={props.attempt.url}
       instructions={props.attempt.instructions}
       message={t("main.integration.authWaiting")}
-      copy
-      open
+      onCopy={copy}
+      onOpen={open}
     />
   )
 }
@@ -784,6 +792,7 @@ function OAuthCode(props: {
   const client = useClient()
   const toast = useToast()
   const theme = useTheme().surface("dialog")
+  const newDesigns = useNewDesigns()
   const [error, setError] = createSignal<string>()
   let settled = false
 
@@ -799,6 +808,7 @@ function OAuthCode(props: {
   return (
     <DialogPrompt
       title={props.title}
+      subtitle={props.attempt.instructions}
       placeholder={t("main.integration.authCode")}
       onConfirm={(code) => {
         if (!code) return
@@ -817,7 +827,9 @@ function OAuthCode(props: {
       }}
       description={() => (
         <box gap={1}>
-          <text fg={theme.text.muted}>{props.attempt.instructions}</text>
+          <Show when={!newDesigns()}>
+            <text fg={theme.text.muted}>{props.attempt.instructions}</text>
+          </Show>
           <Link href={props.attempt.url} fg={theme.markdown.link} />
           <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
         </box>
@@ -831,20 +843,40 @@ function OAuthView(props: {
   url?: string
   instructions?: string
   message: string
-  copy?: boolean
-  open?: boolean
+  onCopy?: () => void
+  onOpen?: () => void
 }) {
   const { t } = useI18n()
   const theme = useTheme().surface("dialog")
   return (
     <DialogLayout
       header={<DialogHeader title={props.title} />}
-      footer={
+      footer={{
+        actions: {
+          primary: [
+            ...(props.onCopy
+              ? [
+                  {
+                    title: props.instructions?.match(OAUTH_CODE)
+                      ? t("main.integration.copyCode")
+                      : t("main.integration.copyLink"),
+                    key: "c",
+                    onTrigger: props.onCopy,
+                  },
+                ]
+              : []),
+            ...(props.onOpen ? [{ title: t("main.integration.openLink"), key: "enter", onTrigger: props.onOpen }] : []),
+          ],
+        },
+      }}
+      legacyFooter={
         <DialogFooter
-          actions={[
-            ...(props.open ? [{ title: t("main.open"), key: "o" }] : []),
-            ...(props.copy ? [{ title: t("main.copy"), key: "c" }] : []),
-          ]}
+          actions={{
+            secondary: [
+              ...(props.onOpen ? [{ title: t("main.open"), key: "o" }] : []),
+              ...(props.onCopy ? [{ title: t("main.copy"), key: "c" }] : []),
+            ],
+          }}
         />
       }
     >
@@ -1020,26 +1052,24 @@ function StringChoiceField(props: {
   return (
     <DialogLayout
       header={<DialogHeader title={formLabel(props.field)} onClose={() => (store.editing ? back() : dialog.clear())} />}
-      footer={
-        <DialogFooter
-          actions={
-            store.editing
-              ? [
-                  {
-                    title: t("main.submit"),
-                    key: "enter",
-                    onTrigger: () => submit(textarea()?.plainText.trim() || undefined),
-                  },
-                  { title: t("main.back"), key: "esc", onTrigger: back },
-                ]
-              : [
-                  { title: t("main.select"), key: "↑/↓" },
-                  { title: t("main.confirm"), key: "enter", onTrigger: () => select(store.selected) },
-                  { title: t("main.cancel"), key: "esc", onTrigger: () => dialog.clear() },
-                ]
-          }
-        />
-      }
+      footer={{
+        actions: {
+          secondary: store.editing
+            ? [
+                {
+                  title: t("main.submit"),
+                  key: "enter",
+                  onTrigger: () => submit(textarea()?.plainText.trim() || undefined),
+                },
+                { title: t("main.back"), key: "esc", onTrigger: back },
+              ]
+            : [
+                { title: t("main.select"), key: "↑/↓" },
+                { title: t("main.confirm"), key: "enter", onTrigger: () => select(store.selected) },
+                { title: t("main.cancel"), key: "esc", onTrigger: () => dialog.clear() },
+              ],
+        },
+      }}
     >
       <box gap={1}>
         <Show when={props.field.description}>

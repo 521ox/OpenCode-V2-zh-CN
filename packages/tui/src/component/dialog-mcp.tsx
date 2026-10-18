@@ -141,6 +141,8 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
         fallback={
           <DialogSelect
             title={t("main.mcp.servers")}
+            searchInTitle
+            titlePlaceholder={t("main.search.mcp")}
             options={options()}
             preserveSelection
             onMove={(option) => setFocused(option.value as string)}
@@ -155,7 +157,7 @@ export function DialogMcp(props: { initialServer?: string; details?: boolean } =
                 },
               },
             ]}
-            footerHints={focusedError() ? [{ title: t("main.mcp.viewError"), label: "enter" }] : []}
+            footerHints={focusedError() ? [{ title: t("main.mcp.viewError"), label: "enter", group: "primary" }] : []}
           />
         }
       >

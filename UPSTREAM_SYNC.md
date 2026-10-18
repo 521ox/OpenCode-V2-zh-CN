@@ -1,5 +1,58 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## October 18 synchronization in progress
+
+The authorized target is frozen official dev
+`63c1a27af5a391d9caa55b82694f496911e1859b` (2.0.32), based on custom
+`57d92d1e7297937f89d43b1d5f94731388446daf` and previous upstream
+`eeec76bb620f9bee8cab89c5a3a88e315539645b`. The exact comparison contains
+76 commits and 336 paths. Recovery tag: `custom-lite-pre-sync-20261018`.
+Planned local artifact: `2.0.32-custom-lite.20261018.1`, latest storage channel,
+Windows x64, Bun 1.4.2, bytecode and complete embedded WebUI. The manual release
+workflow default is updated without dispatching it. No activation, push or
+publication is implied by this local synchronization.
+
+High-throughput DeepSeek long-reasoning display diagnosis is explicitly deferred
+until after synchronization. This task does not tune delta batching, animation,
+scrolling or provider settings, nor cherry-pick the still-separate session-title
+loading fix. Existing memory guidance and native-tool contracts remain required.
+Official new-designs experiment settings retain their upstream defaults rather
+than being silently enabled during reconciliation.
+
+Frozen installation passed with 2,169 packages and no subsequent lock mutation.
+The lock conflict preserves custom Mustache types while adopting the official
+TypeScript 7.0.2 native toolchain and TypeScript 6 alias. Canonical Protocol/Client
+generation and repeated checks passed without content drift. Client runtime
+checks currently have condition-dependent failures under investigation; results
+from different conditions must not be combined into a fabricated clean suite.
+Final source checks, compiled compatibility and independent acceptance are pending.
+
+The Client runtime failures were compared against the accepted 2.0.30 baseline
+using the same Bun binary, arguments and private environment. Both default-condition
+reconnect failures and all ten browser-condition proxy-matcher failures reproduce
+on both trees, with no I-only failure found in the compared cases. The canonical
+Client script uses default conditions: browser-condition diagnostics are not a
+substitute passing gate. These remain baseline residuals, not a clean-suite claim
+or an automatically attributed upstream defect. Neither product nor test code was
+changed to conceal them.
+
+Twelve stable packages passed their canonical typechecks with actual TypeScript
+7.0.2. The TypeScript 6 compatibility wrapper's package is 6.0.2 but its installed
+forwarded compiler reports 6.0.3; that distinction is retained rather than
+misreporting the executed compiler.
+
+Final source verification: fourteen canonical package typechecks passed with
+TypeScript 7.0.2, including all five updated/new Core and TUI test roots. Focused
+TUI verification passed 288 cases across 29 files with no failures/skips. New
+designs remain opt-in; last-message copy and transcript copy remain separate.
+Core/AI focused groups and test-only fixture repairs passed within the scopes
+recorded in the delivery evidence; overlapping reruns and platform early returns
+are not counted as additional coverage. Canonical lint exited 0 with 1,306
+warnings, zero errors and the existing unused-suppression diagnostic. No upstream
+product bug was patched to force passing results. The canonical Client default
+runtime failures remain explicitly documented baseline residuals. Compiled checks
+and independent acceptance remain pending for the final artifact.
+
 ## October 16 accepted candidate
 
 Independent review `ses_ebd1f85d3ffedgpAk4yUUzZ18T` returned

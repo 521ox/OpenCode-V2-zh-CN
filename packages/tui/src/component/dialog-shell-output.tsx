@@ -116,13 +116,15 @@ export function DialogShellOutput(props: { shell: ShellInfo; location: LocationR
           <text fg={theme.text.muted}>{status()}</text>
         </DialogHeader>
       }
-      footer={
+      legacyFooter={
         <DialogFooter
-          actions={[
-            { title: t("main.scroll"), key: "↑/↓" },
-            { title: t("main.shell.follow"), key: "end" },
-            { title: t("main.back"), key: "esc" },
-          ]}
+          actions={{
+            secondary: [
+              { title: t("main.scroll"), key: "↑/↓" },
+              { title: t("main.shell.follow"), key: "end" },
+              { title: t("main.back"), key: "esc" },
+            ],
+          }}
         />
       }
     >

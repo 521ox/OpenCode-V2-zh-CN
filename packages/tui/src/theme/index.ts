@@ -2,6 +2,7 @@ import { migrateV1, parseThemeDocument, type ThemeDocument, type ModeDefinition 
 import { resolveThemeColors } from "./resolve"
 import { DEFAULT_THEMES, type Theme, type ThemeV1Json } from "./v1"
 import opencode from "./assets/v2/opencode.json" with { type: "json" }
+import opencode2 from "./assets/v2/opencode2.json" with { type: "json" }
 
 export { DEFAULT_THEMES, type Theme, type ThemeV1Json } from "./v1"
 
@@ -11,16 +12,27 @@ let customThemes: Record<string, ThemeDocumentSource> = {}
 let systemTheme: ThemeDocumentSource | undefined
 const listeners = new Set<(themes: Record<string, ThemeDocumentSource>) => void>()
 const parsed = new WeakMap<object, ThemeDocument>()
-let opencodeTheme: (ThemeDocument & {
-  readonly light: ModeDefinition
-  readonly dark: ModeDefinition
-}) | undefined
+let opencodeTheme:
+  | (ThemeDocument & {
+      readonly light: ModeDefinition
+      readonly dark: ModeDefinition
+    })
+  | undefined
 
 export function getOpenCodeTheme() {
   if (opencodeTheme) return opencodeTheme
   const document = parseThemeDocument(opencode, "opencode") as NonNullable<typeof opencodeTheme>
   opencodeTheme = document
   return document
+}
+
+let opencode2Theme: ThemeDocument | undefined
+
+// Temporary theme for the "new-designs" experiment. It is not part of allThemes(), so only the
+// TUI theme context offers it, and only while the experiment is enabled.
+export function getOpenCode2Theme() {
+  opencode2Theme ??= parseThemeDocument(opencode2, "opencode2")
+  return opencode2Theme
 }
 
 function listThemes(): Record<string, ThemeDocumentSource> {

@@ -86,7 +86,7 @@ import { FormPrompt } from "./form"
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import { DialogExportResult } from "../../ui/dialog-export-result"
 import { sessionEpilogue } from "../../util/presentation"
-import { useConfig } from "../../config"
+import { useConfig, useNewDesigns } from "../../config"
 import { useClipboard } from "../../context/clipboard"
 import { nextThinkingMode, type ThinkingMode } from "../../context/thinking"
 import { getScrollAcceleration } from "../../util/scroll"
@@ -681,6 +681,8 @@ export function Session(props: {
     dialog.replace(() => (
       <DialogSelect
         title={t("session.queuedPrompts")}
+        searchInTitle
+        titlePlaceholder={t("session.searchQueuedPrompts")}
         options={queuedPrompts().map((prompt, index) => ({
           title: prompt.text,
           value: prompt.id,
@@ -723,7 +725,7 @@ export function Session(props: {
             },
           },
         ]}
-        footerHints={[{ title: t("session.steer"), label: "enter" }]}
+        footerHints={[{ title: t("session.steer"), label: "enter", group: "primary" }]}
       />
     ))
   const alignMessage = (messageID: string, top: number) => {
@@ -1168,9 +1170,14 @@ export function Session(props: {
       title: t("session.copyLastMessage"),
       id: "messages.copy",
       group: "Session",
+      slash: {
+        name: "copy",
+      },
       run: () => {
         const lastAssistantMessage = messagesBeforeRevert().findLast(
-          (msg): msg is SessionMessageAssistant => msg.type === "assistant",
+          (msg) =>
+            msg.type === "assistant" ||
+            (msg.type === "compaction" && msg.status === "completed" && msg.summary.trim() !== ""),
         )
         if (!lastAssistantMessage) {
           toast.show({ message: t("session.noAssistant"), variant: "error" })
@@ -1178,17 +1185,16 @@ export function Session(props: {
           return
         }
 
-        const textParts = lastAssistantMessage.content.filter((part) => part.type === "text")
-        if (textParts.length === 0) {
-          toast.show({ message: t("session.noTextParts"), variant: "error" })
-          dialog.clear()
-          return
-        }
-
-        const text = textParts
-          .map((part) => part.text)
-          .join("\n")
-          .trim()
+        const text =
+          lastAssistantMessage.type === "assistant"
+            ? lastAssistantMessage.content
+                .filter((part) => part.type === "text")
+                .map((part) => part.text)
+                .join("\n")
+                .trim()
+            : lastAssistantMessage.type === "compaction" && lastAssistantMessage.status === "completed"
+              ? lastAssistantMessage.summary.trim()
+              : ""
         if (!text) {
           toast.show({
             message: t("session.noTextContent"),
@@ -1221,9 +1227,6 @@ export function Session(props: {
       title: t("session.copyTranscript"),
       id: "session.copy",
       group: "Session",
-      slash: {
-        name: "copy",
-      },
       run: async () => {
         try {
           const sessionData = session()
@@ -2336,6 +2339,7 @@ function ShellMessage(props: { message: Extract<SessionMessageInfo, { type: "she
 function UserMessage(props: { message: SessionMessageUser }) {
   const { t } = useI18n()
   const ctx = use()
+  const newDesigns = useNewDesigns()
   const data = useData()
   const local = useLocal()
   const files = createMemo(() => deduplicateVisibleImages(props.message.files ?? []))
@@ -2381,6 +2385,7 @@ function UserMessage(props: { message: SessionMessageUser }) {
               dialog.replace(() => (
                 <DialogSelect
                   title={t("session.pendingSteer")}
+                  renderFilter={!newDesigns()}
                   options={[
                     { title: t("session.moveQueue"), value: "queue" as const },
                     { title: t("session.delete"), value: "cancel" as const },

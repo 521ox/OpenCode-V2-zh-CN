@@ -319,6 +319,8 @@ export default {
   "session.copyDescription": "message text to clipboard",
   "session.forkDescription": "create a new session",
   "session.timeline": "Timeline",
+  "session.searchTimeline": "Search timeline",
+  "session.searchQueuedPrompts": "Search queued prompts",
   "session.forked": "Forked session",
   "session.fullSession": "Full session",
   "session.forking": "Forking session…",

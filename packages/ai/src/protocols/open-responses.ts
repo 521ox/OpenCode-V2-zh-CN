@@ -18,7 +18,7 @@ import {
   type ToolResultPart,
 } from "../schema/index.js"
 import type { Media } from "../media.js"
-import { JsonObject, optionalArray, optionalNull, ProviderShared } from "./shared.js"
+import { JsonObject, optionalArray, optionalNull, ProviderShared, withUntypedFrames } from "./shared.js"
 import { classifyProviderFailure } from "../provider-error.js"
 import { effortUpdate } from "../effort-updates.js"
 import { OpenResponsesOptions } from "./utils/open-responses-options.js"
@@ -351,7 +351,7 @@ export type OutputItem = StreamItem & { readonly id: string; readonly namespace?
 const asText = (value: unknown) =>
   typeof value === "string" && value.length > 0 ? value : typeof value === "number" ? String(value) : undefined
 
-export const Event = Schema.StructWithRest(
+const TypedEvent = Schema.StructWithRest(
   Schema.Struct({
     type: Schema.String,
     delta: Schema.optional(Schema.String),
@@ -383,27 +383,12 @@ export const Event = Schema.StructWithRest(
   }),
   [Schema.Record(Schema.String, Schema.Unknown)],
 )
+export const Event = withUntypedFrames(TypedEvent)
 export type Event = Schema.Schema.Type<typeof Event>
 export type NormalizedEvent = Event & { readonly item?: OutputItem | null }
 
-const decodeEventValue = Schema.decodeUnknownEffect(Event)
-const decodeFrame = Schema.decodeUnknownEffect(ProviderShared.Json)
-
-/**
- * Decodes one WebSocket frame. Some providers and gateways answer a rejected `response.create` with a bare
- * `{ "error": ... }` envelope and no event type; that reads as an error event so it classifies instead of
- * failing decoding.
- */
-export const decodeChannelEvent = (frame: string) =>
-  decodeFrame(frame).pipe(
-    Effect.flatMap((value) =>
-      decodeEventValue(
-        ProviderShared.isRecord(value) && value.type === undefined && value.error != null
-          ? { ...value, type: "error" }
-          : value,
-      ),
-    ),
-  )
+/** Decodes one WebSocket frame. */
+export const decodeChannelEvent = Schema.decodeUnknownEffect(Protocol.jsonEvent(Event))
 
 export interface ProviderAdapter {
   readonly id: string

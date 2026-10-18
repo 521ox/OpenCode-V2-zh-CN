@@ -25,6 +25,8 @@ export function DialogThemeList() {
   return (
     <DialogSelect
       title={t("main.themes")}
+      searchInTitle
+      titlePlaceholder={t("main.search.themes")}
       options={options}
       current={initial}
       onMove={(opt) => {

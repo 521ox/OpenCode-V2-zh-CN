@@ -20,7 +20,8 @@ export function DialogHelp() {
   return (
     <DialogLayout
       header={<DialogHeader title={t("main.help")} closeLabel="    ×    " />}
-      footer={
+      footer={{ actions: { primary: [{ title: t("main.ok"), key: "enter", onTrigger: () => dialog.clear() }] } }}
+      legacyFooter={
         <box flexDirection="row" justifyContent="flex-end">
           <box
             paddingLeft={3}

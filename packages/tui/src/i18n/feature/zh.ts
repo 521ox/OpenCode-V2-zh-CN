@@ -50,6 +50,7 @@ export default {
   "feature.btw.copyAnswer": "复制回答",
   "feature.btw.copied": "已复制",
   "feature.btw.copy": "复制",
+  "feature.btw.copyResponse": "复制回复",
   "feature.btw.scroll": "滚动",
   "feature.group.session": "会话",
   "feature.group.dialog": "对话框",

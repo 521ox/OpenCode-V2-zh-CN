@@ -49,6 +49,7 @@ export default {
   "feature.btw.copyAnswer": "Copy answer",
   "feature.btw.copied": "copied",
   "feature.btw.copy": "copy",
+  "feature.btw.copyResponse": "copy response",
   "feature.btw.scroll": "scroll",
   "feature.group.session": "Session",
   "feature.group.dialog": "Dialog",

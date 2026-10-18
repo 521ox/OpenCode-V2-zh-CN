@@ -265,6 +265,7 @@ export function DialogWorkspaces(props: DialogWorkspacesProps) {
         const choice = await DialogWorkspaceFileChanges.show(dialog, status?.data ?? [], {
           title: t("main.worktree.delete"),
           message: t("main.worktree.deleteConfirm"),
+          confirm: { title: t("main.delete"), key: "d" },
         })
         if (choice !== "yes") {
           reopen()

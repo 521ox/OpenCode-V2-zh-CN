@@ -63,6 +63,13 @@ export function DialogErrorDetails(props: {
     ],
   }))
 
+  const actions = () => [
+    { title: t("main.investigate"), key: "i", onTrigger: investigate },
+    copied()
+      ? { title: t("main.copy.done"), color: theme.text.feedback.success.base, onTrigger: copy }
+      : { title: t("main.details.copy"), key: "c", onTrigger: copy },
+  ]
+
   useKeyboard((event) => {
     if (event.name === "up") return scroll?.scrollBy(-1)
     if (event.name === "down") return scroll?.scrollBy(1)
@@ -103,16 +110,9 @@ export function DialogErrorDetails(props: {
           </Show>
         </box>
       }
-      footer={
-        <DialogFooter
-          actions={[
-            { title: t("main.investigate"), key: "i", onTrigger: investigate },
-            copied()
-              ? { title: t("main.copy.done"), color: theme.text.feedback.success.base, onTrigger: copy }
-              : { title: t("main.details.copy"), key: "c", onTrigger: copy },
-            { title: t("main.scroll"), key: "↑/↓", side: "right" },
-          ]}
-        />
+      footer={{ actions: { primary: actions() } }}
+      legacyFooter={
+        <DialogFooter actions={{ secondary: actions(), primary: [{ title: t("main.scroll"), key: "↑/↓" }] }} />
       }
     >
       <scrollbox

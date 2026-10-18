@@ -21,6 +21,7 @@ test("exposes every standard HTTP API group", () => {
     "message",
     "model",
     "generate",
+    "voice",
     "provider",
     "integration",
     "mcp",
@@ -53,6 +54,7 @@ test("exposes every standard HTTP API group", () => {
   expect(Object.keys(client.integration.oauth)).toEqual(["connect", "status", "complete", "cancel"])
   expect(Object.keys(client.integration.command)).toEqual(["connect", "status", "cancel"])
   expect(Object.keys(client.websearch)).toEqual(["providers", "query"])
+  expect(Object.keys(client.voice)).toEqual(["session"])
   expect(Object.keys(client.file)).toEqual(["read", "list", "find", "write"])
   expect(client.file.write).toBeFunction()
   expect(Object.keys(client.vcs)).toEqual(["init", "get", "base", "status", "branch", "diff"])

@@ -72,9 +72,9 @@ test("validates and resolves categorical hues in configured order", () => {
   expect(theme.categorical[2]).toBe(theme.hue.interactive)
   expect(theme.surface("dialog").categorical).toBe(theme.categorical)
   expect(() => resolveSource(complete("light", { categorical: [] }), "light")).toThrow("Invalid theme")
-  expect(() =>
-    resolveSource(complete("light", { categorical: ["magenta"] as never }), "light"),
-  ).toThrow("Invalid theme")
+  expect(() => resolveSource(complete("light", { categorical: ["magenta"] as never }), "light")).toThrow(
+    "Invalid theme",
+  )
 })
 
 test("resolves arbitrary hue names across aliases, categorical colors, and token references", () => {
@@ -117,9 +117,7 @@ test("generates syntax with one categorical hue", () => {
 
 test("rejects incomplete themes instead of merging defaults", () => {
   expect(() => resolveSource({ light: { hue: light.hue } }, "light")).toThrow("Invalid theme")
-  expect(() => resolveSource({ light: { ...light, categorical: undefined } }, "light")).toThrow(
-    "Invalid theme",
-  )
+  expect(() => resolveSource({ light: { ...light, categorical: undefined } }, "light")).toThrow("Invalid theme")
 })
 
 test("resolves independent definitions and hue aliases", () => {
@@ -163,16 +161,11 @@ test("resolves independent definitions and hue aliases", () => {
 })
 
 test("resolves base hue aliases and rejects circular hue aliases", () => {
-  const aliased = resolveTheme(
-    {
-      ...light,
-      hue: { ...light.hue, blue: "$hue.red", purple: "$hue.blue" },
-    },
-  )
-  const overridden = resolveSource(
-    complete("light", { hue: { ...light.hue, blue: "$hue.red" } }),
-    "light",
-  )
+  const aliased = resolveTheme({
+    ...light,
+    hue: { ...light.hue, blue: "$hue.red", purple: "$hue.blue" },
+  })
+  const overridden = resolveSource(complete("light", { hue: { ...light.hue, blue: "$hue.red" } }), "light")
   const aliasedHues = allHues(aliased)
   const overriddenHues = allHues(overridden)
 
@@ -186,27 +179,23 @@ test("resolves base hue aliases and rejects circular hue aliases", () => {
   expect(aliased.source(aliasedHues.blue[500])).toEqual({ hue: "blue", step: 500 })
   expect(aliased.source(aliasedHues.purple[500])).toEqual({ hue: "purple", step: 500 })
   expect(() =>
-    resolveTheme(
-      {
-        ...light,
-        hue: { ...light.hue, red: "$hue.blue", blue: "$hue.red" },
-      },
-    ),
+    resolveTheme({
+      ...light,
+      hue: { ...light.hue, red: "$hue.blue", blue: "$hue.red" },
+    }),
   ).toThrow("Circular hue reference: red -> blue -> red")
 })
 
 test("steps by hue source when adjacent colors have equal values", () => {
   if (typeof light.hue.gray !== "object") throw new Error("Expected a concrete gray scale")
-  const theme = resolveTheme(
-    {
-      ...light,
-      hue: {
-        ...light.hue,
-        gray: { ...light.hue.gray, 200: "#eee8d5", 300: "#eee8d5", 400: "#d3d7c6" },
-        neutral: "$hue.gray",
-      },
+  const theme = resolveTheme({
+    ...light,
+    hue: {
+      ...light.hue,
+      gray: { ...light.hue.gray, 200: "#eee8d5", 300: "#eee8d5", 400: "#d3d7c6" },
+      neutral: "$hue.gray",
     },
-  )
+  })
 
   expect(theme.hue.neutral[200]).not.toBe(theme.hue.neutral[300])
   expect(theme.hue.neutral[200].equals(theme.hue.neutral[300])).toBeTrue()
@@ -268,6 +257,15 @@ test("resolves matched action variants and states", () => {
   expect(theme.background.formfield.hovered).toBeInstanceOf(RGBA)
 })
 
+test("defaults faint text to muted unless a theme sets it", () => {
+  const fallback = resolveTheme(light)
+  const explicit = resolveTheme({ ...light, text: { ...light.text, faint: "#123456" } })
+
+  expect(fallback.text.faint).toBe(fallback.text.muted)
+  expect(fallback.surface("dialog").text.faint).toBe(fallback.surface("dialog").text.muted)
+  expect(explicit.text.faint.toInts()).toEqual([18, 52, 86, 255])
+})
+
 test("resolves dialog surfaces from direct colors", () => {
   const theme = resolveSource(
     {
@@ -286,19 +284,17 @@ test("resolves dialog surfaces from direct colors", () => {
 })
 
 test("resolves transparent colors", () => {
-  const theme = resolveSource(complete("light", {
-    background: { ...light.background, formfield: { base: "transparent" } },
-  }))
+  const theme = resolveSource(
+    complete("light", {
+      background: { ...light.background, formfield: { base: "transparent" } },
+    }),
+  )
   expect(theme.background.formfield.base.toInts()).toEqual([0, 0, 0, 0])
 })
 
 test("reports theme decoding failures as native errors", () => {
   expect(() =>
-    resolveSource(
-      complete("light", { text: { ...light.text, base: "opaque" } }) as never,
-      "light",
-      "custom",
-    ),
+    resolveSource(complete("light", { text: { ...light.text, base: "opaque" } }) as never, "light", "custom"),
   ).toThrow('Invalid theme: custom "opaque" is an invalid value')
 })
 
@@ -338,20 +334,16 @@ test("rejects missing and circular references", () => {
 
 test("validates complete hues, resolved groups, and hue-only syntax", () => {
   expect(() =>
-    resolveTheme(
-      {
-        ...light,
-        hue: { ...light.hue, accent: "$hue.missing" },
-      } as unknown as ThemeDefinition,
-    ),
+    resolveTheme({
+      ...light,
+      hue: { ...light.hue, accent: "$hue.missing" },
+    } as unknown as ThemeDefinition),
   ).toThrow("$hue.missing")
   expect(() =>
-    resolveTheme(
-      {
-        ...light,
-        syntax: { ...light.syntax, keyword: "$text.base" },
-      } as unknown as ThemeDefinition,
-    ),
+    resolveTheme({
+      ...light,
+      syntax: { ...light.syntax, keyword: "$text.base" },
+    } as unknown as ThemeDefinition),
   ).toThrow("$text.base")
 })
 

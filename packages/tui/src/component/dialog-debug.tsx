@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For } from "solid-js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
-import { DialogFooter, DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
+import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { useRoute } from "../context/route"
 import { useLocal } from "../context/local"
 import { useClipboard } from "../context/clipboard"
@@ -9,6 +9,7 @@ import { useToast } from "../ui/toast"
 import { describeOS, describeTerminal } from "../util/system"
 import { useTuiApp } from "../context/runtime"
 import { useI18n } from "../context/i18n"
+import { useNewDesigns } from "../config"
 
 export function DialogDebug() {
   const { t } = useI18n()
@@ -19,6 +20,7 @@ export function DialogDebug() {
   const clipboard = useClipboard()
   const toast = useToast()
   const app = useTuiApp()
+  const newDesigns = useNewDesigns()
   const [copied, setCopied] = createSignal(false)
 
   dialog.setSize("large")
@@ -50,27 +52,28 @@ export function DialogDebug() {
 
   Keymap.createLayer(() => ({
     mode: "modal",
-    commands: [{ bind: "return", title: t("main.debug.copy"), group: t("main.group.dialog"), run: copy }],
+    commands: [
+      { bind: newDesigns() ? "c" : "return", title: t("main.debug.copy"), group: t("main.group.dialog"), run: copy },
+    ],
   }))
+
+  const copyAction = () => ({
+    title: copied() ? t("main.copy.done") : t("main.copy"),
+    key: newDesigns() ? "c" : "enter",
+    color: copied() ? theme.text.feedback.success.base : undefined,
+    onTrigger: copy,
+  })
 
   return (
     <DialogLayout
-      header={<DialogHeader title={t("main.group.debug")} />}
-      footer={
-        <DialogFooter
-          actions={[
-            {
-              title: copied() ? t("main.copy.done") : t("main.copy"),
-              key: "enter",
-              side: "right",
-              color: copied() ? theme.text.feedback.success.base : undefined,
-              onTrigger: copy,
-            },
-          ]}
-        >
-          <text fg={theme.text.muted}>{t("main.debug.share")}</text>
-        </DialogFooter>
-      }
+      header={<DialogHeader title={t("main.group.debug")} description={t("main.debug.share")} />}
+      footer={{
+        actions: { primary: [copyAction()] },
+        get children() {
+          if (newDesigns()) return undefined
+          return <text fg={theme.text.muted}>{t("main.debug.share")}</text>
+        },
+      }}
     >
       {/* No click-to-copy here: releasing a mouse selection must trigger the
           global copy-on-select so users can copy a single value, e.g. the session id. */}

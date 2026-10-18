@@ -145,14 +145,29 @@ export function Answer(props: {
           </text>
         </DialogHeader>
       }
-      footer={
-        <DialogFooter
-          actions={[
+      footer={{
+        actions: {
+          primary: [
             copied()
               ? { title: `✓ ${i18n.t("feature.btw.copied")}`, color: theme.text.feedback.success.base, onTrigger: copy }
-              : { title: i18n.t("feature.btw.copy"), key: "c", onTrigger: copy },
-            { title: i18n.t("feature.btw.scroll"), key: "j/k ↑/↓" },
-          ]}
+              : { title: i18n.t("feature.btw.copyResponse"), key: "c", onTrigger: copy },
+          ],
+        },
+      }}
+      legacyFooter={
+        <DialogFooter
+          actions={{
+            secondary: [
+              copied()
+                ? {
+                    title: `✓ ${i18n.t("feature.btw.copied")}`,
+                    color: theme.text.feedback.success.base,
+                    onTrigger: copy,
+                  }
+                : { title: i18n.t("feature.btw.copy"), key: "c", onTrigger: copy },
+              { title: i18n.t("feature.btw.scroll"), key: "j/k ↑/↓" },
+            ],
+          }}
         />
       }
     >

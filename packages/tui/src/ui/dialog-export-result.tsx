@@ -1,16 +1,31 @@
+import { createSignal } from "solid-js"
+import { useNewDesigns } from "../config"
+import { useClipboard } from "../context/clipboard"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog, type DialogContext } from "./dialog"
 import { useI18n } from "../context/i18n"
+import { useToast } from "./toast"
 
 export function DialogExportResult(props: { path: string; onClose?: () => void }) {
   const { t } = useI18n()
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
+  const clipboard = useClipboard()
+  const toast = useToast()
+  const newDesigns = useNewDesigns()
+  const [copied, setCopied] = createSignal(false)
 
   const close = () => {
     props.onClose?.()
     dialog.clear()
+  }
+
+  const copy = () => {
+    void clipboard
+      .write(props.path)
+      .then(() => setCopied(true))
+      .catch(toast.error)
   }
 
   Keymap.createLayer(() => ({
@@ -25,10 +40,25 @@ export function DialogExportResult(props: { path: string; onClose?: () => void }
     ],
   }))
 
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    enabled: newDesigns(),
+    commands: [{ bind: "c", title: t("main.export.copyPath"), group: t("main.group.dialog"), run: copy }],
+  }))
+
   return (
     <DialogLayout
       header={<DialogHeader title={t("main.export.done")} onClose={close} />}
-      footer={
+      footer={{
+        actions: {
+          primary: [
+            copied()
+              ? { title: t("main.copy.done"), color: theme.text.feedback.success.base, onTrigger: copy }
+              : { title: t("main.path.copy").toLowerCase(), key: "c", onTrigger: copy },
+          ],
+        },
+      }}
+      legacyFooter={
         <box flexDirection="row" justifyContent="flex-end" gap={1}>
           <box
             paddingLeft={3}

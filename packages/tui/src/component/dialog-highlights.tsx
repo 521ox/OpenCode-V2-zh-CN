@@ -62,9 +62,10 @@ export function DialogHighlights(props: { version: string; items: ReadonlyArray<
   return (
     <DialogLayout
       header={<DialogHeader title={t("main.highlights.version", { version: props.version })} />}
-      footer={
+      footer={{ actions: { primary: [{ title: t("main.ok"), key: "enter", onTrigger: () => dialog.clear() }] } }}
+      legacyFooter={
         <box flexDirection="row" justifyContent="space-between" alignItems="center">
-          <DialogFooter actions={[{ title: t("main.scroll"), key: "↑/↓" }]} />
+          <DialogFooter actions={{ secondary: [{ title: t("main.scroll"), key: "↑/↓" }] }} />
           <box
             paddingLeft={3}
             paddingRight={3}

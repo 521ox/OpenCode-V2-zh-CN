@@ -319,6 +319,8 @@ export default {
   "session.copyDescription": "将消息文本复制到剪贴板",
   "session.forkDescription": "创建新会话",
   "session.timeline": "时间线",
+  "session.searchTimeline": "搜索时间线",
+  "session.searchQueuedPrompts": "搜索排队中的提示",
   "session.forked": "已创建会话分支",
   "session.fullSession": "完整会话",
   "session.forking": "正在创建会话分支…",
