@@ -1,6 +1,34 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## October 18 synchronization in progress
+## October 18 accepted local synchronization
+
+Independent reviewer `ses_eb2727061ffeb4ShVC3NnlBtSb` returned
+`APPROVE WITH DEFERRED RISKS` for build source
+`3cd03343451297a4806f05c2a66df46432b7aaf9` and candidate
+`2.0.32-custom-lite.20261018.1`, latest channel, Windows x64 bytecode with
+complete embedded WebUI, Bun `1.4.2+744846f84`. Length: 215,883,776 bytes;
+SHA256: `04b9e76a50073ebc3d01bbbe2cfb1331ec1418f58d7ae689b953b91d58c0c73c`.
+Source repair/re-review cycles consumed: 0/1; earlier reviews are unchanged.
+
+Fresh compiled run `run-7e7b9994929149e98bcac9329712cf2a` passed all ten phases.
+The accepted old 2.0.30 binary created and cold-read the populated private default
+database before this candidate read the same file. Two sessions, six completed
+messages, original rows/raw JSON/order/start-directory, 36 schema objects and
+51 migration journal rows were preserved. DB/channel/XDG/config-root selectors
+were absent; ProgramData and saved service configuration were private. Actual
+UTF-8 Chinese help, version, embedded Bun, NativeArch and supervised service smoke
+passed. Service loser exited 0; winner stop exited 1 under the existing termination
+contract. All recorded processes exited and private profiles were removed.
+
+The initial harness observer-descriptor failure remains failed evidence; it
+occurred before product launch and was followed by a complete fresh run without
+changing the candidate. No official-independent product defect was patched.
+Client baseline failures, OCT11-P2-1, existing localization/lint warnings,
+platform non-coverage and real-user/unfinished-state/rollback limitations remain
+deferred. Fast DeepSeek long-thinking diagnosis remains a separate next task.
+Formal promotion/export facts belong to executable metadata. No activation or
+remote publication is implied. The following paragraphs retain staged history,
+not open acceptance blockers.
 
 The authorized target is frozen official dev
 `63c1a27af5a391d9caa55b82694f496911e1859b` (2.0.32), based on custom
