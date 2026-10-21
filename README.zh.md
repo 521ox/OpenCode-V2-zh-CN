@@ -8,7 +8,7 @@
 
 本项目在现有 [521ox/OpenCode-V2-zh-CN 仓库](https://github.com/521ox/OpenCode-V2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
-官方 V2 开发现跟踪 **`dev`** 分支。2026 年 10 月 16 日的同步冻结于 `eeec76bb620f9bee8cab89c5a3a88e315539645b`（2.0.30，Bun 1.4.2）。计划本地候选版本 `2.0.30-custom-lite.20261016.1` **仍在进行中，尚未验收或发布**；当前证据和限制见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+官方 V2 开发现跟踪 **`dev`** 分支。2026 年 10 月 16 日的同步冻结于 `eeec76bb620f9bee8cab89c5a3a88e315539645b`（2.0.30，Bun 1.4.2）。独立复核对基于源码提交 `917f5f463a2b09bb9d27e4eabeed26c1031af777` 构建的 Windows x64 本地候选版本 `2.0.30-custom-lite.20261016.1` 给出“通过，但保留风险”（`APPROVE WITH DEFERRED RISKS`）的结论，最终编译检查也已通过。该候选尚未启用，也未作为公开 Release 发布；这不代表完成了多平台发布或真实用户数据迁移验收。准确证据和限制见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
 - 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
 - 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。本维护记录最后已核实的线上版本是 [**`v2.0.22-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，于 2026 年 10 月 4 日由源码 `e2e166b1905603b750f5c0bbfa808fdf6d73bca3` 经[发布 CI `37200948032`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/37200948032) 发布。这是注明日期的历史事实，不承诺它始终是最新版本。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
@@ -45,6 +45,7 @@
 ```powershell
 git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
+git checkout 917f5f463a2b09bb9d27e4eabeed26c1031af777
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
 $env:OPENCODE_VERSION = "2.0.30-custom-lite.20261016.1"
@@ -52,13 +53,13 @@ $env:OPENCODE_CHANNEL = "latest"
 bun script/build.ts --target=opencode-windows-x64 --skip-install
 ```
 
-示例版本是 10 月 16 日的计划候选版本，**不是已验收构建**，也不表示默认分支已包含此次冻结的集成。请核对选定源码提交；修改源码后构建应使用不同的自定义版本号。该命令使用现有构建脚本生成包含字节码和完整内嵌 WebUI 的 Windows x64 CLI。可执行文件位于相对仓库根目录的 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`。构建会重新创建 CLI 的 `dist` 目录。`--skip-install` 跳过构建脚本额外安装依赖的步骤，因此需要先完成根目录的依赖安装。
+示例版本对应基于源码提交 `917f5f463a2b09bb9d27e4eabeed26c1031af777` 构建、经本地复核的 10 月 16 日 Windows x64 候选版本；它不是公开 Release。命令通过 checkout 固定到 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 记录的精确源码。修改源码后请使用不同的自定义版本号，不要复用此候选版本。该命令使用现有构建脚本生成包含字节码和完整内嵌 WebUI 的 Windows x64 CLI。可执行文件位于相对仓库根目录的 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`。构建会重新创建 CLI 的 `dist` 目录。`--skip-install` 跳过构建脚本额外安装依赖的步骤，因此需要先完成根目录的依赖安装。
 
 保留明确的自定义 `OPENCODE_VERSION` 和 **`OPENCODE_CHANNEL=latest`**。频道决定数据库、服务和 TUI 的存储身份；`local` 使用另一套状态，不适合直接替换现有版本。这里的 `latest` 不表示已公开发布，也不是自定义更新源。构建不会自动安装、启用或验证新程序对你个人数据的兼容性。
 
 ## 验证范围与已知限制
 
-10 月 16 日的集成仍在进行中。Core 迁移、Protocol 和 Client 的规范生成及检查已通过，重复生成结果稳定，51 个历史迁移体均保持不变。这些仅是有范围的生成源码检查，不代表编译版运行、Windows 构建、跨平台或最终整体验收通过。10 月 11 日的本地验收是 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 中另一条历史记录；下方更早的验收结果也不适用于新候选版本。
+基于源码提交 `917f5f463a2b09bb9d27e4eabeed26c1031af777` 的 10 月 16 日 Windows x64 本地候选版本，在独立复核和编译检查后获“通过但保留风险”的本地验收；精确产物和验证范围见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。这不代表公开 Release、已启用、六种平台均通过、完整功能套件通过或真实用户数据迁移得到验收。另有 Core 迁移、Protocol 和 Client 的规范生成及检查通过，重复生成结果稳定，51 个历史迁移体均保持不变；这些有范围的源码检查不会扩大候选版本的验收范围。10 月 11 日的本地验收是另一条历史记录；下方更早的验收结果也不适用于 10 月 16 日候选版本。
 
 2026 年 9 月 24 日本地 Windows x64 候选版本 `2.0.15-custom-lite.20260924.1` 基于官方 V2 `dca73ba9e3782e2b41983faca5854a9d56a3c482`。已有验收记录覆盖 4,353 项通过的聚焦用例（72 项条件性或平台相关跳过）、16 个受影响包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的服务和已填充旧格式合成数据库冒烟验证。这些是有明确范围的本地结果，与原生发布 CI 分别记录，不是此次 README 更新产生的新运行验证，也不代表整个仓库的检查通过或 Electron Desktop 验证。Stats App 类型检查限制及一次尚未查明原因的 TUI 布局持久化警告继续记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
@@ -69,7 +70,7 @@ bun script/build.ts --target=opencode-windows-x64 --skip-install
 
 后续本地 `.2` 修复增加了对旧原生压缩记录中扁平媒体格式的兼容读取。聚焦验收覆盖 71 项通过的 Core 测试、Core/AI/CLI 类型检查、既有压缩记录的只读验证、编译版冷启动读取的失败/成功对照，以及隔离服务/WebUI 检查。历史记录和加密压缩内容不被重写。当时的本地检查没有重新构建或替换历史 `v2.0.15-zhcn.1` 附件；真实 TUI 的替换启用仍由用户执行。
 
-9 月 25 日已验收的集成将上述修复与官方 V2 2.0.16 的 `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` 合并，本地交付版本为 `2.0.16-custom-lite.20260924.1`。配对采用官方一次性链接，不再把长期服务密码放入二维码。后续 9 月 29 日、10 月 4 日和 10 月 11 日的验收记录见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。源码合并不等于二进制验收，确切验证和交付状态以该记录及产物旁的元数据为准。仍在进行中的 10 月 16 日工作不会替换既有线上 Release，也不会自动启用已安装的可执行文件。
+9 月 25 日已验收的集成将上述修复与官方 V2 2.0.16 的 `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` 合并，本地交付版本为 `2.0.16-custom-lite.20260924.1`。配对采用官方一次性链接，不再把长期服务密码放入二维码。后续 9 月 29 日、10 月 4 日、10 月 11 日及 10 月 16 日的验收记录见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。源码合并本身不等于二进制验收，确切验证和交付状态以该记录及产物旁的元数据为准。10 月 16 日 Windows x64 候选版本已在本地验收，但仍保留已记录的待处理风险；它尚未替换既有线上 Release，也不会自动启用已安装的可执行文件。
 
 替换已安装程序或在真实数据上启用前，请保留旧可执行文件与用户状态的一致备份。个人配置、凭据和真实数据库不应进入源码提交或验证夹具。本次源码切换不提供迁移或转换工具。
 
