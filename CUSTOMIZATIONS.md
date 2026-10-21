@@ -1,25 +1,27 @@
 # Minimal Custom V2 Distribution
 
-## October 16 synchronization — in progress
+## October 16 local candidate — accepted with deferred risks
 
-The current integration starts from custom `c292e252d1e85b003972ebd7e7b8b68e6e30987a`
+The October 16 synchronization starts from custom `c292e252d1e85b003972ebd7e7b8b68e6e30987a`
 and targets frozen official `dev` revision
 `eeec76bb620f9bee8cab89c5a3a88e315539645b` (2.0.30, Bun 1.4.2), following
-`4617210822bdbb31e5749751afbfb4584ccedac8`. Planned local artifact:
-`2.0.30-custom-lite.20261016.1`, channel `latest`, Windows x64 bytecode with the
-complete embedded WebUI. It is not accepted, delivered, activated or published.
+`4617210822bdbb31e5749751afbfb4584ccedac8`. The Windows x64 local candidate
+`2.0.30-custom-lite.20261016.1` was built from source commit
+`917f5f463a2b09bb9d27e4eabeed26c1031af777` with channel `latest`, bytecode and
+the complete embedded WebUI. Independent review returned
+`APPROVE WITH DEFERRED RISKS`, and the final compiled checks passed. This is local
+candidate acceptance only: it is not a public Release or activation, and does not
+establish six-platform or real-user-data migration acceptance.
 
-The selected custom contracts below remain the integration requirements, including
+The selected custom contracts below describe the maintained behavior, including
 the October 13 compact working-memory guidance without a rules-directory path
-change. Scoped generation checks have passed; they do not establish compiled
-runtime or final integrated acceptance. See `UPSTREAM_SYNC.md` for this freeze,
-verification boundaries and the October 11 accepted local synchronization.
-The following September acceptance summaries are retained as history, not claims
-that the October 16 candidate passed those checks.
+change. Exact source and artifact identity, verification boundaries and deferred
+risks are recorded in `UPSTREAM_SYNC.md`. The following dated acceptance summaries
+are historical and are not evidence for the October 16 candidate.
 
 ## Historical acceptance summaries
 
-Current accepted source: the September 29 synchronization targets official V2 `7827dbe39630cbe3b3b7cab22f902b6f5e7cf74f` (2.0.18). Local artifact `2.0.18-custom-lite.20260929.2`, built from `e8100f9d7200fc335667abfdc5d0cbc0fe1f19b4`, passed the scoped checks and independent review recorded in `UPSTREAM_SYNC.md`. S29-F1 is closed. Exact copy/export facts belong to the artifact sidecar; acceptance does not activate the installed executable or publish a Release. The previous accepted artifact below remains the historical fallback.
+Earlier accepted source: the September 29 synchronization targets official V2 `7827dbe39630cbe3b3b7cab22f902b6f5e7cf74f` (2.0.18). Local artifact `2.0.18-custom-lite.20260929.2`, built from `e8100f9d7200fc335667abfdc5d0cbc0fe1f19b4`, passed the scoped checks and independent review recorded in `UPSTREAM_SYNC.md`. S29-F1 is closed. Exact copy/export facts belong to the artifact sidecar; acceptance does not activate the installed executable or publish a Release. The previous accepted artifact below remains the historical fallback.
 
 Status: locally accepted `2.0.16-custom-lite.20260924.1` targets official V2 `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` (2.0.16), retaining the native-checkpoint media compatibility repair and the selected behavior below. It adopts official single-use pairing links while preserving Chinese/English TUI chrome, including missing-directory recovery errors. Existing grouping, disclosure/scroll state, parent cache affinity, cleanup guidance and bounded Console-policy repairs remain intact. See `UPSTREAM_SYNC.md` and the adjacent `.exe.build.json` for exact acceptance, source identity, verification scope and delivery state. Acceptance does not activate the installed executable or update the public Release; replacement and restart remain user-managed.
 
