@@ -21,14 +21,20 @@ winner stop exit: 1 under the existing contract. Its isolated environment now
 also supplies private ALLUSERSPROFILE; the matching 15-case fixture file passed.
 This post-build tooling adjustment does not change the executable's source identity.
 
-The required populated old-binary/default-DB and compiled historical-checkpoint
-checks remain blocked on locating the maintained compatibility harness. The old
-sidecar points to the removed `sync-v2-20261018/compiled-checks` scratch directory;
-no replacement was found in W. The required old executable is explicitly
-`D:\opencode-local-build\opencode-v2-custom-lite\opencode2.exe` (accepted 2.0.32).
-No replacement compatibility framework or real-user database test was substituted.
-Parent must supply the maintained entry/run-input location before this candidate
-can be declared ready for final acceptance.
+The authorized one-off compiled compatibility probe exited 0. Accepted W
+`opencode2.exe` (2.0.32) imported two synthetic sessions/six completed messages,
+then cold-read them after restart. The candidate opened the same private default
+opencode.db without DB/channel/XDG/config-root selectors: 51 migrations became 55,
+with original session/message rows, Unicode, ordering, identifiers and creation
+directories preserved. Legacy checkpoint/media input came from the trusted
+2.0.14 fixture plus explicit data/HTTP(S) URL cases, imported through the old
+public API; it was not naturally model-generated or injected through SQL.
+All three owned processes stopped (exit 1 under the existing stop contract),
+no external proxy request occurred, and the profile was removed. Initial probe
+assertions incorrectly reused a two-process election helper and compared Windows
+path separators literally; both were corrected before the complete passing run.
+The script/result remain in task scratch for independent review. Real-user data,
+unfinished-state migration and downgrade/rollback are outside this evidence.
 
 Conflict ownership: AI protocols retain typed native-search lowering alongside
 upstream generation/media options; Core owns permission/config integration and
@@ -37,7 +43,7 @@ checkpoint shape conversion; Client owns publication revocation; TUI/CLI retain
 the locale owner while adopting upstream interactions. Historical workflow
 deletions and fork README identity are retained. Catalog locking uses the official
 EffectFlock owner; retired model-option helpers use the official model-options
-owner. Compiled compatibility and independent acceptance remain open.
+owner. Independent acceptance remains open.
 
 The owner explicitly selected official Console semantics on October 28. The old
 process-global ManagedPolicy repair is retired with upstream `d78b817631`.
@@ -68,9 +74,14 @@ scoped `typecheck:tsc` package checks passed: AI, Schema, Core, Protocol, Client
 Server, Plugin, App, GUI plugins, Session UI, Codemode, TUI and CLI. App initially
 failed because Git materialized its tracked symlink as text; an I-only checkout
 with `-c core.symlinks=true` restored the actual link without changing source.
-The canonical root check passed lint (1,569 warnings, zero errors), then stopped
-at Turbo's missing global-config path under isolation; it is not an all-green
-monorepo check. Existing lint suppression diagnostics remain.
+The canonical root check passed lint (1,569 warnings, zero errors). After its
+first isolated attempt lacked Turbo's global-config path, the runner supplied
+private Turbo/Vercel config and Turbo cache paths. The requested single rerun
+exited 1 at Console app typecheck: vite.config.ts:10 TS2769, Vite 8/rolldown versus
+Console Vite 7/rollup PluginOption types (missing rolldownVersion). Console's
+manifest and Vite config exactly match the frozen target; no upstream fix was
+added. This installation-level limitation remains unresolved, not a green root
+gate or a proven baseline-equivalent failure. Existing lint diagnostics remain.
 
 Core custom-focused execution recorded 116 passes and two stale registry-fixture
 failures; the updated four-test migration file then passed, preserving the
@@ -88,8 +99,10 @@ failures). No product or assertion was changed to hide them; W was not executed
 or modified. The retired global Console-policy tests were replaced by focused
 Config-document/hosted-search authorization coverage under the new agreed owner.
 
-All probes used cleared child environments and private nonempty Windows/user/XDG
-roots. The task-owned Bun, private runner and basic-probe script/result under
+All probes used cleared child environments and private nonempty Windows/user
+roots; source checks also used private XDG roots, while compiled compatibility
+used official default discovery without XDG overrides. The task-owned Bun,
+private runner and basic/compatibility probe scripts/results under
 `C:\Users\Administrator\AppData\Local\Temp\opencode\sync-20261028` remain for
 continuation and independent review. Completed profiles, downloaded ZIP, redundant
 Bun cache, archived Client baseline/junction, App dist and intermediate app archive
