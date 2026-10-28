@@ -205,9 +205,9 @@ endpoint bodies or auxiliary title/summary work.
 ### Native checkpoint media compatibility
 
 Version-1 provider-context windows written before the upstream Media Asset
-transition may contain flat media parts with `data` and `mediaType`. The Core
-`SessionProviderContext` read boundary recognizes that historical shape and
-adapts it in memory before using the current canonical Message codec. Bare
+transition may contain flat media parts with `data` and `mediaType`. The Schema
+`SessionLegacy` owner now adapts that historical shape on Core's persisted read
+path before the current `SessionHistory.NativeWindow` codec is used. Bare
 base64, base64 data URLs and HTTP(S) URLs retain their distinct meanings; a
 data URL's declared MIME type takes priority over the historical fallback type.
 Filename, cache and provider metadata, message order and opaque compaction
@@ -216,7 +216,9 @@ content remain intact. Both validation and model replay use the same adapter.
 The adapter does not rewrite database rows, prune tools, replace an encrypted
 checkpoint with a summary, or recover arbitrary malformed data. Existing current
 media fields are not overwritten by legacy fields. New checkpoints keep the
-current format; backward reading support does not guarantee that an old binary
+current format. Native-window eligibility and malformed-window fallback follow
+the current official history owner, replacing the retired provider-context
+provenance service. Backward reading support does not guarantee that an old binary
 can read checkpoints written by a newer binary. No real-data migration or
 automatic rollback is provided.
 

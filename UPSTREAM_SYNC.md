@@ -1,13 +1,34 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## October 28 synchronization — integration in progress
+## October 28 compiled candidate — acceptance pending
 
 Base: `72d0dce8ea437ea061e0680110fa19a81aa118fd`. Frozen official target:
-`86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0). The exact merge is open
+`86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0). Merge/build source is
+`c500539a4f7986cd5eeba9bb19fd049e80ae1e87`
 on `sync-dev-20261028` in `D:\opencode-local-build\opencode-v2-custom-sync-20261028`.
-All 58 initial conflict paths are resolved. No candidate has been compiled,
-accepted, promoted, exported or activated. Planned artifact remains
+All 58 initial conflict paths are resolved. The compiled candidate is not yet
+accepted, promoted, exported or activated. Its version is
 `2.2.0-custom-lite.20261028.1`, latest channel, Windows x64 bytecode and full WebUI.
+
+Canonical build exited 0, including native-image and artifact checks. Package and
+I-root mirror are identical: 255,228,928 bytes, SHA256
+`4d96ec1a260ed5a42eb1e46844fa3d03c17eef67550ac826d1825ffef6bb1452`.
+Private version, actual UTF-8 Chinese help and embedded Bun probes exited 0.
+The maintained compiled service smoke passed under an external 180-second deadline:
+owned election, authentication, anonymous embedded WebUI, plugin discovery,
+default opencode.db and owned shutdown/registration removal. Loser exit: 0;
+winner stop exit: 1 under the existing contract. Its isolated environment now
+also supplies private ALLUSERSPROFILE; the matching 15-case fixture file passed.
+This post-build tooling adjustment does not change the executable's source identity.
+
+The required populated old-binary/default-DB and compiled historical-checkpoint
+checks remain blocked on locating the maintained compatibility harness. The old
+sidecar points to the removed `sync-v2-20261018/compiled-checks` scratch directory;
+no replacement was found in W. The required old executable is explicitly
+`D:\opencode-local-build\opencode-v2-custom-lite\opencode2.exe` (accepted 2.0.32).
+No replacement compatibility framework or real-user database test was substituted.
+Parent must supply the maintained entry/run-input location before this candidate
+can be declared ready for final acceptance.
 
 Conflict ownership: AI protocols retain typed native-search lowering alongside
 upstream generation/media options; Core owns permission/config integration and
@@ -68,11 +89,12 @@ or modified. The retired global Console-policy tests were replaced by focused
 Config-document/hosted-search authorization coverage under the new agreed owner.
 
 All probes used cleared child environments and private nonempty Windows/user/XDG
-roots. Task-owned toolchain, cache and runner under
-`C:\Users\Administrator\AppData\Local\Temp\opencode\sync-20261028` are retained
-for continuation. The downloaded ZIP and earlier completed profiles were removed;
-current verification profiles and the small Client baseline are temporary and will
-be removed after their remaining evidence consumers finish.
+roots. The task-owned Bun, private runner and basic-probe script/result under
+`C:\Users\Administrator\AppData\Local\Temp\opencode\sync-20261028` remain for
+continuation and independent review. Completed profiles, downloaded ZIP, redundant
+Bun cache, archived Client baseline/junction, App dist and intermediate app archive
+were removed after observing zero task processes. The package executable, I-root
+mirror and adjacent candidate metadata remain; no final export was created.
 
 ## October 18 accepted local synchronization
 

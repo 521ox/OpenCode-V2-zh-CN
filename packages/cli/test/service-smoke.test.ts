@@ -121,6 +121,7 @@ describe("compiled service smoke contract", () => {
     expect(env.SystemRoot).toBe("fixture-windows")
     expect(env.COMSPEC).toBe("fixture-shell")
     expect(env.ProgramData).toBe(path.join(root, "program-data"))
+    expect(env.ALLUSERSPROFILE).toBe(path.join(root, "program-data"))
     expect(env.PROGRAMDATA).toBeUndefined()
     expect(ConfigDiscovery.systemDirectory("win32", env).toString()).toBe(path.join(root, "program-data", "opencode"))
     for (const key of [
