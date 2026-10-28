@@ -1,0 +1,24 @@
+name: Maintenance task
+description: Track an authorized maintenance, synchronization or workflow change
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and goal
+      description: What needs to change, and what outcome is wanted?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and constraints
+      description: Identify affected areas, authorization and important boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Acceptance and verification
+      description: How can the result be checked? Link existing issues or evidence where useful.
+    validations:
+      required: true

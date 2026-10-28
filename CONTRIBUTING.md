@@ -9,7 +9,7 @@ The changes most likely to be accepted are:
 - Missing standard behavior
 - Documentation improvements
 
-UI and core product features require design review before implementation. If you are unsure whether a change fits, ask a maintainer or choose an issue labeled [`help wanted`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Ahelp-wanted), [`good first issue`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22), [`bug`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug), or [`perf`](https://github.com/anomalyco/opencode/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22perf%22).
+This guide governs the community fork `521ox/OpenCode-V2-zh-CN`, whose default branch is `v2-custom-lite`. Major product decisions and UI/core feature designs require the owner's agreement before implementation.
 
 Want to take on an issue? Leave a comment and a maintainer may assign it unless it is already being worked on.
 
@@ -75,13 +75,31 @@ Follow the repository [style guide](./AGENTS.md).
 
 ## Pull Requests
 
-### Link Issues When Required
+### Issue → branch → PR → checks/review → merge
 
-Bug fixes, chores, and tests must reference an existing issue. Documentation, refactor, and feature PRs are exempt from the automated linked-issue check. When required, use `Fixes #123` or `Closes #123` in the PR description.
+1. Record the problem, intended outcome and scope in an issue; reuse an existing issue when it already covers the work. A small self-contained correction such as a typo may explain the exception in its PR rather than create a redundant issue. An issue is context, not authorization for an agent to take on arbitrary work.
+2. For an authorized task, create a short feature branch from current `v2-custom-lite`. Follow the branch naming rules in `AGENTS.md`; never implement directly on the default branch.
+3. Open a focused PR targeting `v2-custom-lite`, initially draft while incomplete. Link the issue (`Closes #123` when this PR resolves it), explain the change, and record verification results and limitations. Every change is delivered through a PR.
+4. Assign one implementation owner per PR. Agent PRs identify the responsible agent alias and its actual runtime session ID. Do not invent session IDs or change Git authorship to match an alias. The PR must stand on its own without session access. Keep corrections and review evidence in the same PR thread.
+5. Pass the required checks and any additional checks/review appropriate to the change. Record independent agent review against the evaluated head SHA when required by the task or engineering policy. A comment recording independent review is not a GitHub approval; the same GitHub account cannot approve its own PR. Do not require an unavailable external approver or pretend approval occurred.
+6. Once the authorized task meets these gates, the responsible agent may merge it using a **merge commit**, without asking again solely for routine merge permission. Honor any task-specific integration owner (including the parent owner of a delegated PR). Do not bypass branch protection, push directly, force-push the default branch, or delete it. Major product decisions and releases require separate owner authorization.
 
-Before implementing new functionality, open a feature request describing the problem, why it belongs in OpenCode, and your proposed approach if you have one. Wait for design approval before opening the implementation PR.
+Use merge commits for upstream synchronization as well, preserving official merge ancestry; see `UPSTREAM_SYNC.md`. Merge does not publish a binary, deploy, or activate an installed client. `release-custom-cli.yml` remains a separately authorized, manually dispatched six-platform release.
 
-Base branches on `dev` and complete the provided pull request template.
+### Required fork CI and its limits
+
+`custom-check.yml` runs on every PR to `v2-custom-lite` (including drafts and documentation-only changes), pushes to that branch, and manual dispatch. Stable required check names are:
+
+- **`custom-source`**: GitHub-hosted Ubuntu; actionlint for the fork check/release workflows, repository lint, and canonical `typecheck:tsc` for AI, Schema, Core, Protocol, Client, Server, Plugin, App, GUI plugins, Session UI, Codemode, TUI and CLI. Package checks run directly without Turbo or remote-cache credentials.
+- **`custom-windows`**: GitHub-hosted Windows; existing CLI localization, release-manifest/artifact and smoke-helper fixtures, plus native direct-execution and environment-tool catalog fixtures. These are source tests, not a compiled service or release build.
+
+Both use the frozen lockfile and declared Bun version. PR code receives no repository secrets, checkout credentials are not persisted, and token permissions are read-only. Dependency cache saves exclude PR events. Upstream-only check workflows remain in source but are restricted to the official repository and their upstream target branches; their check names are not required here.
+
+This is a CLI/custom baseline, **not full-monorepo green**. The recorded Console Vite 8/7 type conflict and two Client default-condition reconnect failures remain unresolved; this workflow neither changes those tests nor reports them as passing. See the October 28 evidence in `UPSTREAM_SYNC.md`. Browser/Electron, Nix, Rust process-daemon, live providers, full Core/Client suites and six-platform builds are outside this baseline.
+
+The implementation owner must add relevant evidence in the PR for changed behavior outside that baseline: affected-package tests/typechecks; generated Protocol/Client checks for API changes; migration/compatibility checks for persistence changes; browser/component checks for UI changes; native Rust/Nix checks for those areas; and compiled service smoke for build/service changes. Upstream syncs require checks for the actual integrated delta. Run the canonical root `bun run check` when evaluating repository-wide health and disclose failures rather than relabel a scoped pass. A baseline failure needs diagnosis and an explicit scoped acceptance decision, not test edits or silent skips to manufacture green.
+
+Workflow changes also need actionlint and inspection of event filters, runner labels, permissions and release isolation. Keep required names stable or coordinate their branch-rule update with the maintainer. Branch protection is configured on GitHub, not enforced by this document.
 
 ### Keep It Focused
 
@@ -93,7 +111,7 @@ Base branches on `dev` and complete the provided pull request template.
 
 ### Keep It Brief
 
-Long, AI-generated PR descriptions and issues may be ignored. Write a short explanation in your own words. If the change cannot be explained briefly, the PR may be too large.
+Write a short, concrete explanation that a maintainer can verify. If the change cannot be explained briefly, the PR may be too large.
 
 ### Use Conventional Titles
 
@@ -107,6 +125,4 @@ Examples:
 
 ## Issues
 
-Bug reports and feature requests must use their issue templates. Blank issues are not allowed; ask support and how-to questions in the [Discord community](https://discord.gg/opencode).
-
-Automated checks flag missing templates, placeholder text, AI-generated walls of text, and missing meaningful content. You have two hours to correct a flagged issue before it closes automatically. Ask a maintainer if an issue was flagged incorrectly.
+Use this fork's bug, feature or maintenance-task template. Describe the problem, desired outcome, scope and reproduction or acceptance evidence as applicable. Search existing issues before opening another. Issue creation and comments do not automatically schedule implementation or authorize a release.

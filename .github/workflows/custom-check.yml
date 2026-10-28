@@ -1,0 +1,93 @@
+name: Custom checks
+
+on:
+  pull_request:
+    branches: [v2-custom-lite]
+  push:
+    branches: [v2-custom-lite]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  HUSKY: "0"
+  ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+
+jobs:
+  source:
+    name: custom-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Check fork workflow syntax
+        env:
+          ACTIONLINT_SHA256: 900919a84f2229bac68ca9cd4103ea297abc35e9689ebb842c6e34a3d1b01b0a
+        run: |
+          curl --fail --location --silent --show-error https://github.com/rhysd/actionlint/releases/download/v1.7.11/actionlint_1.7.11_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" .github/workflows/custom-check.yml .github/workflows/release-custom-cli.yml
+      - uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --linker hoisted
+      - name: Repository lint
+        run: bun run lint
+      - name: CLI and embedded WebUI typechecks
+        run: |
+          for package in ai schema core protocol client server plugin app gui-plugins session-ui codemode tui cli; do
+            bun run --cwd "packages/$package" typecheck:tsc
+          done
+
+  windows:
+    name: custom-windows
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --linker hoisted
+      - name: Use private test configuration roots
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'custom-tests'
+          $roots = @{
+            HOME = "$root/home"; USERPROFILE = "$root/home"
+            APPDATA = "$root/appdata"; LOCALAPPDATA = "$root/localappdata"
+            ProgramData = "$root/programdata"; ALLUSERSPROFILE = "$root/programdata"
+            XDG_CONFIG_HOME = "$root/config"; XDG_DATA_HOME = "$root/data"
+            XDG_STATE_HOME = "$root/state"; XDG_CACHE_HOME = "$root/cache"
+            TEMP = "$root/tmp"; TMP = "$root/tmp"; OPENCODE_TEST_HOME = "$root/home"
+          }
+          foreach ($entry in $roots.GetEnumerator()) {
+            New-Item -ItemType Directory -Force $entry.Value | Out-Null
+            "$($entry.Key)=$($entry.Value)" >> $env:GITHUB_ENV
+          }
+      - name: CLI localization and release contract fixtures
+        working-directory: packages/cli
+        run: >-
+          bun --no-env-file run test
+          test/i18n-cli-config.test.ts
+          test/i18n-cli-help.test.ts
+          test/i18n-cli-output.test.ts
+          test/i18n-cli-stream.test.ts
+          test/release-artifact.test.ts
+          test/release-manifest.test.ts
+          test/service-smoke.test.ts
+      - name: Native execution and catalog fixtures
+        working-directory: packages/core
+        run: >-
+          bun --no-env-file run test
+          test/tool-direct-exec.test.ts
+          test/tool-environment-tools.test.ts
+          test/environment-tools-catalog.test.ts

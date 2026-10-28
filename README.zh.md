@@ -1,83 +1,88 @@
-# OpenCode V2 zh-CN — 中文增强版
+# OpenCode V2 zh-CN
 
-[English](README.md) | [简体中文](README.zh.md)
+**社区维护的 OpenCode V2 分支，提供中英文界面与原生工具增强。**
 
-这是基于开源 AI 编程工具 [OpenCode](https://github.com/anomalyco/opencode) 的社区维护分支。本项目并非 OpenCode 团队开发，与官方团队没有隶属关系，也不代表官方认可。
+[English](README.md) · [简体中文](README.zh.md)
 
-## 源码与发布状态
+[功能](#功能) · [下载](#下载) · [构建](#从源码构建) · [贡献](CONTRIBUTING.md) · [维护](UPSTREAM_SYNC.md)
 
-本项目在现有 [521ox/OpenCode-V2-zh-CN 仓库](https://github.com/521ox/OpenCode-V2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
+基于开源 AI 编程工具 [OpenCode](https://github.com/anomalyco/opencode)。本项目独立维护，与官方团队没有隶属关系，也不代表官方认可。维护分支为 **`v2-custom-lite`**，持续跟踪官方 **`dev`**；“lite”表示有边界的维护方式，并非仅做汉化。
 
-官方 V2 开发跟踪 **`dev`** 分支。2026 年 10 月 28 日的同步冻结于 `86ce19d96eccbfb95af3ff3189c7071575f94339`（2.2.0，Bun 1.4.4）。候选版本 `2.2.0-custom-lite.20261028.1` **尚未验收或发布**；当前证据和限制见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+## 源码与公开二进制
 
-- 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
-- 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。本维护记录最后已核实的线上版本是 [**`v2.0.22-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，于 2026 年 10 月 4 日由源码 `e2e166b1905603b750f5c0bbfa808fdf6d73bca3` 经[发布 CI `37200948032`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/37200948032) 发布。这是注明日期的历史事实，不承诺它始终是最新版本。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
-- 官方安装器、npm 包和官方更新器提供的是官方构建，不是此二开发行版。接受官方更新可能覆盖二开功能；本分支没有改变上游更新策略。
+| 类别 | 截至 2026 年 10 月 28 日的状态 |
+| --- | --- |
+| 维护源码 | 已集成官方 V2 **2.2.0**，本地 Windows x64 构建 `2.2.0-custom-lite.20261028.1` 已验收。详见[源码与验收证据](UPSTREAM_SYNC.md)。 |
+| 公开二进制 | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，2026 年 10 月 4 日发布的未签名预发布版本。2.2.0 源码／本地构建**不代表六平台版本已公开发布**。 |
 
-本分支持续同步官方 V2 的 `dev` 开发分支，围绕界面本地化、原生工具、会话与子代理交互、搜索权限和执行可靠性进行了多项实质增强。维护上强调改动边界清晰、沿用官方模块职责，不整体恢复旧二开的复杂实现。内部名称 `v2-custom-lite` 表达的是这种维护方式，并不意味着只做汉化或功能很少。
+已发布附件见[全部 Releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases)。旧 `main` 分支和 `v1.18.4-zhcn.*` Releases 不代表当前 V2 分支。官方安装器、npm 包及更新提供官方构建，可能覆盖二开功能；本分支不改变该更新策略。
 
-旧版二进制发布工作流继续停用。自定义发布流程复用当前官方构建入口、固定版本的环境／产物 Actions 和 GitHub CLI，不恢复官方部署或社区运维自动化。它独立于官方发布自动化，不表示所有上游工作流均已验收为本仓库的 CI。
+## 功能
 
-**历史版本升级兼容性提示：** `v2.0.15-zhcn.1` 受上游媒体格式变更影响，可能无法读取含图片的旧原生压缩记录。有边界的持久化媒体读取修复记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)；该历史 Release 的附件未被重新构建或覆盖。后续版本有各自的源码与验证记录。不要通过删除或重写会话历史来绕过此错误。
+| 领域 | 定制行为 |
+| --- | --- |
+| 中文 / English | TUI、Mini 和 CLI-run 界面默认简体中文，可选择英文并保留英文回退；模型／工具输出与协议数据保持原样。 |
+| 原生工具 | `environment_tools` 记录并重新验证程序；`direct_exec` 使用目录 ID 和参数数组执行已验证的原生 EXE/COM，仍受执行权限约束。 |
+| 会话记忆 | 根会话与子会话共享受保护的精简续接记忆位置，强调优先使用当前对话、按需读取和维护当前状态。 |
+| 子代理导航 | 可信的已完成结果在提供方限制内保留完整最终回复；显示会话身份，并可打开既有子会话。 |
+| 托管搜索 | 受支持的原生 OpenAI/xAI Responses 路由仅在有效权限允许时提供搜索；仍取决于模型和账户资格。 |
+| 临时产物 | 为 Agent 提供任务自有产物清理指引，不是自动清理服务。 |
 
-### 原生下载包与校验
+精确行为、保留的修复及非目标见 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)。维护证据与已知失败见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
-每个新 Release 包含 `opencode-windows-{x64,arm64}.zip`、`opencode-linux-{x64,arm64}.tar.gz`、`opencode-darwin-{x64,arm64}.tar.gz`，以及六个 JSON 元数据文件、`release-manifest.json` 和 `SHA256SUMS`。完整解压后运行 `cli-<platform>-<arch>/bin/opencode`，Windows 使用 `opencode.exe`。Linux 包适用于 glibc，不是 musl。这些是内嵌 WebUI 的 CLI 包，不是 Electron 桌面安装器。
+## 下载
 
-运行前请将下载包与 `SHA256SUMS` 对照：Windows 使用 `Get-FileHash -Algorithm SHA256 <archive>`，Linux 使用 `sha256sum <archive>`，macOS 使用 `shasum -a 256 <archive>`。清单记录精确源码提交、Bun 运行时、原生目标和实际文件摘要。二进制尚未代码签名，macOS 包也未经公证，系统可能显示安全提示。原生发布检查不等于完整功能测试或真实用户数据迁移认证。
+从 **`2.x-zhcn.N` [Release](https://github.com/521ox/OpenCode-V2-zh-CN/releases)** 选择对应附件：
 
-## 定制内容
+| 系统 | 架构 | 文件 |
+| --- | --- | --- |
+| Windows | x64、ARM64 | `opencode-windows-<arch>.zip` |
+| Linux（glibc） | x64、ARM64 | `opencode-linux-<arch>.tar.gz` |
+| macOS | x64、ARM64 | `opencode-darwin-<arch>.tar.gz` |
 
-- **简体中文 / English 界面文字。** TUI、Mini 和 CLI-run 的界面默认使用简体中文，可选择 English，并保留英文回退。通过现有设置对话框选择语言。模型和工具输出、标识符及协议数据不翻译；Mini 在启动时读取语言。早期帮助、启动输出和原生参数解析输出的翻译范围更窄，详见下方功能文档。
-- **环境目录与原生执行。** `environment_tools` 记录并重新验证已知程序；目录中没有记录不代表程序不存在。`direct_exec` 使用目录 ID 和参数数组执行已验证的原生 EXE/COM，仍受执行权限约束。Shell 语法、自定义环境、stdin 和后台执行仍由 Shell 工具处理。两者复用官方可折叠工具块；自动分组时，相邻 `direct_exec` 调用合并为执行集合，同时保留审批和失败状态的可见性。
-- **子代理结果与导航。** 已完成且可信的结果保留完整最终回复及官方子会话身份信息，仍受提供方上下文限制。管理列表显示子会话 ID，完成通知中的任务标题可打开既有子会话。可见的 `×` 关闭控件复用官方动作。这些功能不代表已修复子代理后续通知恢复。
-- **受保护的会话工作记忆。** 普通 Agent 请求获得根会话的规则目录位置，后代会话通过持久化父子关系共享。10 月 13 日的指引将其定位为精简的续接记忆，而非通用文档目录或流水日志：优先使用当前对话，按需读取并维护当前状态。路径与解析方式不变；解析过程不创建文件，用户指令和权威项目路径优先。
-- **权限控制的原生托管搜索。** 受支持的原生 OpenAI 和 xAI Responses 路由仅在有效授权不受限制时声明托管搜索能力。限制性或无法确认的权限策略会阻止该能力；已禁用的搜索不会被重新加入。这不表示所有提供方都默认启用，也不保证账户或模型有使用资格。原生压缩及恢复机制沿用官方实现，没有自定义覆盖，也不声称所有提供方都支持原生压缩。
-- **任务临时产物清理指引。** 提示 Agent 在现有权限内清理自己创建且不再需要的临时产物，并解释需要保留的证据。这是提示词指引，不是自动清理服务，也不保证模型一定执行。
-- **少量上游缺陷修复。** 流捕获结束、客户端过期结果发布和后台标签 Location 请求准入保留在既有模块内。旧的全局 Console 策略补丁已退休，Console 采用官方 Location 范围的 Config integration 语义。
+**完整解压**后运行 `cli-<platform>-<arch>/bin/opencode`，Windows 使用 `opencode.exe`。这是内嵌 WebUI 的 CLI 包，**不是 Electron 桌面安装器**；不包含 Linux musl 版本。二进制未签名，macOS 包也未经公证。
 
-精确行为、搜索授权、非目标和操作边界见 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)；源码来源与维护历史见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+运行前与 Release 的 `SHA256SUMS` 比对：Windows 使用 `Get-FileHash -Algorithm SHA256 <archive>`，Linux 使用 `sha256sum <archive>`，macOS 使用 `shasum -a 256 <archive>`。`release-manifest.json` 与各目标元数据记录源码、运行时和文件摘要。
 
-## 从源码构建（Windows x64）
+## 从源码构建
 
-使用 **Bun 1.4.4**、Node 24 及支持符号链接的 Git。在自行选择的开发目录中打开 PowerShell，执行以下命令：
+Windows x64 示例，需要 **Bun 1.4.4**、**Node 24** 及支持符号链接的 Git，在 PowerShell 中执行：
 
 ```powershell
-git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
+git clone -c core.symlinks=true --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
+$env:ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
+$env:HUSKY = "0"
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.2.0-custom-lite.20261028.1"
+$env:OPENCODE_VERSION = "2.2.0-custom-local.1"
 $env:OPENCODE_CHANNEL = "latest"
 $env:OPENCODE_TARGET = "windows-x64"
 bun script/build.ts --skip-install
 ```
 
-示例标识 10 月 28 日的候选版本，**不是已验收构建**。请核对源码提交，修改后使用不同版本号。官方脚本生成包含字节码和完整内嵌 WebUI 的 Windows x64 CLI，输出为 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`，并重新创建 CLI 的 `dist` 目录。使用 `--skip-install` 前须完成根目录依赖安装。目标平台现在由 `OPENCODE_TARGET` 选择，不再使用旧的 `--target` 参数。
+请为自己的源码版本使用独立版本号；仅使用某个已验收版本号不代表复现了该产物。官方构建入口重新创建 CLI `dist`，输出 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`，包含字节码与完整内嵌 WebUI。使用 `--skip-install` 前需完成根目录安装，目标平台由 `OPENCODE_TARGET` 选择。
 
-保留明确的自定义 `OPENCODE_VERSION` 和 **`OPENCODE_CHANNEL=latest`**。频道决定数据库、服务和 TUI 的存储身份；`local` 使用另一套状态，不适合直接替换现有版本。这里的 `latest` 不表示已公开发布，也不是自定义更新源。构建不会自动安装、启用或验证新程序对你个人数据的兼容性。
+`OPENCODE_CHANNEL=latest` 保持常规数据库、服务和 TUI 存储身份；`local` 使用不同状态。它不表示使用自定义更新源。构建不会安装或启用程序；替换安装前请保留旧程序和用户状态的一致备份。
 
-## 验证范围与已知限制
+## 贡献与维护
 
-当前验证及验收状态以 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 为准。以下是历史摘要，不代表 10 月 28 日候选版本已通过验收。
+**Issue → 功能分支 → PR → 必要检查及适用审查 → merge commit。**
 
-2026 年 9 月 24 日本地 Windows x64 候选版本 `2.0.15-custom-lite.20260924.1` 基于官方 V2 `dca73ba9e3782e2b41983faca5854a9d56a3c482`。已有验收记录覆盖 4,353 项通过的聚焦用例（72 项条件性或平台相关跳过）、16 个受影响包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的服务和已填充旧格式合成数据库冒烟验证。这些是有明确范围的本地结果，与原生发布 CI 分别记录，不是此次 README 更新产生的新运行验证，也不代表整个仓库的检查通过或 Electron Desktop 验证。Stats App 类型检查限制及一次尚未查明原因的 TUI 布局持久化警告继续记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+PR 以 `v2-custom-lite` 为目标。已授权任务通过必要检查与审查后，Agent 可按任务的集成职责完成合并；重大产品决定及发布仍需单独授权。官方同步同样通过 PR，并保留上游合并祖先关系。六平台发布继续**手动触发**，不会因合并自动发布。
 
-- 启动延迟和默认共享服务退出/生命周期调整仍然延期。
-- 子会话被后续后台 Shell 工作重新激活后，继续向父会话发送通知的问题仍未解决。
-- 已知上游测试限制及更细的验证范围继续记录在维护文档中。
-- 已完成并物化的历史记录可读，不代表未完成的旧二开 sidecar 状态、已退休执行状态或迁移后的回滚完全兼容。
+- [CONTRIBUTING.md](CONTRIBUTING.md)：任务负责人、PR 要求、CI 覆盖范围与合并权限。
+- [AGENTS.md](AGENTS.md)：仓库工程约定。
+- [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)：同步流程与验收证据。
 
-后续本地 `.2` 修复增加了对旧原生压缩记录中扁平媒体格式的兼容读取。聚焦验收覆盖 71 项通过的 Core 测试、Core/AI/CLI 类型检查、既有压缩记录的只读验证、编译版冷启动读取的失败/成功对照，以及隔离服务/WebUI 检查。历史记录和加密压缩内容不被重写。当时的本地检查没有重新构建或替换历史 `v2.0.15-zhcn.1` 附件；真实 TUI 的替换启用仍由用户执行。
+## 验证限制
 
-9 月 25 日已验收的集成将上述修复与官方 V2 2.0.16 的 `9810d98bc2db41fe9fb59e069fb96bd2e8a93f79` 合并，本地交付版本为 `2.0.16-custom-lite.20260924.1`。配对采用官方一次性链接，不再把长期服务密码放入二维码。后续 9 月 29 日、10 月 4 日和 10 月 11 日的验收记录见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。源码合并不等于二进制验收，确切验证和交付状态以该记录及产物旁的元数据为准。仍在进行中的 10 月 16 日工作不会替换既有线上 Release，也不会自动启用已安装的可执行文件。
+- 必要 CI 覆盖有界的 CLI／定制源码检查和 Windows 夹具，不代表全仓库、浏览器／Electron 或六平台发布验证。已知 Console 类型检查和 Client 重连失败继续保留在维护记录中。
+- 本地合成历史验证不证明真实用户数据迁移、未完成旧状态或回滚兼容性。历史 `v2.0.15-zhcn.1` 附件仍有旧图片压缩记录兼容性问题，请查阅维护记录，不要删除会话历史来绕过。
+- 启动／服务生命周期调整，以及后台工作重新激活子会话后的后续父会话通知，不属于这些已保留增强。
 
-替换已安装程序或在真实数据上启用前，请保留旧可执行文件与用户状态的一致备份。个人配置、凭据和真实数据库不应进入源码提交或验证夹具。本次源码切换不提供迁移或转换工具。
+## 文档与许可
 
-## 文档与致谢
+[官方 V2 文档](https://opencode.ai/v2/docs/) 说明上游用法；[CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) 定义本分支差异。English 与简体中文是本分支维护的 README 入口，其余语言 README 保留上游内容。
 
-- [OpenCode 官方 V2 文档](https://opencode.ai/v2/docs/) 说明上游用法；本分支差异以 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) 为准。
-- [上游同步说明](UPSTREAM_SYNC.md) 记录如何维护有边界的定制功能。
-- English 和简体中文是此二开分支的 README 入口。其他语言 README 保留为上游资料，不是此二开发行版的功能规范。
-
-本项目基于 OpenCode 及其贡献者的工作，保留现有 [MIT 许可证](LICENSE) 与上游版权声明。
+基于 OpenCode 及其贡献者的工作，保留 [MIT 许可证](LICENSE) 和上游版权声明。

@@ -1,5 +1,25 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## Current GitHub delivery procedure
+
+The maintenance flow and merge authority are defined in `CONTRIBUTING.md`.
+For each authorized upstream synchronization, link its issue, freeze the official
+`dev` commit, branch from current fork `v2-custom-lite`, and merge the official
+commit into that feature branch. Preserve the official commits and merge ancestry;
+do not squash, rebase away, or replace the upstream merge with copied files.
+
+Open a PR back to `v2-custom-lite` with the frozen upstream SHA, retained custom
+behavior, conflict resolutions, actual verification and limitations, and responsible
+implementation agent/session. Inspect newly imported workflows: preserve the fork
+checks and official-only guards, and keep release publication manually dispatched.
+Complete required CI, delta-specific checks and applicable independent review,
+then merge the PR with a merge commit. The integration owner may update the local
+delivery branch to that accepted remote commit. Binary building, publishing and
+installed-client activation remain separately authorized actions.
+
+The dated records below describe earlier local deliveries and their evidence;
+their task-specific no-publication statements do not replace this current PR flow.
+
 ## October 28 accepted local synchronization
 
 Independent reviewer `ses_e7eef3568ffePz15QbM9vGn26D` returned

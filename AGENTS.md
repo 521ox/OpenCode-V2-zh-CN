@@ -4,6 +4,7 @@
 - This community repository maintains `v2-custom-lite` as its default branch; official upstream V2 development now continues on `dev`.
 - Default local changes and pull requests for this fork to `v2-custom-lite`. Keep official upstream synchronization separate and follow `UPSTREAM_SYNC.md`; use another base or target only when explicitly requested.
 - The remote `main` branch is legacy history, not the current custom baseline. Use `v2-custom-lite` for fork diffs and the fixed official target for upstream comparisons.
+- Follow the Issue → feature branch → PR → checks/review → merge maintenance flow in `CONTRIBUTING.md`. Use its authorization, CI coverage and implementation-owner rules; release publication requires separate authorization.
 
 ## Live TUI Testing
 

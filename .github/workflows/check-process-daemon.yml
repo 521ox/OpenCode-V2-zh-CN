@@ -2,6 +2,7 @@ name: Process daemon
 
 on:
   pull_request:
+    branches: [dev, beta]
     paths:
       - packages/process-daemon/**
       - .github/workflows/check-process-daemon.yml
@@ -25,6 +26,7 @@ defaults:
 
 jobs:
   miri:
+    if: github.repository == 'anomalyco/opencode'
     name: Miri (callback ownership)
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -47,6 +49,7 @@ jobs:
           cargo +nightly-2026-09-02 miri test --locked --manifest-path tests/transport-retained/Cargo.toml
 
   test:
+    if: github.repository == 'anomalyco/opencode'
     name: Core (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -77,6 +80,7 @@ jobs:
         run: cargo test --locked --lib --test service --test runtime --test ownership --test rows --test ghostty-effects
 
   windows:
+    if: github.repository == 'anomalyco/opencode'
     name: Windows (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
