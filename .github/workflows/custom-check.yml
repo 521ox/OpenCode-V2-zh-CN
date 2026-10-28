@@ -58,8 +58,11 @@ jobs:
         with:
           install-flags: --linker hoisted
       - name: Use private test configuration roots
+        id: profile
         shell: pwsh
         run: |
+          & "$env:SystemRoot/System32/tar.exe" --version
+          Get-Culture
           $root = Join-Path $env:RUNNER_TEMP 'custom-tests'
           $roots = @{
             HOME = "$root/home"; USERPROFILE = "$root/home"
@@ -85,6 +88,7 @@ jobs:
           test/release-manifest.test.ts
           test/service-smoke.test.ts
       - name: Native execution and catalog fixtures
+        if: ${{ !cancelled() && steps.profile.outcome == 'success' }}
         working-directory: packages/core
         run: >-
           bun --no-env-file run test
