@@ -1,13 +1,25 @@
 # Maintaining the Minimal Custom V2 Branch
 
-## October 28 compiled candidate — acceptance pending
+## October 28 accepted local synchronization
+
+Independent reviewer `ses_e7eef3568ffePz15QbM9vGn26D` returned
+`APPROVE WITH DEFERRED RISKS` for source tip
+`4d2d4704e9d65f4e6cc300905431c9dc168391aa` and the exact candidate below.
+Source repair/re-review cycles consumed: 0/1. Build-source-to-reviewed-tip changes
+include documentation and the service-smoke isolation helper/test, not executable
+product code. OCT28-P2-1 retains the failed Console root typecheck: Console is not
+in the CLI embedded-WebUI build chain (`packages/app` is), so this does not block
+the scoped local artifact. No claim of full-repository green or proven upstream
+failure equivalence is made. Existing Client failures and OCT11-P2-1 remain.
+Formal promotion and three-copy export are recorded in executable sidecars;
+acceptance does not activate the installed client or authorize remote publication.
 
 Base: `72d0dce8ea437ea061e0680110fa19a81aa118fd`. Frozen official target:
 `86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0). Merge/build source is
 `c500539a4f7986cd5eeba9bb19fd049e80ae1e87`
 on `sync-dev-20261028` in `D:\opencode-local-build\opencode-v2-custom-sync-20261028`.
-All 58 initial conflict paths are resolved. The compiled candidate is not yet
-accepted, promoted, exported or activated. Its version is
+All 58 initial conflict paths are resolved. The compiled candidate is accepted
+for local promotion/export, but is not activated. Its version is
 `2.2.0-custom-lite.20261028.1`, latest channel, Windows x64 bytecode and full WebUI.
 
 Canonical build exited 0, including native-image and artifact checks. Package and
@@ -43,7 +55,7 @@ checkpoint shape conversion; Client owns publication revocation; TUI/CLI retain
 the locale owner while adopting upstream interactions. Historical workflow
 deletions and fork README identity are retained. Catalog locking uses the official
 EffectFlock owner; retired model-option helpers use the official model-options
-owner. Independent acceptance remains open.
+owner. Independent acceptance is recorded above.
 
 The owner explicitly selected official Console semantics on October 28. The old
 process-global ManagedPolicy repair is retired with upstream `d78b817631`.
