@@ -1,12 +1,13 @@
 # Minimal Custom V2 Distribution
 
-## October 28 synchronization — current candidate
+## October 28 synchronization — accepted local delivery
 
 The frozen target is official `dev` revision
 `86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0, Bun 1.4.4).
-Candidate `2.2.0-custom-lite.20261028.1` uses latest storage identity, Windows x64
-bytecode and the complete embedded WebUI. Acceptance and delivery are pending;
-see the current section of `UPSTREAM_SYNC.md`. Use the official CLI build with
+Accepted `2.2.0-custom-lite.20261028.1` uses latest storage identity, Windows x64
+bytecode and the complete embedded WebUI. Local acceptance and three-copy delivery
+are complete; activation and remote publication remain separate. See the current
+section of `UPSTREAM_SYNC.md` and executable sidecars. Use the official CLI build with
 `OPENCODE_TARGET=windows-x64`; the older `--target` flag is no longer consumed.
 The selected custom features remain, with the explicit Console-policy retirement
 below. The following integration notes and acceptance summaries are historical.

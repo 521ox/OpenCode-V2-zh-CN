@@ -14,6 +14,16 @@ failure equivalence is made. Existing Client failures and OCT11-P2-1 remain.
 Formal promotion and three-copy export are recorded in executable sidecars;
 acceptance does not activate the installed client or authorize remote publication.
 
+Local promotion reached `39be6fd38255dbd4adc7d937b78dbfd55cf07e98`, with immutable
+checkpoint `custom-lite-2.2.0-20261028.1`. Package output, formal root mirror and
+`D:\opencode-zh-CN-nightly-windows-x64\opencode2-zh-CN-2.2.0-custom-lite.20261028.1-windows-x64-20261028-140010.exe`
+have identical length and SHA256 as below. Installed `opencode.exe` was unchanged.
+The integration worktree/branch, private Bun and disposable scripts/caches were
+removed. Only the basic-probe and compiled-compatibility result JSON files remain
+in task scratch, referenced by the executable metadata. The formal dependency
+tree was not reinstalled; future source work must install the current lockfile
+with the declared Bun 1.4.4 rather than assume old dependencies are current.
+
 Base: `72d0dce8ea437ea061e0680110fa19a81aa118fd`. Frozen official target:
 `86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0). Merge/build source is
 `c500539a4f7986cd5eeba9bb19fd049e80ae1e87`
