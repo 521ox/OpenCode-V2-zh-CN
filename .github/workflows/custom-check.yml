@@ -45,6 +45,12 @@ jobs:
           for package in ai schema core protocol client server plugin app gui-plugins session-ui codemode tui cli; do
             bun run --cwd "packages/$package" typecheck:tsc
           done
+      - name: Complete release artifact and manifest suites
+        working-directory: packages/cli
+        run: >-
+          bun --no-env-file run test
+          test/release-artifact.test.ts
+          test/release-manifest.test.ts
 
   windows:
     name: custom-windows
@@ -76,7 +82,7 @@ jobs:
             New-Item -ItemType Directory -Force $entry.Value | Out-Null
             "$($entry.Key)=$($entry.Value)" >> $env:GITHUB_ENV
           }
-      - name: CLI localization and release contract fixtures
+      - name: CLI localization and smoke-helper fixtures
         working-directory: packages/cli
         run: >-
           bun --no-env-file run test
@@ -84,9 +90,13 @@ jobs:
           test/i18n-cli-help.test.ts
           test/i18n-cli-output.test.ts
           test/i18n-cli-stream.test.ts
-          test/release-artifact.test.ts
-          test/release-manifest.test.ts
           test/service-smoke.test.ts
+      - name: Windows extraction rules and ASCII PATH regression (focused)
+        if: ${{ !cancelled() && steps.profile.outcome == 'success' }}
+        working-directory: packages/cli
+        run: >-
+          bun --no-env-file run test test/release-artifact.test.ts
+          --test-name-pattern 'win32: selects a format-capable extraction tool|Windows extraction rejects missing or relative SystemRoot|system bsdtar roundtrip survives Git GNU tar first on child PATH'
       - name: Native execution and catalog fixtures
         if: ${{ !cancelled() && steps.profile.outcome == 'success' }}
         working-directory: packages/core
