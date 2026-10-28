@@ -14,6 +14,6 @@ body:
   - type: textarea
     attributes:
       label: Describe the enhancement you want to request
-      description: What do you want to change or add? What are the benefits of implementing this? Try to be detailed so we can understand your request better :)
+      description: Describe the problem, desired outcome, proposed scope and how success could be verified. Major product decisions require owner agreement before implementation.
     validations:
       required: true

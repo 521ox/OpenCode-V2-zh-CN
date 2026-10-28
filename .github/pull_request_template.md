@@ -1,36 +1,24 @@
-### Issue for this PR
+## Problem and change
 
-Closes #
+<!-- Explain the goal, scope and important trade-offs briefly. -->
 
-### Type of change
+## Issue
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Refactor / code improvement
-- [ ] Documentation
+<!-- Closes #123, or link an existing issue. For a small self-contained correction,
+     explain why a separate issue adds no useful context. -->
 
-### What does this PR do?
+## Verification
 
-Please provide a description of the issue, the changes you made to fix it, and why they work. It is expected that you understand why your changes work and if you do not understand why at least say as much so a maintainer knows how much to value the PR.
+<!-- Commands/checks, results, and any failures, skips or uncovered behavior.
+     For UI changes, include screenshots or recordings where useful. -->
 
-**If you paste a large clearly AI generated description here your PR may be IGNORED or CLOSED!**
+## Implementation owner
 
-### How did you verify your code works?
+<!-- For agent work: responsible agent alias and actual runtime session ID.
+     The session is a local recovery pointer, not a substitute for this description.
+     Human-authored work may name its responsible contributor instead. -->
 
-### Visual
+## Review and limitations
 
-_Optional, for user-facing changes: a small looping animated SVG (240×72) of the change, shown in the desktop app's "What's new in beta". Replace the block below or delete this section._
-
-```svg
-```
-
-### Screenshots / recordings
-
-_If this is a UI change, please include a screenshot or recording._
-
-### Checklist
-
-- [ ] I have tested my changes locally
-- [ ] I have not included unrelated changes in this PR
-
-_If you do not follow this template your PR will be automatically rejected._
+<!-- Record applicable independent review with its evaluated head SHA and result.
+     A review comment is not a GitHub approval. State material remaining limits. -->

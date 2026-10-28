@@ -6,6 +6,7 @@ on:
       - dev
       - beta
   pull_request:
+    branches: [dev, beta]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
@@ -30,7 +31,7 @@ env:
 jobs:
   affected:
     name: affected packages
-    if: ${{ !github.event.pull_request.draft }}
+    if: ${{ github.repository == 'anomalyco/opencode' && !github.event.pull_request.draft }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       e2e: ${{ steps.packages.outputs.app }}
@@ -63,7 +64,7 @@ jobs:
 
   unit:
     name: unit (${{ matrix.settings.name }})
-    if: ${{ !inputs.quarantine && !github.event.pull_request.draft }}
+    if: ${{ github.repository == 'anomalyco/opencode' && !inputs.quarantine && !github.event.pull_request.draft }}
     strategy:
       fail-fast: false
       matrix:
@@ -149,7 +150,7 @@ jobs:
 
   build:
     name: build (${{ matrix.settings.name }})
-    if: ${{ !inputs.quarantine && !github.event.pull_request.draft }}
+    if: ${{ github.repository == 'anomalyco/opencode' && !inputs.quarantine && !github.event.pull_request.draft }}
     strategy:
       fail-fast: false
       matrix:
@@ -217,7 +218,7 @@ jobs:
   e2e-suite:
     name: e2e (${{ matrix.settings.name }}, ${{ matrix.suite.id }}${{ matrix.quarantine && ', quarantine' || '' }})
     needs: affected
-    if: needs.affected.outputs.e2e == 'true'
+    if: github.repository == 'anomalyco/opencode' && needs.affected.outputs.e2e == 'true'
     # Quarantined tests are known red; their legs report without failing the e2e checks.
     continue-on-error: ${{ matrix.quarantine }}
     strategy:
@@ -331,7 +332,7 @@ jobs:
   e2e:
     name: e2e (${{ matrix.os }})
     needs: [affected, e2e-suite]
-    if: ${{ !cancelled() && !inputs.quarantine && !github.event.pull_request.draft }}
+    if: ${{ github.repository == 'anomalyco/opencode' && !cancelled() && !inputs.quarantine && !github.event.pull_request.draft }}
     strategy:
       fail-fast: false
       matrix:
