@@ -74,13 +74,15 @@ export default function Notifications(t: Translator<Key>) {
             return
           }
           errored.add(sessionID)
-          notify(context, sessionID, event.data.error.message, "error")
-          context.ui.toast.show({
-            sessionID,
-            title: t("feature.notifications.failed"),
-            message: event.data.error.message,
-            variant: "error",
-          })
+          if (event.data.error.type !== "provider.free-limit") {
+            notify(context, sessionID, event.data.error.message, "error")
+            context.ui.toast.show({
+              sessionID,
+              title: t("feature.notifications.failed"),
+              message: event.data.error.message,
+              variant: "error",
+            })
+          }
           ended(sessionID)
         }),
       ]

@@ -1,6 +1,6 @@
 export * as PluginInternal from "./internal.js"
 
-import { LLMClient } from "@opencode/ai"
+import { LLMClient } from "@opencode/ai/effect"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { httpClient } from "@opencode/util/effect/app-node-platform"
@@ -44,13 +44,13 @@ import { FileSystem } from "../filesystem.js"
 import { LocationWatcherPolicy } from "../filesystem/location-watcher-policy.js"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { EffectFlock } from "@opencode/util/effect-flock"
 import { Image } from "../image.js"
 import { InstructionDiscovery } from "../instruction-discovery.js"
 import { Integration } from "../integration.js"
 import { Job } from "../job.js"
 import { KV } from "../kv.js"
 import { Location } from "../location.js"
-import { ManagedPolicy } from "../managed-policy.js"
 import { ModelsDev } from "../models-dev.js"
 import { Mcp } from "../mcp/index.js"
 import { Npm } from "@opencode/util/npm"
@@ -82,6 +82,7 @@ import { EnvironmentToolsTool } from "../tool/plugin/environment-tools.js"
 import { DirectExecTool } from "../tool/plugin/direct-exec.js"
 import { SkillTool } from "../tool/plugin/skill.js"
 import { SubagentTool } from "../tool/plugin/subagent.js"
+import { TodoTool } from "../tool/plugin/todo.js"
 import { Tool } from "../tool.js"
 import { ToolOutput } from "../tool-output.js"
 import { WebFetchTool } from "../tool/plugin/webfetch.js"
@@ -125,6 +126,7 @@ const services = [
   FileSystem.Service,
   FSUtil.Service,
   Global.Service,
+  EffectFlock.Service,
   HttpClient.HttpClient,
   Image.Service,
   InstructionDiscovery.Service,
@@ -133,7 +135,6 @@ const services = [
   KV.Service,
   LLMClient.Service,
   Location.Service,
-  ManagedPolicy.Service,
   ModelsDev.Service,
   Mcp.Service,
   Npm.Service,
@@ -180,6 +181,7 @@ export const requirements = LayerNode.group([
   FileSystem.node,
   FSUtil.node,
   Global.node,
+  EffectFlock.node,
   httpClient,
   Image.node,
   InstructionDiscovery.node,
@@ -188,7 +190,6 @@ export const requirements = LayerNode.group([
   KV.node,
   llmClient,
   Location.node,
-  ManagedPolicy.node,
   ModelsDev.node,
   Mcp.node,
   Npm.node,
@@ -250,6 +251,7 @@ const pre = [
   DirectExecTool.Plugin,
   SkillTool.Plugin,
   SubagentTool.Plugin,
+  TodoTool.Plugin,
   WebFetchTool.Plugin,
   WebSearchTool.Plugin,
   WriteTool.Plugin,

@@ -8,7 +8,8 @@ import { tmpdir } from "./fixture/fixture"
 
 test.each([40, 120])("shell completion notices do not navigate at width %s", async (width) => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width, height: 36, useThread: false, kittyKeyboard: true })
+  const setup = await createTestRenderer({ width, height: 36, kittyKeyboard: true })
+  await setup.renderer.setupTerminal()
   setup.renderer.start()
   const session = {
     id: "ses_notices",
@@ -135,7 +136,8 @@ test.each([
   [120, "title"],
 ] as const)("subagent completion notices navigate to the child session at width %s via %s", async (width, target) => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width, height: 20, useThread: false, kittyKeyboard: true })
+  const setup = await createTestRenderer({ width, height: 20, kittyKeyboard: true })
+  await setup.renderer.setupTerminal()
   setup.renderer.start()
   const parent = {
     id: "ses_parent",

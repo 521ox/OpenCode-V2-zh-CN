@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Ref, Stream } from "effect"
-import { LanguageModel, LLM, LLMEvent, Message, ToolChoice, ToolDefinition } from "../../src/index.js"
+import { LanguageModel, LLM, LLMEvent, Message, ToolChoice, ToolDefinition } from "../../src/effect.js"
 import { Azure, OpenAI, OpenAICompatibleResponses, XAI } from "../../src/providers.js"
 import { ProviderShared } from "../../src/protocols/shared.js"
 import { LLMClient, type ChannelCheckpoint } from "../../src/route.js"

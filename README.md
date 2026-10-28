@@ -8,7 +8,7 @@ A community-maintained fork of [OpenCode](https://github.com/anomalyco/opencode)
 
 The maintained default branch is **`v2-custom-lite`** in the existing [521ox/OpenCode-V2-zh-CN repository](https://github.com/521ox/OpenCode-V2-zh-CN).
 
-Official V2 development is now tracked on **`dev`**. The October 16, 2026 synchronization is frozen at `eeec76bb620f9bee8cab89c5a3a88e315539645b` (2.0.30, Bun 1.4.2). The planned local candidate `2.0.30-custom-lite.20261016.1` is **in progress, not accepted or published**; see [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) for the current evidence and limits.
+Official V2 development is tracked on **`dev`**. The October 28, 2026 synchronization is frozen at `86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0, Bun 1.4.4). Candidate `2.2.0-custom-lite.20261028.1` is **not accepted or published**; see [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) for current evidence and limits.
 
 - The former `main` branch, old tags and `v1.18.4-zhcn.*` releases remain legacy history. Those binaries are **not** packages of the current enhanced V2 branch.
 - Native binary releases are produced by the manually triggered **Release enhanced V2 CLI** workflow on `v2-custom-lite`. It builds Windows, Linux glibc and macOS for x64 and ARM64, and publishes an unsigned prerelease only after all six targets and the downloaded draft assets pass verification. The last verified public release in this maintenance record is [**`v2.0.22-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), published on October 4, 2026 from `e2e166b1905603b750f5c0bbfa808fdf6d73bca3` by [release CI run `37200948032`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/37200948032). This dated record is not a promise that it will remain the newest release. Earlier releases remain available. Use the matching `2.x-zhcn.N` release assets, not the legacy `1.18.4-zhcn.*` packages.
@@ -34,31 +34,32 @@ Compare the downloaded archive with `SHA256SUMS` before running it: use `Get-Fil
 - **Protected Session working memory.** Normal Agent requests receive the root Session's rules location, shared through persisted lineage. The October 13 guidance treats it as compact continuation memory, not a general document directory or chronological log: conversation-first reads, selective loading and current-state writes. The path and resolution are unchanged; resolution does not create files, and user instructions or authoritative project locations take priority.
 - **Permission-gated native hosted search.** Supported native OpenAI and xAI Responses routes can advertise hosted search only with unrestricted effective authorization. Restrictive or unknown permission policies withhold it; disabled search is not reintroduced. This is not enabled for every provider or guaranteed by model/account entitlement. Official native compaction and recovery remain upstream-owned, with no custom override or claim that every provider supports native compaction.
 - **Task-owned temporary cleanup guidance.** Agents are instructed to remove their own no-longer-needed temporary artifacts within existing permissions and explain retained evidence. This is prompt guidance, not an automatic cleanup service or compliance guarantee.
-- **Bounded upstream repairs.** Stream capture settlement, stale client publication, background-tab Location admission and Console policy failure/publication handling are repaired in their existing owners, without a second policy or lifecycle system.
+- **Bounded upstream repairs.** Stream capture settlement, stale client publication and background-tab Location admission remain in their existing owners. The old global Console policy repair is retired; Console follows the official Location-scoped Config integration semantics.
 
 See [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) for exact behavior, search authorization, exclusions and operational boundaries. See [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) for source provenance and maintenance history.
 
 ## Build from source (Windows x64)
 
-Use **Bun 1.4.2** and Git. Run the following in PowerShell from your chosen development directory:
+Use **Bun 1.4.4**, Node 24 and Git with symlink support. Run the following in PowerShell from your chosen development directory:
 
 ```powershell
 git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.30-custom-lite.20261016.1"
+$env:OPENCODE_VERSION = "2.2.0-custom-lite.20261028.1"
 $env:OPENCODE_CHANNEL = "latest"
-bun script/build.ts --target=opencode-windows-x64 --skip-install
+$env:OPENCODE_TARGET = "windows-x64"
+bun script/build.ts --skip-install
 ```
 
-The example version is the planned October 16 candidate, **not an accepted build**. It does not imply that the default branch already contains this frozen integration; verify the selected source revision and use a distinct custom version for changed builds. This command builds the Windows x64 CLI with bytecode and the complete embedded WebUI, using the existing build script. Its executable output is `packages/cli/dist/cli-windows-x64/bin/opencode.exe` relative to the repository root. The build recreates the CLI `dist` directory. `--skip-install` skips the build script's extra dependency installation, so complete the root install first.
+The example identifies the October 28 candidate, **not an accepted build**. Verify the source revision and use a distinct version for changed builds. The official script builds Windows x64 bytecode with the complete embedded WebUI at `packages/cli/dist/cli-windows-x64/bin/opencode.exe`. It recreates the CLI `dist` directory. Complete the root install before using `--skip-install`; target selection now uses `OPENCODE_TARGET`, not the retired `--target` argument.
 
 Keep an explicit custom `OPENCODE_VERSION` and **`OPENCODE_CHANNEL=latest`**. The channel controls database, service and TUI storage identity: `local` selects different state and is not a drop-in replacement. `latest` here is not a claim of a public release or a custom updater feed. Building does not install, activate or validate a new binary against your own data.
 
 ## Verification and known limits
 
-The October 16 integration is in progress. Canonical Core migration, Protocol and Client generation/checks passed with stable repeated output and all 51 historical migration bodies unchanged. These are scoped generated-source checks, not compiled runtime, Windows build, cross-platform or final integrated acceptance. The October 11 accepted local synchronization remains a separate historical record in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md); earlier acceptance below must not be attributed to the new candidate.
+Current verification and acceptance belong to [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md). The summaries below are historical and do not certify the October 28 candidate.
 
 The September 24, 2026 local Windows x64 candidate `2.0.15-custom-lite.20260924.1` uses official V2 baseline `dca73ba9e3782e2b41983faca5854a9d56a3c482`. Recorded acceptance covers 4,353 passing focused cases (72 conditional/platform skips), sixteen affected package typechecks, the full Windows bytecode/WebUI build and isolated service and populated old-format synthetic-database smokes. These are bounded local results, separate from native release CI—not new runtime verification performed by this README update, a full-monorepo check pass, or Electron Desktop validation. The Stats App typecheck limitation and one unresolved TUI layout-persistence warning remain recorded in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).
 

@@ -1,5 +1,79 @@
 # Maintaining the Minimal Custom V2 Branch
 
+## October 28 synchronization — integration in progress
+
+Base: `72d0dce8ea437ea061e0680110fa19a81aa118fd`. Frozen official target:
+`86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0). The exact merge is open
+on `sync-dev-20261028` in `D:\opencode-local-build\opencode-v2-custom-sync-20261028`.
+All 58 initial conflict paths are resolved. No candidate has been compiled,
+accepted, promoted, exported or activated. Planned artifact remains
+`2.2.0-custom-lite.20261028.1`, latest channel, Windows x64 bytecode and full WebUI.
+
+Conflict ownership: AI protocols retain typed native-search lowering alongside
+upstream generation/media options; Core owns permission/config integration and
+root creation-directory semantics; Schema's `SessionLegacy` now owns old native
+checkpoint shape conversion; Client owns publication revocation; TUI/CLI retain
+the locale owner while adopting upstream interactions. Historical workflow
+deletions and fork README identity are retained. Catalog locking uses the official
+EffectFlock owner; retired model-option helpers use the official model-options
+owner. Compiled compatibility and independent acceptance remain open.
+
+The owner explicitly selected official Console semantics on October 28. The old
+process-global ManagedPolicy repair is retired with upstream `d78b817631`.
+Console observations and failure retention now belong to each Location's official
+Config integration document; cross-Location last-success convergence and the old
+global stale-publication guarantee are no longer promised. The briefly attempted
+shared observation layer was removed. No substitute global policy engine, shared
+credential/config snapshot or offline cache remains. Native hosted search retains
+its blanket authorization adapter against the actual Config policy owner.
+
+Private Bun `1.4.4+38afee6c8` was downloaded from the official release; its ZIP
+matched the release SHA256. Canonical lock reconciliation retains custom
+Archiver/i18next/Mustache dependencies and adopts the frozen upstream manifests.
+The frozen hoisted install exited 0 (1,888 installed packages), with upstream
+obsolete-patch warnings. Electron binary download was disabled; Husky skipped
+installation. No global toolchain or delivery-worktree dependency tree changed.
+
+Scoped evidence: AI hosted-search/native-compaction fixtures passed 33 tests
+(exit 0), and AI `typecheck:tsc` passed both projects (exit 0). The first fixture
+attempt failed on the removed Promise-entry LanguageModel export; changing those
+Effect tests to the official Effect entry resolved that runner failure.
+Schema legacy conversion passed 18 tests (exit 0), including URL/base64 meaning,
+MIME precedence, metadata and unchanged input. Core's canonical migration
+generation and check both exited 0: four official migration bodies were added,
+all historical bodies remain unchanged, and start_directory remains declared.
+Canonical Protocol/Client generation and generated checks passed. Thirteen
+scoped `typecheck:tsc` package checks passed: AI, Schema, Core, Protocol, Client,
+Server, Plugin, App, GUI plugins, Session UI, Codemode, TUI and CLI. App initially
+failed because Git materialized its tracked symlink as text; an I-only checkout
+with `-c core.symlinks=true` restored the actual link without changing source.
+The canonical root check passed lint (1,569 warnings, zero errors), then stopped
+at Turbo's missing global-config path under isolation; it is not an all-green
+monorepo check. Existing lint suppression diagnostics remain.
+
+Core custom-focused execution recorded 116 passes and two stale registry-fixture
+failures; the updated four-test migration file then passed, preserving the
+original-row and start-directory assertions across all four new migrations.
+Console/config/transport/subagent-lifetime checks passed 98 tests. TUI recorded
+168 passes and 24 failures before close-control setup received its required
+private OPENCODE_TEST_HOME; the 24-case rerun passed. CLI locale/release/smoke
+fixtures passed 71 tests with one Unix-only skip. These are scoped results, not
+live-provider, browser/Electron or compiled-runtime verification.
+
+Client Promise/eviction checks recorded 54 passes and two default-condition
+reconnect failures. Both failures reproduced with the same Bun 1.4.4 and installed
+dependency tree against archived accepted-base Client source (12 passes, two
+failures). No product or assertion was changed to hide them; W was not executed
+or modified. The retired global Console-policy tests were replaced by focused
+Config-document/hosted-search authorization coverage under the new agreed owner.
+
+All probes used cleared child environments and private nonempty Windows/user/XDG
+roots. Task-owned toolchain, cache and runner under
+`C:\Users\Administrator\AppData\Local\Temp\opencode\sync-20261028` are retained
+for continuation. The downloaded ZIP and earlier completed profiles were removed;
+current verification profiles and the small Client baseline are temporary and will
+be removed after their remaining evidence consumers finish.
+
 ## October 18 accepted local synchronization
 
 Independent reviewer `ses_eb2727061ffeb4ShVC3NnlBtSb` returned

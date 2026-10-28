@@ -1,6 +1,17 @@
 # Minimal Custom V2 Distribution
 
-## October 16 synchronization — in progress
+## October 28 synchronization — current candidate
+
+The frozen target is official `dev` revision
+`86ce19d96eccbfb95af3ff3189c7071575f94339` (2.2.0, Bun 1.4.4).
+Candidate `2.2.0-custom-lite.20261028.1` uses latest storage identity, Windows x64
+bytecode and the complete embedded WebUI. Acceptance and delivery are pending;
+see the current section of `UPSTREAM_SYNC.md`. Use the official CLI build with
+`OPENCODE_TARGET=windows-x64`; the older `--target` flag is no longer consumed.
+The selected custom features remain, with the explicit Console-policy retirement
+below. The following integration notes and acceptance summaries are historical.
+
+## Historical October 16 integration note
 
 The current integration starts from custom `c292e252d1e85b003972ebd7e7b8b68e6e30987a`
 and targets frozen official `dev` revision
@@ -31,6 +42,17 @@ Jobs, managed-service defaults, and TUI interactions except for the selected
 additions below. It is not a port of the former full customization set.
 
 ## Selected behavior
+
+### October 28 Console policy alignment
+
+The owner selected the official 2.2.0 Config integration owner and its
+Location-scoped failure-retention semantics. The historical September 22
+process-global ManagedPolicy repair described below is retired with that service.
+This distribution no longer promises one cross-Location last-success policy or
+the old global stale-publication guarantee. Provider/MCP/websearch configuration
+and credentials retain upstream ownership, allow-listing and precedence.
+Native hosted search still requires unrestricted effective authorization from
+Agent, Session, saved rules and the current Location's Config policy hooks.
 
 ### Task-owned temporary-artifact cleanup guidance
 

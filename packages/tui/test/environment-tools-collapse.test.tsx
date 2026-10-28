@@ -44,9 +44,9 @@ async function fixture(
   const setup = await createTestRenderer({
     width,
     height: options.count ? 90 : 65,
-    useThread: false,
     kittyKeyboard: true,
   })
+  await setup.renderer.setupTerminal()
   setup.renderer.start()
   const session = {
     id: "ses_environment_collapse",

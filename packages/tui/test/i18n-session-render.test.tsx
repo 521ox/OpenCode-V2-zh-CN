@@ -7,7 +7,8 @@ import { tmpdir } from "./fixture/fixture"
 
 test.each(["zh", "en"] as const)("real session chrome and child navigation in %s", async (locale) => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width: 120, height: 40, useThread: false, kittyKeyboard: true })
+  const setup = await createTestRenderer({ width: 120, height: 40, kittyKeyboard: true })
+  await setup.renderer.setupTerminal()
   setup.renderer.start()
   const parent = {
     id: "ses_i18n_parent",

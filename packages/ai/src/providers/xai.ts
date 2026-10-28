@@ -2,7 +2,7 @@ import { AuthOptions, type ProviderAuthOption } from "../route/auth-options.js"
 import { Route, type RouteDefaultsInput } from "../route/client.js"
 import { Endpoint } from "../route/endpoint.js"
 import { MediaRoute } from "../route/media.js"
-import { ProviderID, ToolDefinition, type LanguageModel, type ModelID } from "../schema/index.js"
+import { ProviderID, ToolDefinition, type LanguageModel, type ModelID, type ProviderOptions } from "../schema/index.js"
 import { OpenAIChat } from "../protocols/openai-chat.js"
 import { OpenResponsesChannel } from "../protocols/open-responses-channel.js"
 import { XAIResponses } from "../protocols/xai-responses.js"
@@ -26,7 +26,8 @@ export const webSearch = (): ToolDefinition =>
     native: { xai: { type: "web_search" } },
   })
 
-export type XAIProviderOptionsInput = OpenAIOptionsInput & { readonly contextManagement?: never }
+export type XAIProviderOptionsInput = OpenAIOptionsInput &
+  XAIResponses.OptionsInput & { readonly contextManagement?: never }
 
 export type LanguageModelOptions = Omit<RouteDefaultsInput, "providerOptions"> &
   ProviderAuthOption<"optional"> & {
@@ -108,7 +109,8 @@ export const configure = (input: LanguageModelOptions = {}) => {
     model: responses,
     responses,
     chat,
-    image: (modelID: string | ModelID) => XAIImages.model({ ...media, id: modelID }),
+    image: (modelID: string | ModelID, providerOptions?: ProviderOptions) =>
+      XAIImages.model({ ...media, id: modelID, providerOptions }),
     video: (modelID: string | ModelID) => XAIVideo.model({ ...media, id: modelID }),
     configure,
   }
@@ -119,14 +121,21 @@ export const model: ProviderPackage.Definition<
   Settings,
   XAIProviderOptionsInput,
   typeof responsesRoute.compact
->["model"] = (modelID, { apiKey, baseURL, body, headers, ...providerOptions }) =>
-  configure({
+>["model"] = (modelID, settings) => configure(config(settings)).model(modelID)
+export const imageModel = (modelID: string, settings: Settings) => {
+  const input = config(settings)
+  return configure(input).image(modelID, input.providerOptions)
+}
+
+function config({ apiKey, baseURL, body, headers, ...providerOptions }: Settings) {
+  return {
     apiKey,
     baseURL,
     headers,
     http: body === undefined ? undefined : { body },
     providerOptions,
-  }).model(modelID)
+  }
+}
 export const responses = provider.responses
 export const chat = provider.chat
 export const image = provider.image

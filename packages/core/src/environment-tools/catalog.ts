@@ -3,7 +3,7 @@ export * as EnvironmentToolsCatalog from "./catalog.js"
 import { Effect, Option, Schema } from "effect"
 import { randomUUID } from "node:crypto"
 import path from "node:path"
-import { Flock } from "@opencode/util/flock"
+import { EffectFlock } from "@opencode/util/effect-flock"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 
@@ -106,6 +106,7 @@ function samePath(left: string, right: string) {
 export const make = Effect.fn("EnvironmentToolsCatalog.make")(function* (options: Options = {}) {
   const fs = yield* FSUtil.Service
   const global = yield* Global.Service
+  const flock = yield* EffectFlock.Service
   const file = path.join(global.config, filename)
   const lockDirectory = path.join(global.state, "locks")
   const environmentIDFile = path.join(global.data, "environment-tools", "environment-id")
@@ -115,7 +116,7 @@ export const make = Effect.fn("EnvironmentToolsCatalog.make")(function* (options
     if (options.environmentID !== undefined) return options.environmentID
     return yield* Effect.scoped(
       Effect.gen(function* () {
-        yield* Flock.effect("environment-tools-environment-id", { dir: lockDirectory })
+        yield* flock.acquire("environment-tools-environment-id", lockDirectory)
         if (yield* fs.exists(environmentIDFile).pipe(Effect.mapError((error) => fail(error.message)))) {
           const value = yield* fs
             .readFileString(environmentIDFile)
@@ -208,7 +209,7 @@ export const make = Effect.fn("EnvironmentToolsCatalog.make")(function* (options
   const locked = <A>(effect: Effect.Effect<A, CatalogError>) =>
     Effect.scoped(
       Effect.gen(function* () {
-        yield* Flock.effect("environment-tools-catalog", { dir: lockDirectory })
+        yield* flock.acquire("environment-tools-catalog", lockDirectory)
         return yield* effect
       }),
     )

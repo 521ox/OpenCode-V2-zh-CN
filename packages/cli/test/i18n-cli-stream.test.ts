@@ -52,7 +52,7 @@ for (const locale of ["zh", "en"] as const) {
         }),
         spyOn(sdk.permission, "list").mockResolvedValue([]),
         spyOn(sdk.session.form, "list").mockResolvedValue([]),
-        spyOn(sdk.event, "subscribe").mockImplementation(() =>
+        spyOn(sdk.event, "subscribe").mockImplementation((() =>
           (async function* (): AsyncGenerator<EventSubscribeOutput> {
             yield { id: "evt_connected", type: "server.connected", data: {} }
             const inboxID = await admitted.promise
@@ -84,8 +84,7 @@ for (const locale of ["zh", "en"] as const) {
               type: "session.execution.failed",
               data: { sessionID: "ses_RAW", error: { type: "unknown", message: raw } },
             }
-          })(),
-        ),
+          })()) as typeof sdk.event.subscribe),
       ]
       try {
         await runNonInteractivePrompt({

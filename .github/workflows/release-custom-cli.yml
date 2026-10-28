@@ -8,7 +8,7 @@ on:
         description: Current source version followed by -zhcn.N
         required: true
         type: string
-        default: 2.0.32-zhcn.1
+        default: 2.2.0-zhcn.1
 
 permissions:
   contents: read
@@ -36,7 +36,7 @@ jobs:
       - name: Set up exact Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
-          bun-version: 1.4.2
+          bun-version: 1.4.4
       - name: Install frozen verification dependencies
         run: bun install --frozen-lockfile --linker hoisted --ignore-scripts
       - name: Run release contract and archive regressions
@@ -124,7 +124,7 @@ jobs:
       - name: Set up exact Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
-          bun-version: 1.4.2
+          bun-version: 1.4.4
       - name: Install frozen native dependencies
         run: bun install --frozen-lockfile --linker hoisted
       - name: Validate source and actual native architecture
@@ -136,7 +136,7 @@ jobs:
           --source-sha "$GITHUB_SHA"
           --target "$RELEASE_TARGET"
       - name: Build one native target with bytecode and embedded WebUI
-        run: bun --no-env-file packages/cli/script/build.ts --target="$RELEASE_TARGET" --skip-install
+        run: bun --no-env-file packages/cli/script/build.ts --single --skip-install
       - name: Verify artifact payload
         run: bun --no-env-file packages/cli/script/verify-artifact.ts "packages/cli/dist/$RELEASE_DIST"
       - name: Verify Windows executable version, runtime and help
@@ -214,7 +214,7 @@ jobs:
       - name: Set up exact Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
-          bun-version: 1.4.2
+          bun-version: 1.4.4
       - name: Install frozen manifest dependencies without lifecycle scripts
         run: bun install --frozen-lockfile --linker hoisted --ignore-scripts
       - name: Download this run's six native artifacts
@@ -258,7 +258,7 @@ jobs:
           Electron Desktop installers. SmartScreen or Gatekeeper may warn because
           these binaries are not code-signed or notarized.
 
-          Built with Bun 1.4.2, bytecode and the embedded WebUI. Every native
+          Built with Bun 1.4.4, bytecode and the embedded WebUI. Every native
           executable passed version/help, embedded runtime and isolated service
           checks; every archive passed an extraction/hash round trip. These checks
           do not certify every feature on every machine or migrate legacy data.

@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
-import type { BoxRenderable, ScrollBoxRenderable, TextareaRenderable } from "@opentui/core"
-import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
+import { measureEditText, type BoxRenderable, type ScrollBoxRenderable, type TextareaRenderable } from "@opentui/core"
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import {
   createFormBodyState,
@@ -49,6 +49,7 @@ export function RunFormBody(props: {
   mono?: boolean
 }) {
   const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
+  const renderer = useRenderer()
   const dims = useTerminalDimensions()
   const [size, setSize] = createSignal(dims())
   const [contentHeight, setContentHeight] = createSignal(1)
@@ -131,12 +132,12 @@ export function RunFormBody(props: {
     const value = formInput(state(), current())
     if (area.plainText !== value) {
       area.setText(value)
-      area.cursorOffset = value.length
+      area.cursorOffset = measureEditText(value, { widthMethod: renderer.widthMethod })
     }
     queueMicrotask(() => {
       if (!area || area.isDestroyed || !state().editing) return
       area.focus()
-      area.cursorOffset = area.plainText.length
+      area.cursorOffset = measureEditText(area.plainText, { widthMethod: renderer.widthMethod })
     })
   })
 

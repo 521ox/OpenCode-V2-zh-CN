@@ -11,7 +11,8 @@ test.each(["medium", "low"] as const)(
   "an expanded %s group spends the mounting budget that older rows used",
   async (verbosity) => {
     await using state = await tmpdir()
-    const setup = await createTestRenderer({ width: 100, height: 30, useThread: false, kittyKeyboard: true })
+    const setup = await createTestRenderer({ width: 100, height: 30, kittyKeyboard: true })
+    await setup.renderer.setupTerminal()
     setup.renderer.start()
     const session = {
       id: "ses_budget",

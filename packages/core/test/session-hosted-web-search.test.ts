@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { ToolDefinition } from "@opencode/ai"
+import { ToolDefinition } from "@opencode/ai/effect"
 import { Azure, OpenAI, OpenAICompatibleResponses, XAI } from "@opencode/ai/providers"
 import { OpenAIChat, OpenAIResponses } from "@opencode/ai/protocols"
 import { Agent } from "@opencode/schema/agent"

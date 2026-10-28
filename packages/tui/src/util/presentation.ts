@@ -1,5 +1,5 @@
 import { logo } from "../logo"
-import { type Key, type Translator } from "../i18n"
+import { translate, type Key, type Translator } from "../i18n"
 
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
@@ -24,13 +24,30 @@ function wordmark(pad = "") {
   })
 }
 
-export function sessionEpilogue(input: { title: string; sessionID?: string }, t: Translator<Key>) {
-  const weak = (text: string) => `${dim}${text.padEnd(10, " ")}${reset}`
+export type SessionEpilogue = { readonly title: string; readonly sessionID?: string }
+
+// Printed after the TUI closes.
+export function epilogue(
+  input: { readonly session?: SessionEpilogue; readonly updatedVersion?: string },
+  t: Translator<Key> = (key, params) => translate("en", key, params),
+) {
+  if (!input.session && !input.updatedVersion) return
+  const row = (label: string, value: string) => `  ${dim}${label.padEnd(10, " ")}${reset}${bold}${value}${reset}`
   return [
     ...wordmark("  "),
     "",
-    `  ${weak(t("main.group.session"))}${bold}${input.title}${reset}`,
-    `  ${weak(t("main.continue"))}${bold}opencode -s ${input.sessionID}${reset}`,
-    "",
+    ...(input.updatedVersion
+      ? [
+          `  ${dim}${t("main.epilogue.updated", { command: `${reset}${bold}opencode${reset}${dim}`, version: `${reset}${bold}${input.updatedVersion}${reset}` })}`,
+          "",
+        ]
+      : []),
+    ...(input.session
+      ? [
+          row(t("main.group.session"), input.session.title),
+          row(t("main.continue"), `opencode -s ${input.session.sessionID}`),
+          "",
+        ]
+      : []),
   ].join("\n")
 }

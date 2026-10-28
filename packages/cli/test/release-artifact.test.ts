@@ -44,12 +44,12 @@ describe("release validation", () => {
 
   test("native identity and exact Bun cannot be substituted by a target flag", () => {
     expect(() =>
-      validateNative("opencode-linux-arm64", { platform: "linux", arch: "arm64", bun: "1.4.2" }),
+      validateNative("opencode-linux-arm64", { platform: "linux", arch: "arm64", bun: "1.4.4" }),
     ).not.toThrow()
-    expect(() => validateNative("opencode-linux-arm64", { platform: "linux", arch: "x64", bun: "1.4.2" })).toThrow(
+    expect(() => validateNative("opencode-linux-arm64", { platform: "linux", arch: "x64", bun: "1.4.4" })).toThrow(
       "Native runner mismatch",
     )
-    expect(() => validateNative("opencode-linux-arm64", { platform: "darwin", arch: "arm64", bun: "1.4.2" })).toThrow(
+    expect(() => validateNative("opencode-linux-arm64", { platform: "darwin", arch: "arm64", bun: "1.4.4" })).toThrow(
       "Native runner mismatch",
     )
     expect(() => validateNative("opencode-linux-arm64", { platform: "linux", arch: "arm64", bun: "1.4.3" })).toThrow(

@@ -59,7 +59,7 @@ const setup = (rules: Permission.Ruleset, sessionRules: Permission.Ruleset = [])
         directory: "/project",
         title: "hosted",
         version: "test",
-        agent: "test",
+        agent: Agent.ID.make("test"),
         permission: sessionRules,
       })
       .onConflictDoNothing()

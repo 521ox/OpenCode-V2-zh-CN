@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { OpenAI } from "@opencode/ai/providers"
-import { SystemPart } from "@opencode/ai"
+import { SystemPart } from "@opencode/ai/effect"
 import { Agent } from "@opencode/core/agent"
 import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/core/tool"

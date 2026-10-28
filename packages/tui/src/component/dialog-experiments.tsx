@@ -22,6 +22,11 @@ export const experiments: Experiment[] = [
     title: "main.experiments.newDesigns",
     description: "main.experiments.newDesignsDescription",
   },
+  {
+    id: "client-mcp",
+    title: "main.experiments.tuiTools",
+    description: "main.experiments.tuiToolsDescription",
+  },
 ]
 
 export function DialogExperiments() {

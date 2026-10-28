@@ -13,7 +13,8 @@ test.each([
   ["zh", 48],
 ] as const)("synced mention kinds render in %s at %i columns", async (locale, width) => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width, height: 40, useThread: false, kittyKeyboard: true })
+  const setup = await createTestRenderer({ width, height: 40, kittyKeyboard: true })
+  await setup.renderer.setupTerminal()
   setup.renderer.start()
   const location = { directory, project: { id: "proj_test", directory: worktree, canonical: worktree } }
   const session = {

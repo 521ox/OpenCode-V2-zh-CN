@@ -28,6 +28,7 @@ import {
 } from "../util/tool-display"
 import { formatPath } from "../util/path-format"
 import { isRecord } from "../util/record"
+import { parseTodos, todoMarker } from "../util/todo"
 import type { RunEntryBody, StreamCommit, ToolSnapshot } from "./types"
 
 export { canonicalToolName } from "../util/tool-display"
@@ -119,6 +120,7 @@ type ToolName =
   | "patch"
   | "batch"
   | "subagent"
+  | "todowrite"
   | "question"
   | "read"
   | "glob"
@@ -466,6 +468,17 @@ function runPatch(p: ToolProps): ToolInline {
   }
 }
 
+function runTodo(p: ToolProps): ToolInline {
+  return {
+    icon: "#",
+    title: "Todos",
+    mode: "block",
+    body: parseTodos(p.frame.input.todos)
+      .map((item) => `${todoMarker(item.status)} ${item.content}`)
+      .join("\n"),
+  }
+}
+
 function runQuestion(p: ToolProps): ToolInline {
   const total = list(p.frame.input.questions).length
   return {
@@ -626,6 +639,13 @@ function snapTask(p: ToolProps): ToolSnapshot {
     title: `# ${translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind })}`,
     rows,
     tail: "",
+  }
+}
+
+function snapTodo(p: ToolProps): ToolSnapshot {
+  return {
+    kind: "todo",
+    items: parseTodos(p.frame.input.todos),
   }
 }
 
@@ -812,6 +832,10 @@ function scrollTaskFinal(p: ToolProps): string {
   return `# ${translate(resolveLocale(p.frame.locale), "miniCli.tool.subagent", { name: kind })}\n${row}`
 }
 
+function scrollTodoStart(_: ToolProps): string {
+  return ""
+}
+
 function scrollQuestionStart(_: ToolProps): string {
   return ""
 }
@@ -988,6 +1012,18 @@ const TOOL_RULES = {
     scroll: {
       start: scrollTaskStart,
       final: scrollTaskFinal,
+    },
+  },
+  todowrite: {
+    view: {
+      output: false,
+      final: true,
+      snap: "structured",
+    },
+    run: runTodo,
+    snap: snapTodo,
+    scroll: {
+      start: scrollTodoStart,
     },
   },
   question: {

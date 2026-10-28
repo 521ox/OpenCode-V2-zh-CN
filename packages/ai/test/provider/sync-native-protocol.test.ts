@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { Effect } from "effect"
-import { LanguageModel, LLM, ToolDefinition } from "../../src/index.js"
+import { LanguageModel, LLM, ToolDefinition } from "../../src/effect.js"
 import { Azure, OpenAI, XAI } from "../../src/providers.js"
 import { ProviderShared } from "../../src/protocols/shared.js"
 import { LLMClient } from "../../src/route/client.js"

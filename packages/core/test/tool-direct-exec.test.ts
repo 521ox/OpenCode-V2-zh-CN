@@ -15,6 +15,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { EffectFlock } from "@opencode/util/effect-flock"
 import { AppProcess } from "@opencode/util/process"
 import { location } from "./fixture/location"
 import { withTempDir } from "./fixture/tmpdir"
@@ -25,10 +26,19 @@ import { executeTool, registerToolPlugin, toolDefinitions, toolIdentity } from "
 const node = makeLocationNode({
   name: "test/e1-direct-exec",
   layer: Layer.effectDiscard(registerToolPlugin(DirectExecTool.Plugin)),
-  deps: [Tool.node, FSUtil.node, Global.node, Location.node, FileAccess.node, Permission.node, AppProcess.node],
+  deps: [
+    Tool.node,
+    FSUtil.node,
+    Global.node,
+    EffectFlock.node,
+    Location.node,
+    FileAccess.node,
+    Permission.node,
+    AppProcess.node,
+  ],
 })
 const layer = (root: string, assert: Permission.Interface["assert"], run?: AppProcess.Interface["run"]) =>
-  AppNodeBuilder.build(LayerNode.group([Tool.node, FSUtil.node, Global.node, node]), [
+  AppNodeBuilder.build(LayerNode.group([Tool.node, FSUtil.node, Global.node, EffectFlock.node, node]), [
     Location.node.replace(
       Layer.succeed(Location.Service, location({ directory: AbsolutePath.make(path.join(root, "project")) })),
     ),

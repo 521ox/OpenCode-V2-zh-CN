@@ -13,6 +13,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { EffectFlock } from "@opencode/util/effect-flock"
 import { withTempDir } from "./fixture/tmpdir"
 import { location } from "./fixture/location"
 import { it } from "./lib/effect"
@@ -22,7 +23,7 @@ import { executeTool, registerToolPlugin, toolDefinitions, toolIdentity } from "
 const node = makeLocationNode({
   name: "test/e1-environment-tools",
   layer: Layer.effectDiscard(registerToolPlugin(EnvironmentToolsTool.Plugin)),
-  deps: [Tool.node, FSUtil.node, Global.node, Permission.node],
+  deps: [Tool.node, FSUtil.node, Global.node, EffectFlock.node, Permission.node],
 })
 const layer = (root: string, permission: Layer.Layer<Permission.Service>) =>
   AppNodeBuilder.build(LayerNode.group([Tool.node, node]), [

@@ -10,7 +10,8 @@ test.skipIf(process.platform === "win32").each([80, 120, 180])(
   "session wheel scrolling preserves pane focus at width %s",
   async (width) => {
     await using state = await tmpdir()
-    const setup = await createTestRenderer({ width, height: 36, useThread: false, kittyKeyboard: true })
+    const setup = await createTestRenderer({ width, height: 36, kittyKeyboard: true })
+    await setup.renderer.setupTerminal()
     setup.renderer.start()
     const session = {
       id: "ses_wheel",
@@ -79,8 +80,8 @@ test.skipIf(process.platform === "win32").each([80, 120, 180])(
         app: { name: "test", version: "test", channel: "test" },
         server: { endpoint: { url: server.url.toString() } },
         config: {
-          get: async () => ({ locale: "en", animations: false, tabs: { mode: "off" } }),
-          update: async () => ({ locale: "en" }),
+          get: async () => ({ animations: false, tabs: { mode: "off" } }),
+          update: async () => ({}),
         },
         packages: { prepare: async () => ({ directory: "" }) },
         args: { sessionID: session.id },

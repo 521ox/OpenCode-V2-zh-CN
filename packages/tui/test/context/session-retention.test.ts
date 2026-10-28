@@ -1,9 +1,8 @@
 import { expect, test } from "bun:test"
 import type { OpenCodeEvent } from "@opencode/client"
-import { createData } from "@opencode/client/solid"
+import { createData, createSessionRetention } from "@opencode/client/solid"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { createRoot, createSignal } from "solid-js"
-import { createSessionRetention } from "../../src/context/session-retention"
 import { createApi, createFetch, directory, json } from "../fixture/tui-client"
 
 function setup(
@@ -242,6 +241,36 @@ test("a delayed transcript cannot refill a family excluded by the recent-three o
     expect(scope.cached("child")).toBe(true)
   } finally {
     release.resolve()
+    scope.dispose()
+  }
+})
+
+test("re-evicts an already excluded family when background turn events repopulate its transcript", async () => {
+  const scope = setup({ current: "current" })
+  try {
+    scope.remember("current")
+    scope.remember("background")
+    expect(scope.evictions).toEqual(["background"])
+
+    scope.events.emit("session.step.started", {
+      id: "evt_step_1",
+      created: 1,
+      type: "session.step.started",
+      durable: { aggregateID: "background", seq: 1, version: 1 },
+      data: {
+        sessionID: "background",
+        assistantMessageID: "msg_bg_assistant",
+        agent: "build",
+        model: { providerID: "openai", id: "gpt-5" },
+        started: 1,
+      },
+    })
+    expect(scope.cached("background")).toBe(true)
+
+    scope.remember("background", undefined, 10)
+    expect(scope.cached("background")).toBe(false)
+    expect(scope.evictions).toEqual(["background", "background"])
+  } finally {
     scope.dispose()
   }
 })

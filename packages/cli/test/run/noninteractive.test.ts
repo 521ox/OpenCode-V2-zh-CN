@@ -268,7 +268,7 @@ async function run(input: {
       yield value
     }
   })()
-  spyOn(sdk.event, "subscribe").mockImplementation(() => stream)
+  spyOn(sdk.event, "subscribe").mockImplementation((() => stream) as typeof sdk.event.subscribe)
   spyOn(sdk.permission, "list").mockImplementation(() => ok([]) as never)
   spyOn(sdk.permission, "reply").mockResolvedValue(undefined)
   spyOn(sdk.session, "interrupt").mockResolvedValue({ interrupted: true })

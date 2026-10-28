@@ -132,6 +132,7 @@ export function DialogPrompt(props: DialogPromptProps) {
 
   return (
     <DialogLayout
+      footerGap={2}
       header={
         <DialogHeader
           title={props.title}

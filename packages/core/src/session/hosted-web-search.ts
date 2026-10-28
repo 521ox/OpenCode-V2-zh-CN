@@ -1,6 +1,6 @@
 export * as HostedWebSearch from "./hosted-web-search.js"
 
-import type { LanguageModel, ToolDefinition } from "@opencode/ai"
+import type { LanguageModel, ToolDefinition } from "@opencode/ai/effect"
 import { OpenAI, XAI } from "@opencode/ai/providers"
 import type { SessionRequestKind } from "@opencode/plugin/effect/session"
 import type { Agent } from "@opencode/schema/agent"

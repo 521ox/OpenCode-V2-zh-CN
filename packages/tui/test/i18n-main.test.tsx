@@ -9,9 +9,9 @@ import en from "../src/i18n/main/en"
 import zh from "../src/i18n/main/zh"
 import { permissionAlwaysLines, permissionOptionLabel, permissionPresentation } from "../src/util/permission"
 import { switchLabel } from "../src/util/model"
-import { sessionEpilogue } from "../src/util/presentation"
+import { epilogue } from "../src/util/presentation"
 import { formValidateValue } from "../src/util/form"
-import { sortModelOptions } from "../src/component/dialog-model"
+import { sortModelOptions } from "../src/component/model-options"
 
 test("main catalog has exact key and placeholder parity", () => {
   expect(Object.keys(zh).sort()).toEqual(Object.keys(en).sort())
@@ -86,8 +86,8 @@ test("main helper chrome localizes while dynamic values remain literal", () => {
   expect(permissionAlwaysLines({ action: raw, save: ["*"] }, t)[0]).toContain(raw)
   expect(permissionOptionLabel("once", t)).toBe("允许一次")
   expect(switchLabel({ providerID: "provider", id: raw }, t)).toBe(`已切换模型为 provider/${raw}`)
-  expect(sessionEpilogue({ title: raw, sessionID: "ses_literal" }, t)).toContain("opencode -s ses_literal")
-  expect(sessionEpilogue({ title: raw, sessionID: "ses_literal" }, t)).toContain(raw)
+  expect(epilogue({ session: { title: raw, sessionID: "ses_literal" } }, t)).toContain("opencode -s ses_literal")
+  expect(epilogue({ session: { title: raw, sessionID: "ses_literal" } }, t)).toContain(raw)
   expect(formValidateValue({ key: "raw", type: "string", required: true }, "", t)).toBe("需要回答")
 })
 

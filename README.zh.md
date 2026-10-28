@@ -8,7 +8,7 @@
 
 本项目在现有 [521ox/OpenCode-V2-zh-CN 仓库](https://github.com/521ox/OpenCode-V2-zh-CN) 中以 **`v2-custom-lite`** 作为当前维护的默认分支。
 
-官方 V2 开发现跟踪 **`dev`** 分支。2026 年 10 月 16 日的同步冻结于 `eeec76bb620f9bee8cab89c5a3a88e315539645b`（2.0.30，Bun 1.4.2）。计划本地候选版本 `2.0.30-custom-lite.20261016.1` **仍在进行中，尚未验收或发布**；当前证据和限制见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
+官方 V2 开发跟踪 **`dev`** 分支。2026 年 10 月 28 日的同步冻结于 `86ce19d96eccbfb95af3ff3189c7071575f94339`（2.2.0，Bun 1.4.4）。候选版本 `2.2.0-custom-lite.20261028.1` **尚未验收或发布**；当前证据和限制见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
 - 原 `main` 分支、旧标签和 `v1.18.4-zhcn.*` Releases 保留为历史。这些二进制文件**不是**当前 V2 增强版的安装包。
 - 原生二进制由 `v2-custom-lite` 分支上的 **Release enhanced V2 CLI** 工作流手动触发生成，覆盖 Windows、Linux glibc、macOS 的 x64 和 ARM64。六种目标及已下载的草稿附件全部验证通过后，才发布未签名的预发布版本。本维护记录最后已核实的线上版本是 [**`v2.0.22-zhcn.1`**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，于 2026 年 10 月 4 日由源码 `e2e166b1905603b750f5c0bbfa808fdf6d73bca3` 经[发布 CI `37200948032`](https://github.com/521ox/OpenCode-V2-zh-CN/actions/runs/37200948032) 发布。这是注明日期的历史事实，不承诺它始终是最新版本。此前版本继续保留。请使用对应的 `2.x-zhcn.N` 附件，不要把旧 `1.18.4-zhcn.*` 安装包当成当前版本。
@@ -34,31 +34,32 @@
 - **受保护的会话工作记忆。** 普通 Agent 请求获得根会话的规则目录位置，后代会话通过持久化父子关系共享。10 月 13 日的指引将其定位为精简的续接记忆，而非通用文档目录或流水日志：优先使用当前对话，按需读取并维护当前状态。路径与解析方式不变；解析过程不创建文件，用户指令和权威项目路径优先。
 - **权限控制的原生托管搜索。** 受支持的原生 OpenAI 和 xAI Responses 路由仅在有效授权不受限制时声明托管搜索能力。限制性或无法确认的权限策略会阻止该能力；已禁用的搜索不会被重新加入。这不表示所有提供方都默认启用，也不保证账户或模型有使用资格。原生压缩及恢复机制沿用官方实现，没有自定义覆盖，也不声称所有提供方都支持原生压缩。
 - **任务临时产物清理指引。** 提示 Agent 在现有权限内清理自己创建且不再需要的临时产物，并解释需要保留的证据。这是提示词指引，不是自动清理服务，也不保证模型一定执行。
-- **少量上游缺陷修复。** 在既有模块内修复流捕获结束、客户端过期结果发布、后台标签的 Location 请求准入及 Console 策略失败与发布处理，不引入第二套策略或生命周期系统。
+- **少量上游缺陷修复。** 流捕获结束、客户端过期结果发布和后台标签 Location 请求准入保留在既有模块内。旧的全局 Console 策略补丁已退休，Console 采用官方 Location 范围的 Config integration 语义。
 
 精确行为、搜索授权、非目标和操作边界见 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)；源码来源与维护历史见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
 ## 从源码构建（Windows x64）
 
-使用 **Bun 1.4.2** 和 Git。在自行选择的开发目录中打开 PowerShell，执行以下命令：
+使用 **Bun 1.4.4**、Node 24 及支持符号链接的 Git。在自行选择的开发目录中打开 PowerShell，执行以下命令：
 
 ```powershell
 git clone --branch v2-custom-lite https://github.com/521ox/OpenCode-V2-zh-CN.git
 cd OpenCode-V2-zh-CN
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.0.30-custom-lite.20261016.1"
+$env:OPENCODE_VERSION = "2.2.0-custom-lite.20261028.1"
 $env:OPENCODE_CHANNEL = "latest"
-bun script/build.ts --target=opencode-windows-x64 --skip-install
+$env:OPENCODE_TARGET = "windows-x64"
+bun script/build.ts --skip-install
 ```
 
-示例版本是 10 月 16 日的计划候选版本，**不是已验收构建**，也不表示默认分支已包含此次冻结的集成。请核对选定源码提交；修改源码后构建应使用不同的自定义版本号。该命令使用现有构建脚本生成包含字节码和完整内嵌 WebUI 的 Windows x64 CLI。可执行文件位于相对仓库根目录的 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`。构建会重新创建 CLI 的 `dist` 目录。`--skip-install` 跳过构建脚本额外安装依赖的步骤，因此需要先完成根目录的依赖安装。
+示例标识 10 月 28 日的候选版本，**不是已验收构建**。请核对源码提交，修改后使用不同版本号。官方脚本生成包含字节码和完整内嵌 WebUI 的 Windows x64 CLI，输出为 `packages/cli/dist/cli-windows-x64/bin/opencode.exe`，并重新创建 CLI 的 `dist` 目录。使用 `--skip-install` 前须完成根目录依赖安装。目标平台现在由 `OPENCODE_TARGET` 选择，不再使用旧的 `--target` 参数。
 
 保留明确的自定义 `OPENCODE_VERSION` 和 **`OPENCODE_CHANNEL=latest`**。频道决定数据库、服务和 TUI 的存储身份；`local` 使用另一套状态，不适合直接替换现有版本。这里的 `latest` 不表示已公开发布，也不是自定义更新源。构建不会自动安装、启用或验证新程序对你个人数据的兼容性。
 
 ## 验证范围与已知限制
 
-10 月 16 日的集成仍在进行中。Core 迁移、Protocol 和 Client 的规范生成及检查已通过，重复生成结果稳定，51 个历史迁移体均保持不变。这些仅是有范围的生成源码检查，不代表编译版运行、Windows 构建、跨平台或最终整体验收通过。10 月 11 日的本地验收是 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 中另一条历史记录；下方更早的验收结果也不适用于新候选版本。
+当前验证及验收状态以 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md) 为准。以下是历史摘要，不代表 10 月 28 日候选版本已通过验收。
 
 2026 年 9 月 24 日本地 Windows x64 候选版本 `2.0.15-custom-lite.20260924.1` 基于官方 V2 `dca73ba9e3782e2b41983faca5854a9d56a3c482`。已有验收记录覆盖 4,353 项通过的聚焦用例（72 项条件性或平台相关跳过）、16 个受影响包的类型检查、完整 Windows 字节码/WebUI 构建，以及隔离的服务和已填充旧格式合成数据库冒烟验证。这些是有明确范围的本地结果，与原生发布 CI 分别记录，不是此次 README 更新产生的新运行验证，也不代表整个仓库的检查通过或 Electron Desktop 验证。Stats App 类型检查限制及一次尚未查明原因的 TUI 布局持久化警告继续记录在 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 

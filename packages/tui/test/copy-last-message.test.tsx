@@ -25,7 +25,6 @@ test.each(["assistant", "summary", "empty", "transcript"] as const)(
       status: "completed",
       reason: "manual",
       summary: "  Raw summary $t(other) {{literal}}  ",
-      recent: "",
       time: { created: mode === "summary" ? 2 : 0 },
     }
     const assistant: SessionMessageInfo = {

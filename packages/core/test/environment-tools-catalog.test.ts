@@ -7,21 +7,27 @@ import { EnvironmentToolsCatalog } from "../src/environment-tools/catalog.js"
 import { Permission } from "../src/permission.js"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { EffectFlock } from "@opencode/util/effect-flock"
+import { LayerNode } from "@opencode/util/effect/layer-node"
 import { tmpdir } from "./fixture/tmpdir"
 
 const environmentID = "11111111-1111-4111-8111-111111111111"
 const layers = (root: string) =>
-  Layer.mergeAll(
-    Global.layerWith({
-      config: path.join(root, "config"),
-      state: path.join(root, "state"),
-      data: path.join(root, "data"),
-      cache: path.join(root, "cache"),
-      tmp: path.join(root, "tmp"),
-    }),
-    FSUtil.layer.pipe(Layer.provide(NodeFileSystem.layer)),
-  )
-const run = <A, E>(root: string, effect: Effect.Effect<A, E, FSUtil.Service | Global.Service>) =>
+  LayerNode.compile(LayerNode.group([Global.node, FSUtil.node, EffectFlock.node]), {
+    replacements: [
+      Global.node.replace(
+        Global.layerWith({
+          config: path.join(root, "config"),
+          state: path.join(root, "state"),
+          data: path.join(root, "data"),
+          cache: path.join(root, "cache"),
+          tmp: path.join(root, "tmp"),
+        }),
+      ),
+      FSUtil.node.replace(FSUtil.layer.pipe(Layer.provide(NodeFileSystem.layer))),
+    ],
+  })
+const run = <A, E>(root: string, effect: Effect.Effect<A, E, FSUtil.Service | Global.Service | EffectFlock.Service>) =>
   Effect.runPromise(effect.pipe(Effect.provide(layers(root))))
 const executable = async (root: string, name: string, content = name) => {
   await mkdir(path.join(root, "bin"), { recursive: true })

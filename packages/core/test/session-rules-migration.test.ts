@@ -31,11 +31,15 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         yield* db.run(sql`UPDATE session_v2 SET start_directory = '/persisted-root' WHERE id = 'ses_root'`)
       }
 
-      expect(migrations.slice(-4).map((entry) => entry.id)).toEqual([
+      expect(migrations.filter((entry) => entry.id >= migration.id).map((entry) => entry.id)).toEqual([
         "20260919120000_session_start_directory",
         "20260923013825_project_time_active",
         "20261007190000_azure_cli_external_credential",
         "20261010180456_project_time_archived",
+        "20261024002554_session_allowance",
+        "20261024175301_drop_session_allowance",
+        "20261025123711_blob",
+        "20261025154125_drop_session_pending",
       ])
       yield* DatabaseMigration.apply(db)
       expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })

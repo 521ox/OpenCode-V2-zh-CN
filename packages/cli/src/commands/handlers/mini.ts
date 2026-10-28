@@ -11,10 +11,7 @@ export default Runtime.handler(Commands.commands.mini, (input) =>
     const { runMini, validateMiniTerminal } = yield* Effect.promise(() => import("../../mini"))
     const config = yield* Config.Service
     yield* Effect.promise(async () => validateMiniTerminal(config.locale()))
-    const serverURL = Option.getOrUndefined(input.server)
     const server = yield* ServerConnection.resolve({
-      server: serverURL,
-      standalone: input.standalone,
       mismatch: "replace",
     })
     const global = yield* Global.Service

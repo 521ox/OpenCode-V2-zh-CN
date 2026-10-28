@@ -4,7 +4,8 @@ import { useDialog } from "../ui/dialog"
 import { onCleanup } from "solid-js"
 import { useI18n } from "../context/i18n"
 
-export function DialogThemeList() {
+/** `onClose` returns to the caller, e.g. Settings, instead of closing every dialog. */
+export function DialogThemeList(props: { onClose?: () => void }) {
   const { t } = useI18n()
   const themes = useThemes()
   const options = Object.keys(themes.all())
@@ -29,12 +30,14 @@ export function DialogThemeList() {
       titlePlaceholder={t("main.search.themes")}
       options={options}
       current={initial}
+      onCancel={props.onClose}
       onMove={(opt) => {
         themes.set(opt.value)
       }}
       onSelect={(opt) => {
         themes.set(opt.value)
         confirmed = true
+        if (props.onClose) return props.onClose()
         dialog.clear()
       }}
       ref={(r) => {

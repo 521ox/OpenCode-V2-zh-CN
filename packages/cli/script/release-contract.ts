@@ -5,7 +5,7 @@ import root from "../../../package.json"
 export const repository = "521ox/OpenCode-V2-zh-CN"
 export const releaseRef = "refs/heads/v2-custom-lite"
 export const channel = "latest"
-export const bunVersion = "1.4.2"
+export const bunVersion = "1.4.4"
 export const targets = [
   "opencode-windows-x64",
   "opencode-windows-arm64",

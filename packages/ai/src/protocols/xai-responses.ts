@@ -36,8 +36,13 @@ const XAIResponsesHostedToolItem = Schema.Union([
   ),
 ])
 
-const XAIResponsesBody = Schema.Struct({
-  ...OpenResponses.coreFields,
+const Options = Schema.Struct({
+  minP: Schema.optional(Schema.Number),
+})
+export type OptionsInput = typeof Options.Type
+
+const Body = Schema.Struct({
+  ...OpenResponses.OpenResponsesBody.fields,
   tool_choice: Schema.optional(
     Schema.Union([
       OpenResponses.ToolChoice,
@@ -51,13 +56,21 @@ const XAIResponsesBody = Schema.Struct({
       }),
     ]),
   ),
-  stream: Schema.Literal(true),
+  top_k: Schema.optional(Schema.Number),
+  min_p: Schema.optional(Schema.Number),
 })
 
 const adapter = {
   id: ADAPTER,
   name: NAME,
   nativeTool: (native) => decodeWebSearch(native).pipe(Effect.map((value) => value.xai)),
+  lowerMedia: ({ part, media }) => {
+    if (part.media.kind !== "video") return undefined
+    const filename = part.filename ?? "file"
+    const url = ProviderShared.mediaUrl(part.media)
+    if (url) return { type: "input_file", filename, file_url: url }
+    return media && { type: "input_file", filename, file_data: media.dataUrl }
+  },
   restoreHostedToolItem: (item: unknown) => (Schema.is(XAIResponsesHostedToolItem)(item) ? item : undefined),
 } satisfies OpenResponses.ProviderAdapter
 
@@ -70,6 +83,7 @@ const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LL
       message:
         "xAI requires explicit compaction through LLMClient.compact; automatic context management is not supported",
     })
+  const options = yield* ProviderShared.validateWith(Schema.decodeUnknownEffect(Options))(request.providerOptions ?? {})
   const tools = ProviderShared.flattenTools(request.tools)
   const body = yield* OpenResponses.fromRequestWithAdapter(request, adapter)
   const searches = tools.filter((_, index) => body.tools?.[index]?.type === "web_search")
@@ -78,6 +92,10 @@ const fromRequest = Effect.fn("XAIResponses.fromRequest")(function* (request: LL
   const choice = body.tool_choice
   return {
     ...body,
+    presence_penalty: undefined,
+    frequency_penalty: undefined,
+    top_k: request.generation?.topK,
+    min_p: options.minP,
     tool_choice:
       typeof choice !== "object"
         ? choice
@@ -121,7 +139,7 @@ const step = (state: OpenResponses.ParserState, input: OpenResponses.Event) => {
 export const protocol = Protocol.make({
   id: ADAPTER,
   body: {
-    schema: XAIResponsesBody,
+    schema: Body,
     from: fromRequest,
   },
   stream: {
