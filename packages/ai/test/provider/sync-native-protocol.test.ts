@@ -1,9 +1,8 @@
 import { expect } from "bun:test"
 import { Effect } from "effect"
-import { LanguageModel, LLM, ToolDefinition } from "../../src/effect.js"
+import { ai, LanguageModel, ToolDefinition } from "../../src/effect.js"
 import { Azure, OpenAI, XAI } from "../../src/providers.js"
 import { ProviderShared } from "../../src/protocols/shared.js"
-import { LLMClient } from "../../src/route/client.js"
 import { testEffect } from "../lib/effect.js"
 import { dynamicResponse } from "../lib/http.js"
 
@@ -41,8 +40,8 @@ for (const provider of providers) {
     ),
   ).effect(`sync ${provider.id} compaction retains typed hosted search with a display-provider alias`, () =>
     Effect.gen(function* () {
-      const result = yield* LLMClient.compact(
-        LLM.request({
+      const result = yield* ai.compact(
+        ai.request({
           model: LanguageModel.update(provider.model, { provider: "configured-alias" }),
           prompt: "Keep the context",
           tools: [provider.tool, local],
@@ -80,9 +79,9 @@ for (const [name, model, tool] of [
     `sync compaction ${name}`,
     () =>
       Effect.gen(function* () {
-        const error = yield* LLMClient.compact(LLM.request({ model, prompt: "Keep the context", tools: [tool] })).pipe(
-          Effect.flip,
-        )
+        const error = yield* ai
+          .compact(ai.request({ model, prompt: "Keep the context", tools: [tool] }))
+          .pipe(Effect.flip)
         expect(error.reason._tag).toBe("InvalidRequest")
       }),
   )

@@ -9,7 +9,8 @@ import type { OpenCodeEvent, PermissionRequest, SessionMessageAssistantTool } fr
 
 const input = { search: { query: "bun", limit: 5 } }
 // Permit only the observed wraps onto one immediately adjacent bordered line.
-const chineseDescription = /"description": "中文(?:测试|[ \t]*\n[ \t]*┃[ \t]*测试|测[ \t]*\n[ \t]*┃[ \t]*试)"/
+const chineseDescription =
+  /"description": "中(?:[ \t]*\n[ \t]*┃[ \t]*)?文(?:[ \t]*\n[ \t]*┃[ \t]*)?测(?:[ \t]*\n[ \t]*┃[ \t]*)?试"/
 const output = JSON.stringify(
   {
     operation: "search",

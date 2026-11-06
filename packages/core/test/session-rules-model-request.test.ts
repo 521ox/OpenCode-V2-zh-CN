@@ -92,10 +92,10 @@ it.effect("combines parent cache affinity, hosted search and protected root rule
     }
     const primary = yield* requests.primary(input)
     expect(primary.request.promptCacheKey).toBe(child.id)
-    expect(primary.request.http?.headers?.["x-opencode-session-id"]).toBe(nested.id)
-    expect(primary.request.http?.headers?.["x-opencode-parent-session-id"]).toBe(child.id)
-    expect(primary.request.http?.headers?.["x-session-affinity"]).toBe(child.id)
-    expect(primary.request.http?.headers?.["x-parent-session-id"]).toBe(child.id)
+    expect(primary.request.headers?.["x-opencode-session-id"]).toBe(nested.id)
+    expect(primary.request.headers?.["x-opencode-parent-session-id"]).toBe(child.id)
+    expect(primary.request.headers?.["x-session-affinity"]).toBe(child.id)
+    expect(primary.request.headers?.["x-parent-session-id"]).toBe(child.id)
     expect(primary.request.tools.map((tool) => tool.name)).toContain("web_search")
     expect(primary.request.tools.map((tool) => tool.name)).not.toContain("websearch")
     expect(primary.request.system).toEqual([

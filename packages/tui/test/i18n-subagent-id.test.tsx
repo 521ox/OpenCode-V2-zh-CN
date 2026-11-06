@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
-import { onMount } from "solid-js"
+import { createEffect, onMount } from "solid-js"
 import { ConfigProvider } from "../src/config"
 import { I18nProvider } from "../src/context/i18n"
 import { ClientProvider } from "../src/context/client"
@@ -37,12 +37,15 @@ test.each(["en", "zh"] as const)(
     }
     const child = { ...parent, id: childID, title: "Literal child title", agent: "general", parentID }
     const interrupted: string[] = []
+    const interruption = Promise.withResolvers<void>()
+    const active = Promise.withResolvers<void>()
     const calls = createFetch((url, request) => {
       if (url.pathname === "/api/session/active") return json({ data: { [childID]: { type: "running" } } })
       if (url.pathname === `/api/session/${parentID}`) return json({ data: parent })
       if (url.pathname === `/api/session/${childID}`) return json({ data: child })
       if (url.pathname === `/api/session/${childID}/interrupt` && request.method === "POST") {
         interrupted.push(childID)
+        interruption.resolve()
         return json({ interrupted: true })
       }
       return undefined
@@ -55,6 +58,9 @@ test.each(["en", "zh"] as const)(
       data = useData()
       route = useRoute()
       dispatch = Keymap.use().dispatch
+      createEffect(() => {
+        if (data.session.status(childID) === "running") active.resolve()
+      })
       onMount(() => {
         void Promise.all([data.session.sync(parentID), data.session.sync(childID)]).then(
           () => ready.resolve(),
@@ -97,7 +103,7 @@ test.each(["en", "zh"] as const)(
     )
     try {
       await ready.promise
-      await app.waitFor(() => data.session.status(childID) === "running")
+      await active.promise
       await app.renderOnce()
       const frame = app.captureCharFrame()
       expect(frame).toContain(`General: Literal child title · ${childID}`)
@@ -105,7 +111,7 @@ test.each(["en", "zh"] as const)(
       expect(frame).toContain(locale === "zh" ? "运行中" : "Running")
       expect(route.data).toMatchObject({ type: "session", sessionID: parentID })
       dispatch("composer.subagent.interrupt")
-      await app.waitFor(() => interrupted.length === 1)
+      await interruption.promise
       expect(interrupted).toEqual([childID])
       dispatch("composer.subagent.select")
       expect(route.data).toMatchObject({ type: "session", sessionID: childID })

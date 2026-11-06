@@ -9,7 +9,7 @@ import { DIALOG_LIST_INSET, DialogHeader, DialogLayout, useDialog } from "../../
 import { useToast } from "../../ui/toast"
 import { errorMessage } from "../../util/error"
 import { Locale } from "../../util/locale"
-import { projectedPromptInput } from "../../prompt/codec"
+import { usePromptRestore } from "../../prompt/restore"
 
 export function DialogFork(props: { sessionID: string; messageID?: string; onMove?: (messageID?: string) => void }) {
   const { t } = useI18n()
@@ -18,10 +18,20 @@ export function DialogFork(props: { sessionID: string; messageID?: string; onMov
   const client = useClient()
   const route = useRoute()
   const toast = useToast()
+  const restorePrompt = usePromptRestore()
   const [pending, setPending] = createSignal(!!props.messageID)
 
   const fork = async (messageID?: string) => {
     setPending(true)
+    const message = messageID ? data.session.message.get(props.sessionID, messageID) : undefined
+    const prompt =
+      message?.type === "user"
+        ? await restorePrompt(message, { allowMissing: false }).catch((error) => {
+            toast.show({ message: errorMessage(error), variant: "error", duration: 5000 })
+            return null
+          })
+        : undefined
+    if (prompt === null) return dialog.clear()
     const result = await client.api.session
       .fork({
         sessionID: props.sessionID,
@@ -32,18 +42,10 @@ export function DialogFork(props: { sessionID: string; messageID?: string; onMov
         return undefined
       })
     if (!result) return dialog.clear()
-    const message = messageID ? data.session.message.get(props.sessionID, messageID) : undefined
-    const prompt = message?.type === "user" ? projectedPromptInput(message) : undefined
     route.navigate({
       sessionID: result.id,
       type: "session",
-      prompt: prompt
-        ? {
-            ...prompt,
-            agents: prompt.agents ?? [],
-            pasted: [],
-          }
-        : undefined,
+      prompt: prompt && { ...prompt, agents: prompt.agents ?? [] },
     })
     dialog.clear()
     toast.show({ message: t("session.forked"), variant: "success", duration: 4000 })

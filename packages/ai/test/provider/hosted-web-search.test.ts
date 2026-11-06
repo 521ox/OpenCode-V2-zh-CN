@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Ref, Stream } from "effect"
-import { LanguageModel, LLM, LLMEvent, Message, ToolChoice, ToolDefinition } from "../../src/effect.js"
+import { ai, LanguageModel, LLMEvent, Message, ToolChoice, ToolDefinition } from "../../src/effect.js"
 import { Azure, OpenAI, OpenAICompatibleResponses, XAI } from "../../src/providers.js"
 import { ProviderShared } from "../../src/protocols/shared.js"
 import { LLMClient, type ChannelCheckpoint } from "../../src/route.js"
@@ -55,7 +55,7 @@ describe("native hosted web search", () => {
         Effect.gen(function* () {
           const calls = yield* Ref.make(0)
           yield* LLMClient.generate(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Search the web",
               tools: [provider.tool, local],
@@ -90,7 +90,7 @@ describe("native hosted web search", () => {
       it.effect("preserves named, none and allowed tool choices", () =>
         Effect.gen(function* () {
           const aliased = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: LanguageModel.update(provider.model, { provider: "configured-alias" }),
               prompt: "Search",
               tools: [provider.tool],
@@ -99,13 +99,13 @@ describe("native hosted web search", () => {
           expect(aliased.body.tools).toEqual([{ type: "web_search" }])
           for (const choice of ["auto", "none", "required"] as const) {
             const prepared = yield* compileRequest(
-              LLM.request({ model: provider.model, prompt: "Search", tools: [provider.tool], toolChoice: choice }),
+              ai.request({ model: provider.model, prompt: "Search", tools: [provider.tool], toolChoice: choice }),
             )
             expect(prepared.body.tools).toEqual([{ type: "web_search" }])
             expect(prepared.body.tool_choice).toBe(choice)
           }
           const named = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Search",
               tools: [provider.tool],
@@ -114,7 +114,7 @@ describe("native hosted web search", () => {
           )
           expect(named.body.tool_choice).toEqual({ type: "web_search" })
           const namedLocal = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Read",
               tools: [provider.tool, local],
@@ -123,7 +123,7 @@ describe("native hosted web search", () => {
           )
           expect(namedLocal.body.tool_choice).toEqual({ type: "function", name: "read" })
           const allowed = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Search",
               tools: [provider.tool, local],
@@ -134,6 +134,26 @@ describe("native hosted web search", () => {
             type: "allowed_tools",
             mode: "required",
             tools: [{ type: "web_search" }, { type: "function", name: "read" }],
+          })
+        }),
+      )
+
+      it.effect("combines hosted search with freeform tools and their allowed choices", () =>
+        Effect.gen(function* () {
+          const custom = ToolDefinition.make({ ...local, freeform: { type: "text" } })
+          const prepared = yield* compileRequest(
+            ai.request({
+              model: provider.model,
+              prompt: "Search then read",
+              tools: [provider.tool, custom],
+              providerOptions: { allowedTools: { toolNames: [provider.tool.name, custom.name], mode: "required" } },
+            }),
+          )
+          expect(prepared.body.tools).toMatchObject([{ type: "web_search" }, { type: "custom", name: "read" }])
+          expect(prepared.body.tool_choice).toEqual({
+            type: "allowed_tools",
+            mode: "required",
+            tools: [{ type: "web_search" }, { type: "custom", name: "read" }],
           })
         }),
       )
@@ -149,7 +169,7 @@ describe("native hosted web search", () => {
           ]) {
             const tool = ToolDefinition.make({ name: "web_search", description: "Search", inputSchema: {}, native })
             const error = yield* compileRequest(
-              LLM.request({ model: provider.model, prompt: "Search", tools: [tool] }),
+              ai.request({ model: provider.model, prompt: "Search", tools: [tool] }),
             ).pipe(Effect.flip)
             expect(error.reason._tag).toBe("InvalidRequest")
           }
@@ -160,7 +180,7 @@ describe("native hosted web search", () => {
         Effect.gen(function* () {
           const tool = ToolDefinition.make({ ...provider.tool, name: "find_sources" })
           const named = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Search",
               tools: [local, tool],
@@ -169,7 +189,7 @@ describe("native hosted web search", () => {
           )
           expect(named.body.tool_choice).toEqual({ type: "web_search" })
           const allowed = yield* compileRequest(
-            LLM.request({
+            ai.request({
               model: provider.model,
               prompt: "Search",
               tools: [local, tool],
@@ -189,7 +209,7 @@ describe("native hosted web search", () => {
           const events = yield* Ref.make<LLMEvent[]>([])
           const error = { code: "search_failed", message: "Search unavailable" }
           const failure = yield* LLMClient.stream(
-            LLM.request({ model: provider.model, prompt: "Search", tools: [provider.tool] }),
+            ai.request({ model: provider.model, prompt: "Search", tools: [provider.tool] }),
           ).pipe(
             Stream.runForEach((event) => Ref.update(events, (values) => [...values, event])),
             Effect.provide(
@@ -226,7 +246,7 @@ describe("native hosted web search", () => {
             action: { type: "search", query: "news" },
           }
           const response = yield* LLMClient.generate(
-            LLM.request({ model: provider.model, prompt: "Search", tools: [provider.tool] }),
+            ai.request({ model: provider.model, prompt: "Search", tools: [provider.tool] }),
           ).pipe(
             Effect.provide(
               fixedResponse(
@@ -255,7 +275,7 @@ describe("native hosted web search", () => {
             },
           ])
           const replay = yield* compileRequest(
-            LLM.request({ model: provider.model, messages: [response.message], tools: [provider.tool] }),
+            ai.request({ model: provider.model, messages: [response.message], tools: [provider.tool] }),
           )
           expect(replay.body.input).toEqual([item])
           expect(replay.body.tools).toEqual([{ type: "web_search" }])
@@ -268,7 +288,7 @@ describe("native hosted web search", () => {
             const checkpoint = yield* Ref.make<ChannelCheckpoint | undefined>(undefined)
             const run = (messages: Message[]) =>
               LLMClient.generate(
-                LLM.request({
+                ai.request({
                   model: provider.model,
                   messages,
                   tools: [provider.tool, local],
@@ -321,7 +341,7 @@ describe("native hosted web search", () => {
     it.effect(`${name} Chat preserves function tools and rejects other unsupported native definitions`, () =>
       Effect.gen(function* () {
         const prepared = yield* compileRequest(
-          LLM.request({
+          ai.request({
             model,
             prompt: "Read",
             tools: [local],
@@ -344,7 +364,7 @@ describe("native hosted web search", () => {
             inputSchema: {},
             native,
           })
-          const error = yield* compileRequest(LLM.request({ model, prompt: "Search", tools: [tool] })).pipe(Effect.flip)
+          const error = yield* compileRequest(ai.request({ model, prompt: "Search", tools: [tool] })).pipe(Effect.flip)
           expect(error.reason._tag).toBe("InvalidRequest")
         }
       }),
@@ -380,7 +400,7 @@ describe("native hosted web search", () => {
   ] as const) {
     it.effect(`rejects hosted search: ${name}`, () =>
       Effect.gen(function* () {
-        const outcome = yield* compileRequest(LLM.request({ model, prompt: "Search", tools: [tool] })).pipe(
+        const outcome = yield* compileRequest(ai.request({ model, prompt: "Search", tools: [tool] })).pipe(
           Effect.match({ onFailure: (error) => error.reason._tag, onSuccess: () => "UnexpectedSuccess" }),
         )
         expect(outcome).toBe("InvalidRequest")

@@ -26,6 +26,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
       yield* db.run(sql`CREATE TABLE session_message (id text PRIMARY KEY, session_id text, data text)`)
       yield* db.run(sql`INSERT INTO session_message VALUES ('message', 'ses_root', '{"text":"completed history"}')`)
       yield* db.run(sql`CREATE TABLE credential (id text PRIMARY KEY, integration_id text, value text)`)
+      yield* db.run(sql`CREATE TABLE kv (key text PRIMARY KEY, value text, time_created integer, time_updated integer)`)
       if (applied) {
         yield* db.run(sql`ALTER TABLE session_v2 ADD COLUMN start_directory text`)
         yield* db.run(sql`UPDATE session_v2 SET start_directory = '/persisted-root' WHERE id = 'ses_root'`)
@@ -40,6 +41,11 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         "20261024175301_drop_session_allowance",
         "20261025123711_blob",
         "20261025154125_drop_session_pending",
+        "20261026223005_schedule",
+        "20261029002625_session_part",
+        "20261029073502_session_time_busy",
+        "20261029165540_schedule_checks",
+        "20261030054400_job",
       ])
       yield* DatabaseMigration.apply(db)
       expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })
@@ -53,6 +59,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
           directory: "/child",
           permission: "child-keep",
           start_directory: null,
+          time_busy: null,
         },
         {
           id: "ses_root",
@@ -60,6 +67,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
           directory: "/moved",
           permission: "keep",
           start_directory: applied ? "/persisted-root" : "/created",
+          time_busy: null,
         },
       ])
       expect(yield* db.get(sql`SELECT * FROM event`)).toEqual({

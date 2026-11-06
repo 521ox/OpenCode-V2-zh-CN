@@ -20,6 +20,35 @@ installed-client activation remain separately authorized actions.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 6 synchronization — candidate ready for independent review
+
+Starting source: `774b9ce7d928c3047147f78f4337823d5762a5aa`. Frozen official
+`dev`: `0e655ff2a2b7ee2234a6ebd5e61048b58a188b7c` (2.2.5), following
+`86ce19d96eccbfb95af3ff3189c7071575f94339`. Issue #4 and branch
+`sync-dev-20261106` track this merge-preserving synchronization. The intended local
+candidate is `2.2.5-custom-lite.20261106.1`, latest channel, Windows x64 bytecode
+with the full embedded WebUI. Final independent review and promotion belong to
+the integration owner. No release publication or installed-client activation is
+included. [PR #5](https://github.com/521ox/OpenCode-V2-zh-CN/pull/5) records the
+integration decisions, failures/repairs, focused checks and actual CI evidence.
+
+Build source `01ef820770dae1a03468523e270330899816f49d` produced a 265,637,376-byte
+candidate, SHA256 `e1fdddf74b28ba2e67a24db77e1a01a8008d5b8bbf50e02b60f3c130e71b1eaa`.
+Compiled version, Chinese help, runtime and owned-service/WebUI/MCP-socket smoke
+passed. The accepted 2.2.0 binary imported and cold-read two synthetic sessions
+and six completed-history messages before this candidate opened the same private
+default database: 55→60 migrations preserved IDs, order, Unicode, start_directory
+and original rows. Legacy checkpoint input is a trusted fixture, not model-generated
+history. DB/channel/XDG/config-root selectors were absent; all owned processes and
+profiles were removed. Real-user/unfinished-state/downgrade compatibility is not claimed.
+
+The 13 scoped TypeScript gates, generators and both required CI jobs passed on the
+build source. Root lint passed; the full typecheck stops at Site's two package-local
+SolidStart imports under the hoisted install. Two Client reconnect failures reproduce
+on accepted-base Client source with the same current dependencies. These remain
+explicit limits; full-monorepo green and Windows Unicode archive support (#2) are
+not claimed. Final review, merge, promotion and export remain parent-owned.
+
 ## October 28 accepted local synchronization
 
 Independent reviewer `ses_e7eef3568ffePz15QbM9vGn26D` returned
@@ -1593,8 +1622,8 @@ verification environments.
 
 ## Verification and generation boundaries
 
-- Use the package-manager version in the target root manifest. October 16 frozen
-  target: Bun 1.4.2, TypeScript 5.8.2, Effect 4.0.1, Solid 1.9.15, OpenTUI 0.5.17.
+- Use the package-manager version in the target root manifest. November 6 frozen
+  target: Bun 1.4.4, TypeScript 7.1 beta, Effect 4.1.0, Solid 1.9.17, OpenTUI 0.8.1.
   Preserve the lockfile; do not upgrade dependencies merely while organizing Git.
 - Run tests from their package directories, never the repository-root test script.
   Use private HOME/USERPROFILE/XDG/APPDATA/LOCALAPPDATA/TEMP paths and synthetic
@@ -1609,12 +1638,12 @@ verification environments.
   `migration.gen.ts` and `schema.gen.ts`; do not add a duplicate column migration.
 - Public Protocol/HttpApi changes require the Client generator under repository
   policy. Do not hand-edit generated client output.
-- CLI schema output `services/www/public/cli.json` is generated and ignored by the
+- CLI schema output `services/site/public/cli.json` is generated and ignored by the
   existing repository policy. Verify its generator when applicable; do not force
   it into Git merely because it exists after local checks.
 - Build manual Windows replacements with `OPENCODE_CHANNEL=latest` and an explicit
-  custom version. From `packages/cli`, the accepted build used
-  `bun script/build.ts --target=opencode-windows-x64 --skip-install` after dependency
+  custom version. From `packages/cli`, set `OPENCODE_TARGET=windows-x64` and use
+  `bun script/build.ts --skip-install` after dependency
   setup. Do not reuse `local`: it changes the default database/service/TUI namespace.
 - Check compiled version/runtime, old synthetic history at the default database
   path, authentication, embedded WebUI and owned-service shutdown. Follow the

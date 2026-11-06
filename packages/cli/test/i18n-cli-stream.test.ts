@@ -23,6 +23,7 @@ for (const locale of ["zh", "en"] as const) {
   for (const format of ["default", "json"] as const) {
     test(`${locale}/${format} run stream retains model text and wire values`, async () => {
       const admitted = Promise.withResolvers<string>()
+      const settled = Promise.withResolvers<void>()
       const sdk = OpenCode.make({
         baseUrl: "https://unused.invalid",
         fetch: blockedFetch,
@@ -52,7 +53,24 @@ for (const locale of ["zh", "en"] as const) {
         }),
         spyOn(sdk.permission, "list").mockResolvedValue([]),
         spyOn(sdk.session.form, "list").mockResolvedValue([]),
-        spyOn(sdk.event, "subscribe").mockImplementation((() =>
+        spyOn(sdk.experimental.session, "wait").mockImplementation(async () => settled.promise),
+        spyOn(sdk.experimental.job, "list").mockResolvedValue([]),
+        spyOn(sdk.session.inbox, "list").mockResolvedValue([]),
+        spyOn(sdk.session, "active").mockResolvedValue({}),
+        spyOn(sdk.message, "list").mockImplementation(async () => ({
+          data: [
+            {
+              id: "msg_idle",
+              type: "idle",
+              outcome: "failed",
+              error: { type: "unknown", message: raw },
+              time: { created: 4 },
+            },
+            { id: await admitted.promise, type: "user", text: raw, time: { created: 1 } },
+          ],
+          cursor: {},
+        })),
+        spyOn(sdk.event, "subscribe").mockImplementation(((options) =>
           (async function* (): AsyncGenerator<EventSubscribeOutput> {
             yield { id: "evt_connected", type: "server.connected", data: {} }
             const inboxID = await admitted.promise
@@ -84,6 +102,10 @@ for (const locale of ["zh", "en"] as const) {
               type: "session.execution.failed",
               data: { sessionID: "ses_RAW", error: { type: "unknown", message: raw } },
             }
+            settled.resolve()
+            await new Promise<void>((resolve) =>
+              options?.signal?.addEventListener("abort", () => resolve(), { once: true }),
+            )
           })()) as typeof sdk.event.subscribe),
       ]
       try {
@@ -97,8 +119,8 @@ for (const locale of ["zh", "en"] as const) {
           files: [],
           thinking: true,
           auto: false,
-          attached: true,
-          compatibility: "v1",
+          standalone: false,
+          signal: new AbortController().signal,
           renderTool: async () => {
             throw new Error("Unexpected tool")
           },

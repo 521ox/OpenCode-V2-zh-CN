@@ -10,23 +10,23 @@ Based on [OpenCode](https://github.com/anomalyco/opencode), the open-source AI c
 
 ## Source and published binaries
 
-| Track | Status as of October 28, 2026 |
-| --- | --- |
-| Maintained source | Official V2 **2.2.0** integrated; the local Windows x64 build `2.2.0-custom-lite.20261028.1` is accepted. See [source and acceptance evidence](UPSTREAM_SYNC.md). |
-| Public binaries | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), an unsigned prerelease published October 4, 2026. The 2.2.0 source/local build is **not a published six-platform release**. |
+| Track             | Status as of November 6, 2026                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Maintained source | Official V2 **2.2.5** synchronization; candidate verification and acceptance are tracked in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).                                                                             |
+| Public binaries   | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), an unsigned prerelease published October 4, 2026. The 2.2.5 source is **not a published six-platform release**. |
 
 Browse [all releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases) for published assets. Legacy `main` and `v1.18.4-zhcn.*` releases do not represent this V2 branch. Official installers, npm packages and updates provide official builds and may replace the custom additions; this fork does not change that updater policy.
 
 ## Features
 
-| Area | Custom behavior |
-| --- | --- |
-| Chinese / English | Simplified Chinese interface defaults with English selection/fallback across TUI, Mini and CLI-run presentation. Model/tool output and protocol data stay unchanged. |
-| Native tools | `environment_tools` remembers and revalidates programs; `direct_exec` runs verified native EXE/COM entries by catalog ID and argument array, subject to execution permission. |
-| Session memory | Root and child Sessions share a protected location for compact continuation memory, with conversation-first reads and current-state guidance. |
-| Subagent navigation | Trusted completed results retain full final text within provider limits; visible Session identity and links open existing child Sessions. |
-| Hosted search | Supported native OpenAI/xAI Responses routes expose search only when effective permissions allow it; model and account availability still apply. |
-| Temporary artifacts | Agents receive task-owned cleanup guidance; it is not an automatic cleanup service. |
+| Area                | Custom behavior                                                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chinese / English   | Simplified Chinese interface defaults with English selection/fallback across TUI, Mini and CLI-run presentation. Model/tool output and protocol data stay unchanged.          |
+| Native tools        | `environment_tools` remembers and revalidates programs; `direct_exec` runs verified native EXE/COM entries by catalog ID and argument array, subject to execution permission. |
+| Session memory      | Root and child Sessions share a protected location for compact continuation memory, with conversation-first reads and current-state guidance.                                 |
+| Subagent navigation | Trusted completed results retain full final text within provider limits; visible Session identity and links open existing child Sessions.                                     |
+| Hosted search       | Supported native OpenAI/xAI Responses routes expose search only when effective permissions allow it; model and account availability still apply.                              |
+| Temporary artifacts | Agents receive task-owned cleanup guidance; it is not an automatic cleanup service.                                                                                           |
 
 Exact behavior, retained repairs and exclusions live in [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md). Maintenance evidence and known failures live in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).
 
@@ -34,11 +34,11 @@ Exact behavior, retained repairs and exclusions live in [CUSTOMIZATIONS.md](CUST
 
 Choose the matching asset from a **`2.x-zhcn.N` [release](https://github.com/521ox/OpenCode-V2-zh-CN/releases)**:
 
-| System | Architectures | Archive |
-| --- | --- | --- |
-| Windows | x64, ARM64 | `opencode-windows-<arch>.zip` |
-| Linux (glibc) | x64, ARM64 | `opencode-linux-<arch>.tar.gz` |
-| macOS | x64, ARM64 | `opencode-darwin-<arch>.tar.gz` |
+| System        | Architectures | Archive                         |
+| ------------- | ------------- | ------------------------------- |
+| Windows       | x64, ARM64    | `opencode-windows-<arch>.zip`   |
+| Linux (glibc) | x64, ARM64    | `opencode-linux-<arch>.tar.gz`  |
+| macOS         | x64, ARM64    | `opencode-darwin-<arch>.tar.gz` |
 
 Extract the **complete archive** and run `cli-<platform>-<arch>/bin/opencode` (`opencode.exe` on Windows). These are CLI bundles with an embedded WebUI, **not Electron Desktop installers**; Linux musl is not included. Binaries are unsigned and macOS bundles are not notarized.
 
@@ -55,7 +55,7 @@ $env:ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
 $env:HUSKY = "0"
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.2.0-custom-local.1"
+$env:OPENCODE_VERSION = "2.2.5-custom-local.1"
 $env:OPENCODE_CHANNEL = "latest"
 $env:OPENCODE_TARGET = "windows-x64"
 bun script/build.ts --skip-install

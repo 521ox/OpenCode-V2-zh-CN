@@ -30,7 +30,7 @@ const document = (policies: ConfigPolicy.Info[]) =>
   new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({ policies }) })
 const setup = Effect.gen(function* () {
   const plugin = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugin)
+  const host = yield* PluginHost.make(plugin, "test")
   yield* ConfigPolicyPlugin.Plugin.effect(host)
   const agents = yield* Agent.Service
   const agent = Agent.ID.make("build")

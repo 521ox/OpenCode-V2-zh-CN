@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect, test } from "bun:test"
-import { Deferred, Effect, Fiber, Layer, Schema, Stream } from "effect"
+import { Deferred, Effect, Fiber, Layer, PlatformError, Schema, Stream } from "effect"
 import { Config } from "@opencode/core/config"
 import { Directory, Document, type Entry, Info } from "@opencode/schema/config"
 import { ConfigSkillPlugin } from "@opencode/core/config/plugin/skill"
@@ -66,9 +66,7 @@ const startEntries = Effect.fnUntraced(function* (
   yield* ConfigCompatibilityPlugin.Plugin.effect(pluginHost).pipe(
     Effect.provide(Config.testLayer(entries, compatibility)),
   )
-  yield* ConfigSkillPlugin.Plugin.effect(
-    pluginHost,
-  ).pipe(
+  yield* ConfigSkillPlugin.Plugin.effect(pluginHost).pipe(
     Effect.provide(Config.testLayer(entries, compatibility)),
     Effect.provideService(SkillDiscovery.Service, discovery),
     Effect.provideService(Global.Service, Global.Service.of({ ...Global.make(), home })),
@@ -132,9 +130,9 @@ describe("SkillFile.parse", () => {
     expect(parse("disable-model-invocation: yes")).toMatchObject({ skill: { autoinvoke: false } })
     expect(parse("disable-model-invocation: false")).not.toMatchObject({ skill: { autoinvoke: expect.anything() } })
     expect(parse("disable-model-invocation: maybe")).not.toMatchObject({ skill: { autoinvoke: expect.anything() } })
-    expect(
-      parse("disable-model-invocation: true\nmetadata:\n  opencode/autoinvoke: true"),
-    ).toMatchObject({ skill: { autoinvoke: true } })
+    expect(parse("disable-model-invocation: true\nmetadata:\n  opencode/autoinvoke: true")).toMatchObject({
+      skill: { autoinvoke: true },
+    })
   })
 
   test("parses root and nested skill ids and metadata flags", () => {
@@ -212,7 +210,14 @@ describe("SkillScan.scan", () => {
                   Effect.suspend(() => {
                     visited.push(directory)
                     return directory === denied
-                      ? Effect.fail(new FSUtil.FileSystemError({ method: "readDirectoryEntries" }))
+                      ? Effect.fail(
+                          PlatformError.systemError({
+                            _tag: "PermissionDenied",
+                            module: "FileSystem",
+                            method: "readDirectoryEntries",
+                            pathOrDescriptor: directory,
+                          }),
+                        )
                       : filesystem.readDirectoryEntries(directory)
                   }),
               }),
@@ -259,7 +264,9 @@ describe("ConfigSkillPlugin.Plugin", () => {
             { claude: [AbsolutePath.make(claude)], agents: [AbsolutePath.make(agents)] },
           )
           const watcher = yield* Watcher.Test
-          expect(yield* watcher.subscriptions()).toEqual(expected.map((item) => ({ path: item, type: "directory", ignore: SkillScan.ignore.toSorted() })))
+          expect(yield* watcher.subscriptions()).toEqual(
+            expected.map((item) => ({ path: item, type: "directory", ignore: SkillScan.ignore.toSorted() })),
+          )
         }),
       ),
     ),
@@ -520,10 +527,10 @@ describe("ConfigSkillPlugin.Plugin", () => {
           expect((yield* service.list()).find((item) => item.id === "review")?.description).toBe("Review once")
         }).pipe(
           Effect.provide(
-            Config.testLayer(
-              [new Directory({ type: "directory", path: AbsolutePath.make(tmp.path) })],
-              { claude: [AbsolutePath.make(path.join(tmp.path, ".claude"))], agents: [] },
-            ),
+            Config.testLayer([new Directory({ type: "directory", path: AbsolutePath.make(tmp.path) })], {
+              claude: [AbsolutePath.make(path.join(tmp.path, ".claude"))],
+              agents: [],
+            }),
           ),
         ),
       ),

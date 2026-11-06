@@ -1,11 +1,14 @@
 /** @jsxImportSource @opentui/solid */
 import { expect, test } from "bun:test"
-import { RGBA, TextRenderable } from "@opentui/core"
+import { RGBA, TextRenderable, type Renderable } from "@opentui/core"
 import { testRender } from "@opentui/solid"
 import type { Context } from "@opencode/plugin/tui/context"
 import { createSignal } from "solid-js"
 import { PromptFooter } from "../../src/feature-plugins/prompt/footer"
 import { TestI18n } from "../fixture/i18n"
+import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
+import { createTuiResolvedConfig } from "../fixture/tui-runtime"
 
 test("prompt footer separates simultaneous subagent, shell, and usage status", async () => {
   const color = RGBA.fromInts(200, 200, 200)
@@ -24,7 +27,9 @@ test("prompt footer separates simultaneous subagent, shell, and usage status", a
         id === "session.child.first" ? ["ctrl+j"] : id === "command.palette.show" ? ["ctrl+p"] : [],
       dispatch: (id: string) => dispatched.push(id),
     },
+    client: { rpc: () => ({ get: () => Promise.resolve(null), events: { on: () => () => {} } }) },
     data: {
+      on: () => () => {},
       session: {
         family: () => ["session", "child"],
         status: (id: string) => (id === "child" ? "running" : "idle"),
@@ -86,7 +91,9 @@ test("prompt footer can hide details", async () => {
         return []
       },
     },
+    client: { rpc: () => ({ get: () => Promise.resolve(null), events: { on: () => () => {} } }) },
     data: {
+      on: () => () => {},
       session: {
         family: () => ["session"],
         status: () => "running",
@@ -144,3 +151,101 @@ test("prompt footer can hide details", async () => {
     app.renderer.destroy()
   }
 })
+
+test.each(["en", "zh"] as const)("prompt footer shows the session's goal and opens it in %s", async (locale) => {
+  const label = locale === "en" ? "goal" : "目标"
+  const paused = locale === "en" ? "goal paused" : "目标已暂停"
+  const muted = RGBA.fromInts(100, 100, 100)
+  const warning = RGBA.fromInts(200, 200, 0)
+  const goal = {
+    id: "goal",
+    objective: "Make the test suite pass",
+    status: "active",
+    rounds: 3,
+    maxRounds: 50,
+    boot: "boot",
+    updatedAt: 0,
+  }
+  const fetched = Promise.resolve(goal)
+  const changed: ((event: { data: { sessionID: string; goal: unknown } }) => void)[] = []
+  const dialogs: unknown[] = []
+  const context = {
+    location: { directory: "/workspace" },
+    theme: {
+      text: {
+        base: RGBA.fromInts(200, 200, 200),
+        muted,
+        feedback: { warning: { base: warning }, success: { base: muted } },
+      },
+    },
+    keymap: { shortcuts: () => [] },
+    ui: { dialog: { show: (render: unknown) => dialogs.push(render) }, toast: { show: () => {} } },
+    client: {
+      rpc: () => ({
+        get: () => fetched,
+        events: { on: (_name: string, handler: (typeof changed)[number]) => (changed.push(handler), () => {}) },
+      }),
+    },
+    data: {
+      on: () => () => {},
+      session: {
+        family: () => ["session"],
+        status: () => "idle",
+        get: () => ({ id: "session", location: { directory: "/workspace" } }),
+        cost: () => 0,
+        message: { list: () => [] },
+      },
+      shell: { list: () => [] },
+      location: { model: { list: () => [] } },
+    },
+  } as unknown as Context
+  const app = await testRender(
+    () => (
+      <ConfigProvider config={createTuiResolvedConfig({ locale })}>
+        <I18nProvider>
+          <PromptFooter context={context} sessionID="session" mode="normal" showDetails={true} />
+        </I18nProvider>
+      </ConfigProvider>
+    ),
+    { width: 80, height: 2 },
+  )
+
+  try {
+    // The footer fetches the goal from the goal plugin's RPC.
+    await fetched
+    await app.renderOnce()
+    const frame = app.captureCharFrame()
+    expect(frame).toContain(`◎ ${label}`)
+    // The objective and any round count live in the dialog, not the footer.
+    expect(frame).not.toContain("Make the test suite pass")
+    expect(frame).not.toMatch(/\d+\/\d+/)
+    expect(findText(app.renderer.root, `◎ ${label}`)?.fg.toInts()).toEqual(muted.toInts())
+
+    await app.mockMouse.click(2, 0)
+    expect(dialogs).toHaveLength(1)
+    await app.mockMouse.moveTo(70, 1)
+
+    // Then it follows the plugin's changes for this Session only.
+    const change = (sessionID: string, next: unknown) =>
+      changed.forEach((handler) => handler({ data: { sessionID, goal: next } }))
+    change("session", { ...goal, status: "paused", reason: "Stopped by the user" })
+    change("other", null)
+    await app.renderOnce()
+    expect(app.captureCharFrame()).toContain(`◎ ${paused}`)
+    expect(findText(app.renderer.root, `◎ ${paused}`)?.fg.toInts()).toEqual(warning.toInts())
+
+    change("session", null)
+    await app.renderOnce()
+    expect(app.captureCharFrame()).not.toContain(label)
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+function findText(node: Renderable, text: string): TextRenderable | undefined {
+  if (node instanceof TextRenderable && node.plainText.includes(text)) return node
+  return node
+    .getChildren()
+    .map((child) => findText(child, text))
+    .find((found) => found !== undefined)
+}

@@ -4,6 +4,7 @@ import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { useI18n } from "../context/i18n"
+import { createMediaSource } from "./media-source"
 
 type ImagePreviewItem = Readonly<{
   uri: string
@@ -16,8 +17,8 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
   const dimensions = useTerminalDimensions()
   const theme = useTheme().surface("dialog")
   const [index, setIndex] = createSignal(Math.max(0, Math.min(props.images.length - 1, props.initial)))
-  const [failed, setFailed] = createSignal(false)
   const current = createMemo(() => props.images[index()])
+  const media = createMediaSource(() => current().uri)
   const imageHeight = createMemo(() => Math.max(3, dimensions().height - 8))
 
   dialog.setSize("xlarge")
@@ -25,7 +26,6 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
 
   function move(direction: number) {
     if (props.images.length < 2) return
-    setFailed(false)
     setIndex((value) => (value + direction + props.images.length) % props.images.length)
   }
 
@@ -53,8 +53,8 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
         },
         get children() {
           return (
-            <text fg={failed() ? theme.text.feedback.error.base : theme.text.muted} wrapMode="none" truncate>
-              {failed()
+            <text fg={media.failed() ? theme.text.feedback.error.base : theme.text.muted} wrapMode="none" truncate>
+              {media.failed()
                 ? t("main.image.noPreview")
                 : (current().mention?.text ?? t("main.image.index", { index: index() + 1 }))}
             </text>
@@ -66,8 +66,8 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
           <text fg={theme.text.muted} onMouseUp={() => move(-1)}>
             {props.images.length > 1 ? `← ${t("main.previous")}` : ""}
           </text>
-          <text fg={failed() ? theme.text.feedback.error.base : theme.text.muted} wrapMode="none" truncate>
-            {failed()
+          <text fg={media.failed() ? theme.text.feedback.error.base : theme.text.muted} wrapMode="none" truncate>
+            {media.failed()
               ? t("main.image.noPreview")
               : (current().mention?.text ?? t("main.image.index", { index: index() + 1 }))}
           </text>
@@ -79,12 +79,12 @@ export function DialogImagePreview(props: { images: readonly ImagePreviewItem[];
     >
       <image
         id="prompt-image-viewer-image"
-        source={current().uri}
+        source={media.source()}
         fit="fit"
         protocol="auto"
         width="100%"
         height={imageHeight()}
-        onError={() => setFailed(true)}
+        onError={media.onError}
       />
     </DialogLayout>
   )
