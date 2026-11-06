@@ -1,14 +1,16 @@
 # Minimal Custom V2 Distribution
 
-## November 6 synchronization — candidate in progress
+## November 6 synchronization — candidate ready for independent review
 
 The frozen upstream target is official dev `0e655ff2a2b7ee2234a6ebd5e61048b58a188b7c`
 (2.2.5). This integration keeps the selected behavior below on the official owners,
 including the updated run cancellation/background-job lifecycle and media/draft
 restoration. The old V1 run adapter follows its upstream retirement. The official
 `ManagedPolicy` module now contains stateless rule helpers; the retired global
-policy service and cache remain absent. Candidate acceptance is tracked in the
-PR for issue #4 and `UPSTREAM_SYNC.md`.
+policy service and cache remain absent. The Windows x64 candidate passes compiled
+basic, service/WebUI and old-default-database compatibility checks. Final acceptance
+is tracked in [PR #5](https://github.com/521ox/OpenCode-V2-zh-CN/pull/5) and
+`UPSTREAM_SYNC.md`.
 
 The official transcript projection now owns idle-error visibility and duplicate
 suppression, retiring the old local idle-row repair. Client publication revocation
