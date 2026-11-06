@@ -10,23 +10,23 @@
 
 ## 源码与公开二进制
 
-| 类别 | 截至 2026 年 10 月 28 日的状态 |
-| --- | --- |
-| 维护源码 | 已集成官方 V2 **2.2.0**，本地 Windows x64 构建 `2.2.0-custom-lite.20261028.1` 已验收。详见[源码与验收证据](UPSTREAM_SYNC.md)。 |
-| 公开二进制 | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，2026 年 10 月 4 日发布的未签名预发布版本。2.2.0 源码／本地构建**不代表六平台版本已公开发布**。 |
+| 类别       | 截至 2026 年 11 月 6 日的状态                                                                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 维护源码   | 正在同步官方 V2 **2.2.5**；候选构建验证及验收状态见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。                                                                                         |
+| 公开二进制 | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，2026 年 10 月 4 日发布的未签名预发布版本。2.2.5 源码**不代表六平台版本已公开发布**。 |
 
 已发布附件见[全部 Releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases)。旧 `main` 分支和 `v1.18.4-zhcn.*` Releases 不代表当前 V2 分支。官方安装器、npm 包及更新提供官方构建，可能覆盖二开功能；本分支不改变该更新策略。
 
 ## 功能
 
-| 领域 | 定制行为 |
-| --- | --- |
-| 中文 / English | TUI、Mini 和 CLI-run 界面默认简体中文，可选择英文并保留英文回退；模型／工具输出与协议数据保持原样。 |
-| 原生工具 | `environment_tools` 记录并重新验证程序；`direct_exec` 使用目录 ID 和参数数组执行已验证的原生 EXE/COM，仍受执行权限约束。 |
-| 会话记忆 | 根会话与子会话共享受保护的精简续接记忆位置，强调优先使用当前对话、按需读取和维护当前状态。 |
-| 子代理导航 | 可信的已完成结果在提供方限制内保留完整最终回复；显示会话身份，并可打开既有子会话。 |
-| 托管搜索 | 受支持的原生 OpenAI/xAI Responses 路由仅在有效权限允许时提供搜索；仍取决于模型和账户资格。 |
-| 临时产物 | 为 Agent 提供任务自有产物清理指引，不是自动清理服务。 |
+| 领域           | 定制行为                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 中文 / English | TUI、Mini 和 CLI-run 界面默认简体中文，可选择英文并保留英文回退；模型／工具输出与协议数据保持原样。                      |
+| 原生工具       | `environment_tools` 记录并重新验证程序；`direct_exec` 使用目录 ID 和参数数组执行已验证的原生 EXE/COM，仍受执行权限约束。 |
+| 会话记忆       | 根会话与子会话共享受保护的精简续接记忆位置，强调优先使用当前对话、按需读取和维护当前状态。                               |
+| 子代理导航     | 可信的已完成结果在提供方限制内保留完整最终回复；显示会话身份，并可打开既有子会话。                                       |
+| 托管搜索       | 受支持的原生 OpenAI/xAI Responses 路由仅在有效权限允许时提供搜索；仍取决于模型和账户资格。                               |
+| 临时产物       | 为 Agent 提供任务自有产物清理指引，不是自动清理服务。                                                                    |
 
 精确行为、保留的修复及非目标见 [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)。维护证据与已知失败见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。
 
@@ -34,11 +34,11 @@
 
 从 **`2.x-zhcn.N` [Release](https://github.com/521ox/OpenCode-V2-zh-CN/releases)** 选择对应附件：
 
-| 系统 | 架构 | 文件 |
-| --- | --- | --- |
-| Windows | x64、ARM64 | `opencode-windows-<arch>.zip` |
-| Linux（glibc） | x64、ARM64 | `opencode-linux-<arch>.tar.gz` |
-| macOS | x64、ARM64 | `opencode-darwin-<arch>.tar.gz` |
+| 系统           | 架构       | 文件                            |
+| -------------- | ---------- | ------------------------------- |
+| Windows        | x64、ARM64 | `opencode-windows-<arch>.zip`   |
+| Linux（glibc） | x64、ARM64 | `opencode-linux-<arch>.tar.gz`  |
+| macOS          | x64、ARM64 | `opencode-darwin-<arch>.tar.gz` |
 
 **完整解压**后运行 `cli-<platform>-<arch>/bin/opencode`，Windows 使用 `opencode.exe`。这是内嵌 WebUI 的 CLI 包，**不是 Electron 桌面安装器**；不包含 Linux musl 版本。二进制未签名，macOS 包也未经公证。
 
@@ -55,7 +55,7 @@ $env:ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
 $env:HUSKY = "0"
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.2.0-custom-local.1"
+$env:OPENCODE_VERSION = "2.2.5-custom-local.1"
 $env:OPENCODE_CHANNEL = "latest"
 $env:OPENCODE_TARGET = "windows-x64"
 bun script/build.ts --skip-install

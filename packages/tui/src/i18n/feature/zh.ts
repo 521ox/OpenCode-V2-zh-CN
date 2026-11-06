@@ -1,6 +1,21 @@
 import type en from "./en"
 
 export default {
+  "feature.goal.label": "目标",
+  "feature.goal.pausedLabel": "目标已暂停",
+  "feature.goal.metLabel": "目标已达成",
+  "feature.goal.title": "目标",
+  "feature.goal.empty": "尚未设置目标。使用 /goal <目标> 开始。",
+  "feature.goal.updateFailed": "更新目标失败",
+  "feature.goal.pause": "暂停",
+  "feature.goal.resume": "继续",
+  "feature.goal.clear": "清除",
+  "feature.goal.pauseCommand": "暂停目标",
+  "feature.goal.resumeCommand": "继续目标",
+  "feature.goal.clearCommand": "清除目标",
+  "feature.goal.active": "进行中",
+  "feature.goal.paused": "已暂停",
+  "feature.goal.met": "已达成",
   "feature.sidebar.onboarding.title": "开始使用",
   "feature.sidebar.onboarding.freeModels": "OpenCode 提供免费模型，助你立即开始使用。",
   "feature.sidebar.onboarding.providers": "连接 75 多家提供商，使用 Claude、GPT、Gemini 等更多模型",

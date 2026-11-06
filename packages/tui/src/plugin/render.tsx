@@ -23,9 +23,9 @@ import { errorMessage } from "../util/error"
 import { usePlugin } from "./context"
 import { useI18n } from "../context/i18n"
 
-// Contain render-time plugin crashes: a throwing slot or route must not take
-// down the app or the other plugins. The crash surfaces as one error toast.
-function PluginBoundary(props: ParentProps<{ id: string; where: string }>) {
+// Contain render-time plugin crashes: a throwing slot, route or dialog must not
+// take down the app or the other plugins. The crash surfaces as one error toast.
+export function PluginBoundary(props: ParentProps<{ id: string; where: string; onCrash?: () => void }>) {
   const i18n = useI18n()
   const toast = useToast()
   return (
@@ -33,7 +33,7 @@ function PluginBoundary(props: ParentProps<{ id: string; where: string }>) {
       fallback={(error) => {
         // One toast per crash: onMount is untracked, so prop updates while
         // the boundary is latched cannot re-toast.
-        onMount(() =>
+        onMount(() => {
           toast.show({
             variant: "error",
             title: i18n.t("feature.plugins.singular"),
@@ -42,8 +42,9 @@ function PluginBoundary(props: ParentProps<{ id: string; where: string }>) {
               where: props.where,
               error: errorMessage(error),
             }),
-          }),
-        )
+          })
+          props.onCrash?.()
+        })
         return null
       }}
     >

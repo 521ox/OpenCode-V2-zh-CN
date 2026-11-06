@@ -31,7 +31,7 @@ import { expandPromptInputPastedText, realignPromptInputMentions } from "../../p
 import { parseSlashHead } from "../../prompt/parse"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { emptyPrompt, usePromptHistory, type PromptInfo, type PromptPartRef } from "../../prompt/history"
-import { saveDraft, takeDraft } from "./draft-stash"
+import { registerComposer, saveDraft, takeDraft } from "./draft-stash"
 import { Skill } from "@opencode/schema/skill"
 import { computePromptTraits } from "../../prompt/traits"
 import { expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
@@ -48,9 +48,9 @@ import { useConnected } from "../use-connected"
 import { useToast } from "../../ui/toast"
 import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
-import { useConfig } from "../../config"
+import { useConfig, useCursorStyle } from "../../config"
 import { usePromptMove } from "./move"
-import { resolvePastedAttachments } from "./local-attachment"
+import { promptFilesForServer, resolvePastedAttachments } from "./local-attachment"
 import { locationKey, useData } from "../../context/data"
 import { useLocation } from "../../context/location"
 import { useArgs } from "../../context/args"
@@ -210,6 +210,7 @@ export function Prompt(props: PromptProps) {
   const currentLocation = useLocation()
   const args = useArgs()
   const config = useConfig().data
+  const cursorStyle = useCursorStyle()
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => data.session.status(props.sessionID ?? ""))
@@ -356,7 +357,6 @@ export function Prompt(props: PromptProps) {
   createEffect(() => {
     if (!input || input.isDestroyed) return
     input.cursorColor = disabled() ? theme.background.raised.base : theme.text.base
-    if (config.cursor) input.cursorStyle = config.cursor
   })
 
   const [store, setStore] = createStore<{
@@ -720,6 +720,7 @@ export function Prompt(props: PromptProps) {
   const stashSessionID = props.sessionID
 
   onMount(() => {
+    onCleanup(registerComposer(stashSessionID, ref))
     const saved = takeDraft(stashSessionID)
     if (store.prompt.text) return
     if (saved && saved.prompt.text) {
@@ -1338,7 +1339,7 @@ export function Prompt(props: PromptProps) {
           sessionID: target,
           name: slashHead.name,
           text: slashHead.arguments,
-          files: entry.files,
+          files: promptFilesForServer(entry.files, terminalEnvironment.localServer === true),
           agents: entry.agents,
           skills: entry.skills?.length ? entry.skills : undefined,
           delivery,
@@ -1379,7 +1380,7 @@ export function Prompt(props: PromptProps) {
         .prompt({
           sessionID: target,
           text: inputText,
-          files: entry.files,
+          files: promptFilesForServer(entry.files, terminalEnvironment.localServer === true),
           agents: entry.agents,
           skills: entry.skills?.length ? entry.skills : undefined,
           delivery,
@@ -1496,7 +1497,7 @@ export function Prompt(props: PromptProps) {
     }, 0)
   }
 
-  function pasteAttachment(file: { filename?: string; uri: string }) {
+  function pasteAttachment(file: { filename?: string; uri: string; path?: string }) {
     const currentOffset = input.cursorOffset
     const extmarkStart = currentOffset
     const virtualText = promptAttachmentLabel(store.prompt.files, { uri: file.uri, name: file.filename })
@@ -1516,6 +1517,7 @@ export function Prompt(props: PromptProps) {
     const part: NonNullable<PromptInfo["files"]>[number] = {
       uri: file.uri,
       name: file.filename,
+      path: file.path,
       mention: {
         start: extmarkStart,
         end: extmarkEnd,
@@ -1785,7 +1787,7 @@ export function Prompt(props: PromptProps) {
               focusedTextColor={muted() ? theme.text.muted : theme.text.base}
               minHeight={1}
               maxHeight={maxHeight()}
-              cursorStyle={config.cursor}
+              cursorStyle={cursorStyle()}
               onContentChange={() => {
                 const value = input.plainText
                 setStore("prompt", "text", value)
@@ -1844,7 +1846,6 @@ export function Prompt(props: PromptProps) {
                   // setTimeout is a workaround and needs to be addressed properly
                   if (!input || input.isDestroyed) return
                   input.cursorColor = disabled() ? theme.background.raised.base : theme.text.base
-                  if (config.cursor) input.cursorStyle = config.cursor
                 }, 0)
               }}
               onMouseDown={(r: MouseEvent) => {

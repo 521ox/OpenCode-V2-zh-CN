@@ -21,6 +21,7 @@ test("mounted prompt footer reacts to locale changes without changing the offici
   const dispatched: string[] = []
   const color = RGBA.fromInts(200, 200, 200)
   const plugin = {
+    client: { rpc: () => ({ get: async () => undefined, events: { on: () => () => {} } }) },
     location: { directory: "/workspace" },
     theme: { text: { base: color, muted: color } },
     keymap: {
@@ -28,6 +29,7 @@ test("mounted prompt footer reacts to locale changes without changing the offici
       dispatch: (id: string) => dispatched.push(id),
     },
     data: {
+      on: () => () => {},
       session: {
         family: () => ["session", "child"],
         status: (id: string) => (id === "child" ? "running" : "idle"),

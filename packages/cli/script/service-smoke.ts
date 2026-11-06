@@ -2,12 +2,32 @@
 
 import { NodeFileSystem } from "@effect/platform-node"
 import { Service } from "@opencode/client/effect/service"
+import { MCP_CLIENT_PATH } from "@opencode/protocol/groups/mcp"
 import { ServerInfo } from "@opencode/protocol/groups/server"
 import { Effect, Schema } from "effect"
 import fs from "node:fs/promises"
 import { createServer } from "node:net"
 import os from "node:os"
 import path from "node:path"
+
+// Bun once bundled the WebSocket server away, so every upgrade failed only in the compiled binary.
+async function verifyClientMcpSocket(url: string, token: string) {
+  const endpoint = new URL(`${MCP_CLIENT_PATH}?name=smoke&auth_token=${token}`, url)
+  endpoint.protocol = endpoint.protocol === "https:" ? "wss:" : "ws:"
+  const socket = new WebSocket(endpoint)
+  const message = await new Promise<string>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Compiled service sent no client MCP initialize")), 5_000)
+    socket.onmessage = (event) => {
+      clearTimeout(timeout)
+      resolve(String(event.data))
+    }
+    socket.onerror = () => {
+      clearTimeout(timeout)
+      reject(new Error("Compiled service rejected the client MCP socket"))
+    }
+  }).finally(() => socket.close())
+  if (!message.includes('"initialize"')) throw new Error("Compiled service did not initialize the client MCP socket")
+}
 
 async function main() {
   const nodeBuild = process.argv.includes("--node")
@@ -58,6 +78,8 @@ async function main() {
       `Ready identity: pidMatches=${serverInfo.pid === info.pid}, versionMatches=${serverInfo.version === info.version}, expectedVersionMatches=${process.env.RELEASE_VERSION === undefined || serverInfo.version === process.env.RELEASE_VERSION}`,
     )
     assertServerIdentity(info, serverInfo)
+    stage = "client MCP socket initialization"
+    await verifyClientMcpSocket(info.url, token)
     stage = "query-authenticated GET /api/info"
     const tokenInfo = await fetch(new URL(`/api/info?auth_token=${token}`, info.url), {
       signal: AbortSignal.timeout(5_000),

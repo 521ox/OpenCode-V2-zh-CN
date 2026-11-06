@@ -1,5 +1,21 @@
 # Minimal Custom V2 Distribution
 
+## November 6 synchronization — candidate in progress
+
+The frozen upstream target is official dev `0e655ff2a2b7ee2234a6ebd5e61048b58a188b7c`
+(2.2.5). This integration keeps the selected behavior below on the official owners,
+including the updated run cancellation/background-job lifecycle and media/draft
+restoration. The old V1 run adapter follows its upstream retirement. The official
+`ManagedPolicy` module now contains stateless rule helpers; the retired global
+policy service and cache remain absent. Candidate acceptance is tracked in the
+PR for issue #4 and `UPSTREAM_SYNC.md`.
+
+The official transcript projection now owns idle-error visibility and duplicate
+suppression, retiring the old local idle-row repair. Client publication revocation
+still covers both eviction and deletion; its existing ownership check replaces
+the overlapping upstream deletion-epoch checks only on those same message/inbox
+read paths. Other official deletion handling remains intact.
+
 ## October 28 synchronization — accepted local delivery
 
 The frozen target is official `dev` revision
@@ -270,7 +286,7 @@ This does not restore the old heading-to-parent-tool jump behavior.
 `release-custom-cli.yml` is a manual-only workflow for this repository's
 `v2-custom-lite` branch. Release versions follow the current root source version
 plus `-zhcn.N`; the first selected version is `2.0.12-zhcn.1`. Internal executable
-names stay `opencode` / `opencode.exe`, with storage channel `latest`, Bun 1.4.2,
+names stay `opencode` / `opencode.exe`, with storage channel `latest`, Bun 1.4.4,
 bytecode and the embedded WebUI. The workflow uses native Windows, Linux glibc
 and macOS runners for x64 and ARM64 rather than treating cross-compilation as
 native verification. Existing local acceptance tags and binaries are not replaced.

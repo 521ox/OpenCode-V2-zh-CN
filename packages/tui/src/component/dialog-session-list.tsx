@@ -75,6 +75,7 @@ export function DialogSessionList() {
           limit: 50,
           order: "desc",
           parentID: null,
+          archived: false,
         })
         return { query, allProjects, sessions: response.data, error: undefined }
       } catch (error) {
@@ -93,8 +94,9 @@ export function DialogSessionList() {
       .list()
       .filter(
         (session) =>
-          allProjects() ||
-          (session.projectID === current?.project.id && session.location.directory === current.directory),
+          session.time.archived === undefined &&
+          (allProjects() ||
+            (session.projectID === current?.project.id && session.location.directory === current.directory)),
       )
     if (!query) return sessions
     return sessions.filter(

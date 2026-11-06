@@ -22,7 +22,7 @@ test("notification listeners read the current locale without resubscription and 
       },
     },
     data: {
-      session: { get: () => ({ id: "session", title: "Raw {{title}}" }) },
+      session: { get: () => ({ id: "session", title: "Raw {{title}}" }), family: () => ["session"] },
       on: <Type extends OpenCodeEvent["type"]>(
         type: Type,
         handler: (event: Extract<OpenCodeEvent, { type: Type }>) => void,

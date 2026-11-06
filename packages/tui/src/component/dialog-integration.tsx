@@ -71,7 +71,6 @@ const OAUTH_CODE = /[A-Z0-9]{4}-[A-Z0-9]{4,5}/
 export function integrationOptions(list: IntegrationInfo[]) {
   return list.toSorted(
     (a, b) =>
-      Number(b.metadata?.source === "mcp") - Number(a.metadata?.source === "mcp") ||
       (INTEGRATION_PRIORITY[a.id] ?? 99) - (INTEGRATION_PRIORITY[b.id] ?? 99) ||
       a.name.localeCompare(b.name) ||
       a.id.localeCompare(b.id),
@@ -111,9 +110,12 @@ export function DialogIntegration(
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
   const location = currentLocation.ref ?? data.location.default()
+  // The MCP dialog signs its servers in through `integrationID`; the connect menu leaves them to it.
   const integrations = createMemo(() =>
-    integrationOptions(data.location.integration.list(location) ?? []).filter(
-      (integration) => props.integrationID === undefined || integration.id === props.integrationID,
+    integrationOptions(data.location.integration.list(location) ?? []).filter((integration) =>
+      props.integrationID === undefined
+        ? integration.metadata?.source !== "mcp"
+        : integration.id === props.integrationID,
     ),
   )
 
@@ -135,7 +137,6 @@ export function DialogIntegration(
       const credentials = credentialConnections(integration)
       let category = t("main.integration.services")
       if (integration.id in INTEGRATION_PRIORITY) category = t("main.integration.popular")
-      if (integration.metadata?.source === "mcp") category = "MCP"
       const status = integration.connections[0]?.status
       return {
         title: integration.name,
@@ -692,6 +693,7 @@ function OAuthAuto(props: {
   const toast = useToast()
   const clipboard = useClipboard()
   const newDesigns = useNewDesigns()
+  const theme = useTheme().surface("dialog")
   let timer: ReturnType<typeof setTimeout> | undefined
   let settled = false
 
@@ -712,8 +714,24 @@ function OAuthAuto(props: {
       .catch(toast.error)
   }
 
+  const [error, setError] = createSignal<string>()
+  const paste = (value: string) => {
+    if (!value.trim()) return open()
+    setError(undefined)
+    void client.api.integration.oauth
+      .complete({
+        integrationID: props.integration.id,
+        attemptID: props.attempt.attemptID,
+        location: locationQuery(props.location),
+        code: value,
+      })
+      .catch((cause) => setError(errorMessage(cause)))
+  }
+
   Keymap.createLayer(() => ({
     mode: "modal",
+    // The paste prompt owns typing and Enter.
+    enabled: !props.attempt.paste,
     commands: [
       {
         bind: newDesigns() ? "return" : "o",
@@ -768,14 +786,46 @@ function OAuthAuto(props: {
   })
 
   return (
-    <OAuthView
-      title={props.title}
-      url={props.attempt.url}
-      instructions={props.attempt.instructions}
-      message={t("main.integration.authWaiting")}
-      onCopy={copy}
-      onOpen={open}
-    />
+    <Show
+      when={props.attempt.paste}
+      fallback={
+        <OAuthView
+          title={props.title}
+          url={props.attempt.url}
+          instructions={props.attempt.instructions}
+          message={t("main.integration.authWaiting")}
+          onCopy={copy}
+          onOpen={open}
+        />
+      }
+    >
+      <DialogPrompt
+        title={props.title}
+        subtitle={props.attempt.instructions}
+        placeholder={t("main.integration.redirectUrl")}
+        onConfirm={paste}
+        actions={[
+          {
+            title: t("main.integration.copyLink"),
+            command: "dialog.integration.copy",
+            commandTitle: t("main.integration.copyAuthLink"),
+            onTrigger: copy,
+          },
+        ]}
+        description={() => (
+          <box gap={1}>
+            <Show when={!newDesigns()}>
+              <text fg={theme.text.muted}>{props.attempt.instructions}</text>
+            </Show>
+            <Link href={props.attempt.url} fg={theme.markdown.link} />
+            <text fg={theme.text.muted}>
+              {t("main.integration.redirectInstructions")}
+            </text>
+            <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
+          </box>
+        )}
+      />
+    </Show>
   )
 }
 
@@ -1321,7 +1371,7 @@ async function connected(
     data.location.provider.sync(location),
   ])
   toast.show({ variant: "success", message: t("main.integration.connected", { name: integration.name }) })
-  if (onConnected && integration.metadata?.source !== "mcp") {
+  if (onConnected) {
     onConnected(providerID(data, location, integration.id))
     return
   }
