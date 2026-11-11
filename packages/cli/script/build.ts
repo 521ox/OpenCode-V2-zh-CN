@@ -208,6 +208,9 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     define: {
       OPENCODE_VERSION: `'${Script.version}'`,
       OPENCODE_CLI_NAME: "'opencode'",
+      // W-06 · M-A2 build-identity：取值由 lineage.json 参数化（D9/D10 已裁定 ①）
+      OLO_APP_ID: `'opencode-olo'`,
+      OLO_VERSION_TEMPLATE: `'{upstream_version}-olo.{revision}'`,
       OPENCODE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_ARTIFACT: `'cli'`,
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),

@@ -266,6 +266,9 @@ export const Plugin = {
                   status: output.status,
                   // Completed child conclusions must survive the runner's generic output bounding.
                   ...(output.status === "completed" ? { truncated: false } : {}),
+                  // W-12 · M-B3：委派链可空字段（T13 既有四字段与文本不变）
+                  agent_uid: null as string | null,
+                  parent_agent_uid: null as string | null,
                 },
               })),
             ),
