@@ -17,6 +17,9 @@ const MAX_ARGS = 128
 const MAX_ARG_LENGTH = 4_096
 const MAX_ARGS_LENGTH = 32_768
 const MAX_OUTPUT_BYTES = 65_536
+// W-13 · M-B4 tool-guard 挂点（v1.34 落码：execute 内 opt-in fail-closed 调用 evaluateToolGuard）：
+// T14 身份卡写入零真实身份证号；白名单外任意命令无卡 fail-closed（T11）。
+const OLO_TOOL_GUARD_CONTRACT = "olo-coexist/tool-guard/v1" as const
 
 export const Input = Schema.toStandardSchemaV1(
   Schema.Struct({
@@ -98,6 +101,28 @@ export const Plugin = {
             Effect.gen(function* () {
               const valid = validateInput(input)
               if (valid instanceof ToolFailure) return yield* valid
+              // W-13 · M-B4 tool-guard 挂点（v1.34 落码）：opt-in fail-closed。
+              // 仅当 OLO_AIB_CARD_PATH 配置时启用；未配置保持既有行为不拦截。
+              const oloCardPath = process.env.OLO_AIB_CARD_PATH
+              if (oloCardPath) {
+                const guard = yield* Effect.tryPromise({
+                  try: async () => {
+                    const guardMod = await import("../../../../../olo/coexist/guard.ts")
+                    const aibMod = await import("../../../../../olo/coexist/aib.ts")
+                    const card = aibMod.loadCard(oloCardPath)
+                    return guardMod.evaluateToolGuard({
+                      contract: OLO_TOOL_GUARD_CONTRACT,
+                      commandId: valid.id,
+                      card,
+                    })
+                  },
+                  catch: (e) => ({
+                    allow: false,
+                    reason: "OLO_TOOL_GUARD: eval failed (fail-closed): " + (e as Error).message,
+                  }),
+                })
+                if (!guard.allow) return yield* new ToolFailure({ message: guard.reason ?? "OLO_TOOL_GUARD: denied" })
+              }
               const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const initial = yield* catalog.resolveExecutable(valid.id)
               const target = yield* access.resolve({ path: input.cwd ?? location.directory, kind: "directory" })
