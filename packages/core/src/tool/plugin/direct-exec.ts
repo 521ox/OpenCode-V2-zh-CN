@@ -103,12 +103,12 @@ export const Plugin = {
               if (valid instanceof ToolFailure) return yield* valid
               // W-13 · M-B4 tool-guard 挂点（v1.34 落码）：opt-in fail-closed。
               // 仅当 OLO_AIB_CARD_PATH 配置时启用；未配置保持既有行为不拦截。
-              const oloCardPath = process.env.OLO_AIB_CARD_PATH
+              const oloCardPath = globalThis.process.env.OLO_AIB_CARD_PATH
               if (oloCardPath) {
                 const guard = yield* Effect.tryPromise({
                   try: async () => {
-                    const guardMod = await import("../../../../../olo/coexist/guard.ts")
-                    const aibMod = await import("../../../../../olo/coexist/aib.ts")
+                    const guardMod = await import("olo-coexist/guard")
+                    const aibMod = await import("olo-coexist/aib")
                     const card = aibMod.loadCard(oloCardPath)
                     return guardMod.evaluateToolGuard({
                       contract: OLO_TOOL_GUARD_CONTRACT,

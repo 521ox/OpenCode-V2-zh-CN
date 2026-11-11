@@ -28,6 +28,10 @@
         "turbo": "2.10.2",
       },
     },
+    "olo/coexist": {
+      "name": "olo-coexist",
+      "version": "0.1.0",
+    },
     "packages/ai": {
       "name": "@opencode/ai",
       "version": "2.2.5",
@@ -289,6 +293,7 @@
         "jose": "6.0.11",
         "jsonc-parser": "3.3.1",
         "mime-types": "3.0.2",
+        "olo-coexist": "workspace:*",
         "which": "6.0.1",
         "zod": "catalog:",
       },
@@ -4152,6 +4157,8 @@
     "ohash": ["ohash@2.0.12", "", {}, "sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw=="],
 
     "oidc-token-hash": ["oidc-token-hash@5.2.0", "", {}, "sha512-6gj2m8cJZ+iSW8bm0FXdGF0YhIQbKrfP4yWTNzxc31U6MOjfEmB1rHvlYvxI1B7t7BCi1F2vYTT6YhtQRG4hxw=="],
+
+    "olo-coexist": ["olo-coexist@workspace:olo/coexist"],
 
     "on-finished": ["on-finished@2.4.2", "", { "dependencies": { "ee-first": "1.1.1" } }, "sha512-ATWUv387i+nLD49EiDoOft5scf32Vsdz3ktrQJG9bi7jRFmaXTssvyvj1EmeKVVgvesbqUtvQQvaS2TpTukAZQ=="],
 

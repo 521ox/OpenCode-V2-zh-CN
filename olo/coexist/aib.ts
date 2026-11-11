@@ -15,6 +15,8 @@ export interface BindingSeed {
 }
 
 export interface BindingCard extends BindingSeed {
+  // 索引签名使 BindingCard 结构化兼容 guard.ts 的 BindingCardLike（W-13 钩子直传）；不削弱既有强类型字段。
+  [key: string]: unknown
   binding_id: string
   spiffe_id: string | null
   scope: Scope
