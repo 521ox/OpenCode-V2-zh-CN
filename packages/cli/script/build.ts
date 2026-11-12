@@ -211,6 +211,10 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       // W-06 · M-A2 build-identity：取值由 lineage.json 参数化（D9/D10 已裁定 ①）
       OLO_APP_ID: `'opencode-olo'`,
       OLO_VERSION_TEMPLATE: `'{upstream_version}-olo.{revision}'`,
+      // v1.56 · 真实构建期 install_id（D4 / H.8）：未配置恒 null（fail-closed），
+      // 配置时注入 install_id_base（构建前可知段）；最终 install_id 由
+      // emit_install_id.py 在产物 sha256 实测后追加 sha8 合成并回填 lineage.json。
+      OLO_INSTALL_ID: process.env.OLO_INSTALL_ID ? JSON.stringify(process.env.OLO_INSTALL_ID) : "null",
       OPENCODE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_ARTIFACT: `'cli'`,
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),
