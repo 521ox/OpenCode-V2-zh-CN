@@ -23,6 +23,10 @@
     "./staging-assert": {
       "types": "./staging-assert.ts",
       "default": "./staging-assert.ts"
+    },
+    "./write-guard": {
+      "types": "./write-guard.ts",
+      "default": "./write-guard.ts"
     }
   }
 }

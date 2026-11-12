@@ -25,6 +25,7 @@ export type LeaseEventType =
   | "lease_expired"
   | "lease_renew"
   | "lease_reclaim"
+  | "staging_violation"
 
 export interface LeaseEvent {
   type: LeaseEventType
