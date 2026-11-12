@@ -148,5 +148,36 @@ check("defaultRegistryStore 落点 %USERPROFILE%\\.olo\\registry\\agents.jsonl",
   if (!String(s.path).includes(".olo" + sep + "registry")) throw new Error("wrong path " + s.path)
 })
 
+check("W-37 委派链派生: 子代链 = 父链 + 子 uid（>2 层可递推）", () => {
+  const store = new MemoryStore()
+  const r = new Registry(store)
+  const parent = r.spawn(KEY, ctx(5, 1), { ts: "2026-11-12T10:00:00", source_sha: SHA })
+  const childUid = r.spawn(KEY, ctx(5, 2), { ts: "2026-11-12T10:00:01", source_sha: SHA, parentUid: parent })
+  const events = store.read().trim().split("\n").map((l) => JSON.parse(l))
+  const childSpawned = events.find((e: any) => e.event === "spawned" && e.agent_uid === childUid)
+  if (!childSpawned || JSON.stringify(childSpawned.delegation_chain) !== JSON.stringify([parent, childUid]))
+    throw new Error("chain mismatch: " + JSON.stringify(childSpawned?.delegation_chain))
+  // 三层：孙代
+  const grand = r.spawn(KEY, ctx(5, 3), { ts: "2026-11-12T10:00:02", source_sha: SHA, parentUid: childUid })
+  const gEvents = store.read().trim().split("\n").map((l) => JSON.parse(l))
+  const gSpawned = gEvents.find((e: any) => e.event === "spawned" && e.agent_uid === grand)
+  if (JSON.stringify(gSpawned.delegation_chain) !== JSON.stringify([parent, childUid, grand]))
+    throw new Error("3-level chain mismatch: " + JSON.stringify(gSpawned?.delegation_chain))
+})
+
+check("W-37 buildDelegationChain: 无父链 ⇒ [child] / 有父链 ⇒ 父+子", () => {
+  if (JSON.stringify(Registry.buildDelegationChain(undefined, "c")) !== JSON.stringify(["c"]))
+    throw new Error("no-parent should be [c]")
+  if (JSON.stringify(Registry.buildDelegationChain(["a", "b"], "c")) !== JSON.stringify(["a", "b", "c"]))
+    throw new Error("with-parent should be [a,b,c]")
+})
+
+check("W-37 三处同源 parity: registry 链 + receipt + audit 一致 ⇒ 通过", () => {
+  // 三处同源：registry（本册代码侧）/ receipt v2（olo-may artifacts）/ audit（olo-may artifacts）
+  // receipt/audit 两处落盘在 olo-may，此处用同值模拟三处落盘后的校验
+  const chain = ["u1", "u2", "u3"]
+  Registry.verifyChainParity([chain, [...chain], [...chain]])
+})
+
 console.log(`\nRESULT passed=${passed} failed=${failed}`)
 if (failed > 0) process.exit(1)

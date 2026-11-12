@@ -117,14 +117,25 @@ export class Registry {
   /**
    * W-35 write-ahead + 并发唯一：先落 spawn_intent（落盘失败 ⇒ 调用方拒启），再落 spawned。
    * 同一 UID 二次 spawn（含悬挂 intent 后重启）→ OLO_UID_REUSE_FORBIDDEN。
+   * W-37 委派链派生：给定 parentUid 时，子代 delegation_chain = 父链 + 子 uid（>2 层可递推）；
+   * 否则用显式 delegation_chain 或退化为 [uid]（根 agent）。
    */
   spawn(
     key: AgentKey,
     ctx: AgentUidContext,
-    opts: { ts: string; source_sha: string; ephemeral?: boolean; delegation_chain?: string[] },
+    opts: {
+      ts: string
+      source_sha: string
+      ephemeral?: boolean
+      delegation_chain?: string[]
+      parentUid?: string
+    },
   ): string {
     const uid = buildAgentUid(ctx)
     if (this.reservedUids().has(uid)) throw new Error("OLO_UID_REUSE_FORBIDDEN")
+    const chain = opts.parentUid
+      ? Registry.buildDelegationChain(this.chainOf(opts.parentUid), uid)
+      : opts.delegation_chain ?? [uid]
     const base = {
       ts: opts.ts,
       agent_uid: uid,
@@ -137,9 +148,22 @@ export class Registry {
     this.assertAppend({
       ...base,
       event: "spawned",
-      delegation_chain: opts.delegation_chain,
+      delegation_chain: chain,
     })
     return uid
+  }
+
+  /** 取某 UID 已 spawned 事件的 delegation_chain（子代派生链用）。 */
+  private chainOf(uid: string): string[] | undefined {
+    for (const e of this.parseAll()) {
+      if (e.event === "spawned" && e.agent_uid === uid) return e.delegation_chain
+    }
+    return undefined
+  }
+
+  /** W-37 委派链构造：父链（无则仅父 uid）+ 子 uid；支持 >2 层递归派生。 */
+  static buildDelegationChain(parentChain: string[] | undefined, childUid: string): string[] {
+    return parentChain && parentChain.length > 0 ? [...parentChain, childUid] : [childUid]
   }
 
   /** 崩溃恢复：悬挂 spawn_intent（无后续 spawned）直接转 tombstone，确保该 UID 永不重启发号。 */
