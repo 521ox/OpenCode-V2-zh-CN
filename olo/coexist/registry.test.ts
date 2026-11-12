@@ -5,7 +5,7 @@ import {
   defaultRegistryStore,
   type AgentKey,
 } from "./registry.ts"
-import { buildAgentUid } from "./agent-uid.ts"
+import { buildAgentUid, ULID_ALPHABET } from "./agent-uid.ts"
 import { sep } from "node:path"
 
 let passed = 0
@@ -24,8 +24,20 @@ function check(name: string, fn: () => void): void {
 const KEY: AgentKey = { install_family: "f1", agent_id: "a1" }
 const SHA = "sha-local-0001"
 
+function ulidFor(boot: number, spawn: number): string {
+  const n = BigInt(boot * 100000 + spawn)
+  let v = (n * 1099511628211n) & 0xffffffffffffffffn
+  let s = ""
+  for (let i = 0; i < 26; i++) {
+    s += ULID_ALPHABET[Number(v % 32n)]
+    v = (v >> 5n) & 0xffffffffffffffffn
+    v = (v * 1103515245n + 12345n) & 0xffffffffffffffffn
+  }
+  return s
+}
+
 function ctx(boot: number, spawn: number) {
-  return { machine8: "abcdef01", install8: "12345678", boot_seq: boot, spawn_seq: spawn }
+  return { role: "code-main", machine: "GTX75060", ulid: ulidFor(boot, spawn) }
 }
 
 check("schema: spiffe_id 非空 ⇒ OLO_SPIFFE_NOT_NULL", () => {
@@ -35,7 +47,7 @@ check("schema: spiffe_id 非空 ⇒ OLO_SPIFFE_NOT_NULL", () => {
     ;(r as any).assertAppend({
       ts: "2026-11-12T10:00:00",
       event: "quarantine",
-      agent_uid: "ag.abcdef01.12345678.1.1",
+      agent_uid: "agent-code-main-gtx1-0123456789ABCDEFGHJKMNPQRS",
       spiffe_id: "spiffe://x",
       source_sha: SHA,
     })
@@ -136,7 +148,7 @@ check("W-39 双键聚合: 按 (install_family,agent_id) 计数", () => {
 check("W-40 quarantine: 无 UID 存量全覆盖", () => {
   const r = new Registry(new MemoryStore())
   const n = r.quarantineInventory(
-    [{ uid: "ag.aaaaaaaa.bbbbbbbb.1.1" }, { uid: "ag.aaaaaaaa.bbbbbbbb.1.2" }],
+    [{ uid: "agent-code-main-gtx1-0123456789ABCDEFGHJKMNPQRS" }, { uid: "agent-code-main-gtx1-0123456789ABCDEFGHJKMNPQRV" }],
     "2026-11-12T10:00:00",
     SHA,
   )
