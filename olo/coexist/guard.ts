@@ -1,7 +1,14 @@
 // W-13 · M-B4 tool-guard 决策逻辑（[CONTRACT] · 未随 monorepo 编译/安装/运行）
 // T11：白名单外任意命令无卡 fail-closed；T14：身份卡写入零真实身份证号（扫描防御）。
+// R-CC-2（W-57）：写工具须持本 agent 的有效租约，否则 fail-closed 拒写。
 // 纯函数、零 OpenCode 运行时依赖，可由 node --experimental-strip-types 直接执行验证。
+import type { LeaseStatus } from "./lease.ts"
+
 export const OLO_TOOL_GUARD_CONTRACT = "olo-coexist/tool-guard/v1" as const
+
+// R-CC-2：写类工具集合（方案 §20.2 R-CC-2）。落码清单，运行期接线由 direct-exec.ts 调用（本轮未做）。
+export const OLO_WRITE_TOOLS = ["write", "edit", "patch", "apply_patch"] as const
+export type WriteTool = (typeof OLO_WRITE_TOOLS)[number]
 
 // 真实身份证号形态扫描（防御性；T14：卡内不得写入真实身份证号）。
 // 命中中国大陆 18 位身份证 或 美式 SSN（xxx-xx-xxxx）；仅作防御探针，避免误伤随机串。
@@ -49,4 +56,34 @@ export function evaluateToolGuard(input: GuardInput): GuardResult {
     return { allow: false, reason: "OLO_TOOL_GUARD: real ID number detected in card (T14 violation)" }
   }
   return { allow: true, bindingId: input.card.binding_id }
+}
+
+// W-57 · R-CC-2 写工具 fail-closed 前置门。
+// 判据（方案 §20.2 R-CC-2）：write/edit/patch/apply_patch 一律经本门校验租约；
+// 无租约 / 非持有者 / 租约过期 ⇒ 100% 拒绝且 caller 须落事件。非写工具不在此门约束。
+export interface WriteGuardInput {
+  commandId: string
+  agentUid: string
+  lease: LeaseStatus
+}
+
+export function evaluateWriteToolGuard(input: WriteGuardInput): GuardResult {
+  if (!(OLO_WRITE_TOOLS as readonly string[]).includes(input.commandId)) {
+    return { allow: true } // 非写工具：不在此门约束（由 evaluateToolGuard 另行裁决）
+  }
+  if (!input.lease.held || input.lease.expired) {
+    return {
+      allow: false,
+      reason: "OLO_TOOL_GUARD: write tool requires an active lease (R-CC-2 fail-closed)",
+      bindingId: null,
+    }
+  }
+  if (input.lease.owner !== input.agentUid) {
+    return {
+      allow: false,
+      reason: `OLO_TOOL_GUARD: lease held by ${input.lease.owner}, not ${input.agentUid} (R-CC-2)`,
+      bindingId: null,
+    }
+  }
+  return { allow: true, bindingId: null }
 }

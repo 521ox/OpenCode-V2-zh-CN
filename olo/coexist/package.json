@@ -15,6 +15,14 @@
     "./identity-diagnose": {
       "types": "./identity-diagnose.ts",
       "default": "./identity-diagnose.ts"
+    },
+    "./lease": {
+      "types": "./lease.ts",
+      "default": "./lease.ts"
+    },
+    "./staging-assert": {
+      "types": "./staging-assert.ts",
+      "default": "./staging-assert.ts"
     }
   }
 }
