@@ -58,6 +58,7 @@ export function parseAgentUid(uid: string): AgentUidContext {
   if (!m) throw new Error("OLO_UID_MALFORMED")
   const middle = m[1]
   const ulid = m[2]
+  if (middle === undefined || ulid === undefined) throw new Error("OLO_UID_MALFORMED")
   const idx = middle.lastIndexOf("-")
   const role = idx >= 0 ? middle.slice(0, idx) : middle
   const machine = idx >= 0 ? middle.slice(idx + 1) : ""

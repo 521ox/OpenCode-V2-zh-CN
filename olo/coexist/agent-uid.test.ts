@@ -35,10 +35,21 @@ check("newUlid 生成 26 位 Crockford（无 I/L/O/U）", () => {
   if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(u)) throw new Error("bad ulid " + u)
 })
 
-check("newUlid 两次调用大概率不同（随机低位）", () => {
-  const a = newUlid()
-  const b = newUlid()
-  if (a === b) throw new Error("ulid collision (unlikely)")
+check("newUlid 随机低位参与生成（确定性随机源，非概率断言）", () => {
+  const orig = Math.random
+  const origNow = Date.now
+  try {
+    Date.now = () => 1700000000000
+    Math.random = () => 0.1
+    const a = newUlid()
+    Math.random = () => 0.9
+    const b = newUlid()
+    if (a === b) throw new Error("distinct random sources produced identical ulid")
+    if (a.slice(0, 10) !== b.slice(0, 10)) throw new Error("time high bits should be unchanged")
+  } finally {
+    Math.random = orig
+    Date.now = origNow
+  }
 })
 
 check("segmentHash 确定性 + 8 位 hex", () => {
