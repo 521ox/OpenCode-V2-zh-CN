@@ -40,7 +40,15 @@ export const deliver = Effect.fnUntraced(function* (
     ...(input.resume === false ? { resume: false } : {}),
     description: recovery.description,
     text: `<subagent sessionID="${recovery.childSessionID}" state="${input.status}" description="${recovery.description}">\n${text}\n</subagent>`,
-    metadata: { source: "subagent", childID: recovery.childSessionID, agent: recovery.agent, state: input.status },
+    // W-12 · M-B3：委派 metadata 新增两可空身份字段（T13：四字段 + 两可空；真实 UID 填充为下游步骤）
+    metadata: {
+      source: "subagent",
+      childID: recovery.childSessionID,
+      agent: recovery.agent,
+      state: input.status,
+      agent_uid: null as string | null,
+      parent_agent_uid: null as string | null,
+    },
   })
   if (input.notificationID) yield* jobs.completeBackground(input.notificationID)
 })
