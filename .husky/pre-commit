@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# W-58 · R-CC-3 暂存集断言（olo/coexist staging-assert）。opt-in：
+# 仅当 OLO_DECLARED_PATHS 或仓库根 .olo-declared.json 已配置时启用；未配置则放行（不影响普通提交）。
+# 配置后若检出越界暂存文件 ⇒ fail-closed 拒绝提交并指名越界路径。
+ROOT="$(git rev-parse --show-toplevel)"
+CHECKER="$ROOT/olo/coexist/scripts/staging-precommit.ts"
+if [ -n "$OLO_DECLARED_PATHS" ] || [ -f "$ROOT/.olo-declared.json" ]; then
+  if command -v bun >/dev/null 2>&1; then
+    bun "$CHECKER"
+  elif command -v node >/dev/null 2>&1; then
+    node "$CHECKER"
+  else
+    echo "R-CC-3: 已配置声明集却找不到 bun/node 运行器，无法校验暂存集 ⇒ fail-closed" >&2
+    exit 1
+  fi
+fi

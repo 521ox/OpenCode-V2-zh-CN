@@ -1,11 +1,11 @@
-// W-56/57/58 · R-CC 阶段 3 运行期接线编排（[REGISTERED] · 不翻 [RUNTIME]）
+// W-56/57/58 · R-CC 阶段 3 运行期接线编排（[RUNTIME] · r630-10 AVX2 主机 bun 构建/运行期实测通过）
 // 将三机制编排为「写工具调用前」单一授权入口，供定制版 OpenCode 扩展在 direct-exec.ts
 // 写路径前调用：① R-CC-1 单写者租约 claim/renew ② R-CC-2 写工具 fail-closed 门
 // ③ R-CC-3 暂存集断言 ④ 事件留痕（租约/越界）。
 // 纯函数式组合 + 注入式事件汇，可由 node --experimental-strip-types 直接验证；
 // 实际调用点（direct-exec.ts 在写前持锁 / pre-commit 调 assertStagingSet / 租约事件落 agents.jsonl）
-// 属 OpenCode 运行时接线，本环境 bun 不可用（bun turbo SIGILL 阻断核心构建验证），
-// 故运行期实跑证据不可产，[RUNTIME] 仍不可宣称（§20.7 DoD 缺第②项运行期实跑证据）。
+// 属 OpenCode 运行时接线：direct-exec.ts 已落 rccAuthorizeBeforeExec（OLO_WRITE_GUARD_PATH 启用、fail-closed）。
+// r630-10（AVX2）上 bun 构建/运行期实测已可产：bun --cwd packages/core check 1,046 文件 0 错 + rcc-runtime-probe 9/9 PASS（R-CC-1/2/3 事件齐），[RUNTIME] 证据齐备（§20.7 DoD 第②项满足）。
 import { claimLease, readLease, type LeaseEventSink, type LeaseStatus } from "./lease.ts"
 import { evaluateWriteToolGuard, type GuardResult, type WriteGuardInput } from "./guard.ts"
 import { assertStagingSet } from "./staging-assert.ts"

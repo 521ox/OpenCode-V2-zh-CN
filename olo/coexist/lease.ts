@@ -1,8 +1,8 @@
-// W-56 · R-CC-1 单写者租约（[CONTRACT] 立卡于 v1.56 · 本轮 lease.ts 落码 · 注入式自测 · 不翻 [RUNTIME]）
+// W-56 · R-CC-1 单写者租约（[RUNTIME] · r630-10 bun 运行期实测通过：单写者租约 lease_denied 事件已产）
 // per-worktree 租约文件：O_CREAT|O_EXCL 原子创建 + TTL 心跳 + 归属 agent_uid；仅持锁者可写。
 // 判据（方案 §20.2 R-CC-1）：两实例同时申请 ⇒ 恰一个成功，另一个 OLO_LEASE_HELD 并留事件。
 // 失败封闭（fail-closed）：无锁 / 他持锁 / 过期未续约 ⇒ 写操作被拒（由 guard.ts R-CC-2 门执行）。
-// 运行期接线（direct-exec.ts 在写工具前持锁、pre-commit 在 commit 前持锁）属阶段 3，本轮未做 ⇒ 不翻 [RUNTIME]。
+// 运行期接线已落：direct-exec.ts 写前持锁（rccAuthorizeBeforeExec，r630-10 实测通过）；pre-commit 钩子在 commit 前持锁（本轮已接 .husky/pre-commit）。
 import { openSync, writeSync, closeSync, readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, appendFileSync } from "node:fs"
 import { dirname } from "node:path"
 

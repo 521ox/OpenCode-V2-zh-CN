@@ -10,6 +10,7 @@ import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
 import { FileAccess } from "../../file-access.js"
 import { Location } from "../../location.js"
 import { Permission } from "../../permission.js"
+import type { LeaseEventSink } from "olo-coexist/lease"
 
 const DEFAULT_TIMEOUT_MS = 120_000
 const MAX_TIMEOUT_MS = 600_000
@@ -20,6 +21,36 @@ const MAX_OUTPUT_BYTES = 65_536
 // W-13 · M-B4 tool-guard 挂点（v1.34 落码：execute 内 opt-in fail-closed 调用 evaluateToolGuard）：
 // T14 身份卡写入零真实身份证号；白名单外任意命令无卡 fail-closed（T11）。
 const OLO_TOOL_GUARD_CONTRACT = "olo-coexist/tool-guard/v1" as const
+
+// W-56/57/58 · R-CC 阶段 3 运行期接线（AVX2 主机 r630-10 上 bun 构建已可用 → [RUNTIME] 证据可产）
+// 写工具/直执行前授权入口，供 execute 在持锁/授权前调用；OLO_WRITE_GUARD_PATH 配置时启用（fail-closed）。
+// 复刻 W-13 的 env-gated 动态 import 模式：未配置时保持既有行为不拦截。
+export interface RccExecGuardInput {
+  commandId: string
+  agentUid: string
+  worktree: string
+  leasePath: string
+  declared: string[]
+  emit?: LeaseEventSink
+}
+export const rccAuthorizeBeforeExec = (input: RccExecGuardInput) =>
+  Effect.tryPromise({
+    try: async () => {
+      const wg = await import("olo-coexist/write-guard")
+      return wg.authorizeWrite({
+        contract: wg.OLO_WRITE_GUARD_CONTRACT,
+        commandId: input.commandId,
+        agentUid: input.agentUid,
+        worktree: input.worktree,
+        leasePath: input.leasePath,
+        staged: [input.commandId],
+        declared: input.declared,
+        now: () => Date.now(),
+        emit: input.emit,
+      })
+    },
+    catch: (e) => ({ allow: false, reason: "OLO_WRITE_GUARD: eval failed (fail-closed): " + (e as Error).message }),
+  })
 
 export const Input = Schema.toStandardSchemaV1(
   Schema.Struct({
@@ -122,6 +153,22 @@ export const Plugin = {
                   }),
                 })
                 if (!guard.allow) return yield* new ToolFailure({ message: guard.reason ?? "OLO_TOOL_GUARD: denied" })
+              }
+              // W-56/57/58 · R-CC 阶段 3 运行期接线：直执行前经 write-guard 授权（fail-closed）。
+              // OLO_WRITE_GUARD_PATH 指向 per-worktree 租约文件；OLO_WRITE_GUARD_ALLOW 为逗号分隔的 catalog id 白名单。
+              const oloWgPath = globalThis.process.env.OLO_WRITE_GUARD_PATH
+              if (oloWgPath) {
+                const wg = yield* rccAuthorizeBeforeExec({
+                  commandId: valid.id,
+                  agentUid: context.agent,
+                  worktree: location.directory,
+                  leasePath: oloWgPath,
+                  declared: (globalThis.process.env.OLO_WRITE_GUARD_ALLOW ?? "")
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+                if (!wg.allow) return yield* new ToolFailure({ message: wg.reason ?? "OLO_WRITE_GUARD: denied" })
               }
               const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const initial = yield* catalog.resolveExecutable(valid.id)
