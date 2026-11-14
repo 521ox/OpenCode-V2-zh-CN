@@ -98,7 +98,8 @@ test.each([
           get: async () => ({
             animations: false,
             locale: "en",
-            tabs: { mode: "on", scope: "global" },
+            session: { verbosity: "medium" },
+            tabs: { enabled: true, scope: "global" },
             keybinds: { "session.messages_last_user": "ctrl+shift+u", "session.message.next": "ctrl+shift+n" },
           }),
           update: async () => ({}),

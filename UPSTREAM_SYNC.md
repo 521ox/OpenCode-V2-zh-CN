@@ -20,6 +20,56 @@ installed-client activation remain separately authorized actions.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 15 synchronization — candidate verification
+
+Issue #7 and [PR #8](https://github.com/521ox/OpenCode-V2-zh-CN/pull/8) track the
+merge from custom `448b1a6dfc2ba52a4d2f4a7de22da7b2cd6eae57` to frozen official
+`dev` `38bd73789a43bf043599d6196af96583228035d7` (2.3.0). The official range from
+`0e655ff2a2b7ee2234a6ebd5e61048b58a188b7c` contains 474 commits and 3,815 changed
+paths, including moves. Upstream ancestry is retained. External PRs #1/#6 are
+excluded. Required CI, final independent review and promotion are tracked in the
+PR; this record does not authorize release publication or installed-client activation.
+
+Build source `772442aada63f8f4b18cdd40da6effc059e54862` produced local candidate
+`2.3.0-custom-lite.20261115.1`, latest channel, Windows x64 bytecode and full WebUI,
+with Bun `1.4.4+38afee6c8`. Length: 266,788,352 bytes. SHA256:
+`642c6094125e9e7e5ab0997d98b508972f6aea1be1d0ad7b7ab5ae7d4995ee1a`.
+Version, actual Chinese help, embedded runtime and maintained compiled service
+smoke passed, including embedded WebUI, authenticated APIs and client MCP socket.
+The election loser exited 0; owned service stop exited 1 and removed registration.
+
+The accepted 2.2.5 binary imported two synthetic Sessions and six completed
+messages through its public import API, then cold-read them after restart. The
+candidate read the same private default `opencode.db`: all original rows, IDs,
+order, Unicode and start_directory survived, with 60 unchanged migration entries.
+Legacy media/checkpoint input was the trusted 2.0.14 fixture, not natural model
+history or SQL-injected user data. DB/channel/XDG/config-root selectors were absent;
+Windows machine/user roots were private. All three owned processes exited and the
+compatibility profile was removed. Real-user, unfinished-state and downgrade
+compatibility are outside this evidence.
+
+The frozen hoisted install, 13 scoped TypeScript gates and canonical migration,
+Protocol and Client generation checks passed. Protocol/Client output matches the
+frozen upstream target. One historical migration helper differs from the accepted
+base: upstream's `20260805200742_import_legacy_credentials.ts` now warns and skips
+a non-object legacy auth file instead of failing startup, with a new upstream
+bootstrap regression. The integration owner explicitly accepted this sole official
+helper exception under the follow-upstream/minimal-custom policy. Other historical
+migration files are unchanged. The runner checks completed migration IDs, not file
+checksums; the compiled compatibility probe preserves all 60 existing journal rows
+without rewriting or fabricating history. Initial lock
+conflict resolution was invalid and caused an unconstrained diagnostic install;
+it was replaced by upstream-lock-based reconciliation and a passing frozen install.
+
+Windows root `bun run check` fails in the unmodified upstream grey checker:
+slash-only exception patterns do not match Windows paths, producing 172 reports.
+Separate root typechecking fails at six Site package-local SolidStart imports in
+three test files under the hoisted installation. Client's two default-condition
+reconnect failures reproduce on archived accepted-base Client source with current
+dependencies (12 passes, two failures). These are current observations, not a
+full-monorepo pass or automatic reuse of earlier Console/Site failure claims.
+Windows Unicode archives remain outside the accepted routine CI split (#2).
+
 ## November 6 synchronization — candidate ready for independent review
 
 Starting source: `774b9ce7d928c3047147f78f4337823d5762a5aa`. Frozen official

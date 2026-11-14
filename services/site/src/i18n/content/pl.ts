@@ -6,10 +6,6 @@ export const content = {
       text: "Twórz, instaluj i udostępniaj pluginy desktopowe.",
       link: "Zobacz nowości w 2.2",
     },
-    "use-your-claude-code-login-in-opencode": {
-      text: "Używaj logowania Claude Code w OpenCode.",
-      link: "Zobacz v2.2.3",
-    },
     "desktop-terminals-now-survive-restarts": {
       text: "Terminale w Desktop przetrwają teraz restart.",
       link: "Zobacz v2.2.4",
@@ -48,11 +44,6 @@ export const content = {
       body: "Steruj OpenCode z własnych skryptów, zadań CI i narzędzi.",
       action: "Czytaj docs",
     },
-    ide: {
-      name: "Rozszerzenia IDE",
-      body: "Otwórz OpenCode w VS Code, Cursorze i Windsurfie albo w Zedzie i IDE JetBrains przez ACP.",
-      action: "Instaluj",
-    },
     mini: {
       name: "Mini",
       body: "Minimalny interfejs terminalowy. Odpowiedzi trafiają do historii terminala, a pod nimi jest jeden prompt.",
@@ -63,68 +54,34 @@ export const content = {
     desktop: {
       title: "OpenCode | Aplikacja desktopowa na macOS, Windows i Linux",
       description:
-        "Uruchamiaj kilku agentów OpenCode naraz, każdego w osobnej karcie. Przeglądaj każdą zmianę jako diff, komentuj dowolną linię i sprawdzaj wynik we wbudowanej przeglądarce.",
+        "Uruchamiaj równolegle tylu agentów OpenCode, ilu chcesz, oglądaj każdą zmianę w przeglądarce obok i kontynuuj na dowolnym urządzeniu. Na macOS, Windows i Linux.",
       intro:
         "Uruchamiaj kilku agentów naraz, każdą sesję w osobnej karcie. Przeglądaj każdą zmianę jako diff, komentuj dowolną linię i sprawdzaj wynik we wbudowanej przeglądarce. Na macOS, Windows i Linux.",
-      features: {
-        "built-in-terminal": {
-          title: "Wbudowany terminal",
-          body: "Uruchamiaj polecenia w karcie terminala obok sesji.",
-        },
-        "ssh-servers": {
-          title: "Serwery SSH",
-          body: "Połącz się z inną maszyną przez SSH i pracuj nad jej projektami.",
-        },
-        extensions: {
-          title: "Rozszerzenia",
-          body: "Zarządzaj serwerami MCP, pluginami i skillami w jednym menu.",
-        },
-        wsl: {
-          title: "WSL",
-          body: "W Windows uruchamiaj sesje w dystrybucji WSL 2 zamiast natywnie.",
-        },
-        "office-files": {
-          title: "Pliki Office",
-          body: "Otwieraj pliki Word, Excel i PowerPoint obok sesji.",
-        },
-        "keyboard-shortcuts": {
-          title: "Skróty",
-          body: "Każda akcja ma skrót klawiszowy, a każdy z nich możesz zmienić.",
-        },
-        "updates-itself": {
-          title: "Aktualizacje",
-          body: "Nowe wersje pobierają się i instalują z poziomu aplikacji.",
-        },
-        "all-your-projects": {
-          title: "Wszystkie projekty",
-          body: "Przełączaj się między projektami i ich sesjami w jednym oknie.",
-        },
-      },
       showcase: {
-        "sessions-in-tabs": {
-          title: "Sesje w kartach",
-          body: "Niech kilku agentów pracuje naraz, każda sesja w osobnej karcie.",
-        },
-        "review-and-comment": {
-          title: "Przeglądaj i komentuj",
-          body: "Czytaj każdą zmianę jako diff, skomentuj linię i odeślij ją.",
+        "parallel-agents": {
+          title: "Agenci równolegle",
+          body: "Uruchom tylu agentów, ilu chcesz, i pozwól im pracować równolegle. Przełączaj się między nimi, gdy kończą.",
         },
         "see-it-in-the-browser": {
           title: "Zobacz w przeglądarce",
-          body: "Praca agenta otwiera się w przeglądarce obok sesji na bieżąco.",
+          body: "Twoja aplikacja otwiera się w przeglądarce obok agenta, więc oboje widzicie każdą zmianę na bieżąco.",
         },
-        "pair-your-phone": {
-          title: "Sparuj telefon",
-          body: "Zeskanuj kod QR w OpenCode Mobile, aby sterować sesjami z iPhone'a.",
+        "on-every-device": {
+          title: "Na każdym urządzeniu",
+          body: "Uruchamiaj agentów na wszystkich swoich urządzeniach i kontynuuj w aplikacji desktopowej, terminalu lub na telefonie.",
+        },
+        "extend-it": {
+          title: "Rozszerzaj",
+          body: "Podłącz swoje narzędzia i usługi, aby agent mógł pracować ze wszystkim. Albo pozwól OpenCode zbudować wtyczki dla samego siebie, z własnym interfejsem w panelu bocznym.",
         },
       },
     },
     mobile: {
       title: "OpenCode | Mobile, Twoje sesje programowania na telefonie",
       description:
-        "Uruchamiaj, prowadź i zatwierdzaj sesje OpenCode z telefonu. Rozmawiaj z agentem, przeglądaj jego zmiany i zezwalaj na to, czego potrzebuje, gdy działa na Twoim komputerze.",
+        "Uruchamiaj i prowadź sesje OpenCode z telefonu. Rozmawiaj z agentem, gdy działa na Twoim komputerze.",
       intro:
-        "Uruchamiaj, prowadź i zatwierdzaj sesje z telefonu, gdziekolwiek jesteś. Zadzwoń do sesji i porozmawiaj z agentem, przejrzyj jego zmiany i zezwól na to, czego potrzebuje. Wszystko w OpenCode działającym na Twoim komputerze.",
+        "Uruchamiaj i prowadź sesje z telefonu, gdziekolwiek jesteś. Zadzwoń do sesji i rozmawiaj z agentem albo otwórz sesję i kontynuuj od miejsca, w którym skończyłeś, wszystko z OpenCode na Twoim komputerze.",
       features: {
         "notify-when-done": {
           title: "Powiadomienia",
@@ -163,10 +120,6 @@ export const content = {
         voice: {
           title: "Głos",
           body: "Zadzwoń do sesji i powiedz, czego chcesz. Agent odpowie na głos.",
-        },
-        approvals: {
-          title: "Zgody",
-          body: "Gdy agent poprosi o zgodę, przejrzyj zmianę i zatwierdź ją z telefonu.",
         },
         sessions: {
           title: "Sesje",
@@ -300,47 +253,6 @@ export const content = {
         },
       },
     },
-    ide: {
-      title: "OpenCode | Integracje z edytorami VS Code, Cursor i Zed",
-      description:
-        "Używaj OpenCode w edytorze, z rozszerzeniem dla VS Code, Cursora, Windsurfa i VSCodium oraz opencode acp dla Zeda, IDE JetBrains i innych edytorów ACP.",
-      intro:
-        "Używaj OpenCode w swoim edytorze. W VS Code, Cursorze, Windsurfie i VSCodium uruchom opencode we wbudowanym terminalu, a rozszerzenie zainstaluje się samo. Zed, IDE JetBrains i inne edytory obsługujące Agent Client Protocol uruchamiają OpenCode przez opencode acp.",
-      features: {
-        "quick-launch": {
-          title: "Szybki start",
-          body: "Cmd+Esc lub Ctrl+Esc otwiera OpenCode w podzielonym terminalu.",
-        },
-        "new-session": {
-          title: "Nowa sesja",
-          body: "Cmd+Shift+Esc lub Ctrl+Shift+Esc zaczyna kolejną sesję.",
-        },
-        context: {
-          title: "Kontekst",
-          body: "Udostępnia OpenCode bieżące zaznaczenie lub kartę.",
-        },
-        "file-references": {
-          title: "Odwołania",
-          body: "Cmd+Option+K lub Alt+Ctrl+K wstawia @File#L37-42.",
-        },
-        "installs-itself": {
-          title: "Instaluje się samo",
-          body: "Uruchom opencode we wbudowanym terminalu, aby je dodać.",
-        },
-        "acp-editors": {
-          title: "Edytory ACP",
-          body: "Zed, IDE JetBrains, Avante.nvim i CodeCompanion.nvim.",
-        },
-        "open-vsx": {
-          title: "Open VSX",
-          body: "Dostępne też w Open VSX dla Cursora, Windsurfa i VSCodium.",
-        },
-        "same-agent": {
-          title: "Ten sam agent",
-          body: "OpenCode, którego używasz w terminalu, obok Twojego kodu.",
-        },
-      },
-    },
     mini: {
       title: "OpenCode | Mini, minimalny interfejs terminalowy dla agenta",
       description:
@@ -422,9 +334,9 @@ export const content = {
           title: "Każdy klient MCP",
           body: "OpenCode, Claude Code, Cursor, Codex, Zed i wiele innych.",
         },
-        "named-sessions": {
-          title: "Nazwane sesje",
-          body: "Każda sesja zachowuje swoje karty, także po restarcie.",
+        "all-your-logins": {
+          title: "Wszystkie twoje logowania",
+          body: "Agenci korzystają ze stron, na których już jesteś zalogowany. Bez kluczy, bez konfiguracji.",
         },
         allowlists: {
           title: "Listy stron",
@@ -432,10 +344,14 @@ export const content = {
         },
       },
       install:
-        "Uruchom to raz. Dodaje serwer MCP browse do wybranych agentów i paruje rozszerzenie z Chrome Web Store. Wymaga Node.js 22.19 lub nowszego.",
+        "Najpierw zainstaluj [rozszerzenie Chrome]. Przeprowadzi cię przez pozostałe kroki. Aby zainstalować CLI bezpośrednio (nie powinno to być potrzebne), użyj jednego z tych poleceń.",
     },
   },
   apps: {
+    browse: {
+      category: "Sterowanie przeglądarką dla agentów",
+      body: "Pozwól agentowi korzystać z Twojej prawdziwej przeglądarki, z Twoimi logowaniami i kartami.",
+    },
     hex: {
       category: "Dyktowanie głosowe",
       body: "Dyktowanie głosowe na urządzeniu w każdej aplikacji.",
@@ -476,9 +392,6 @@ export const content = {
       "github-copilot": {
         name: "GitHub Copilot",
       },
-      "claude-code": {
-        name: "Claude Code",
-      },
     },
     plans: {
       "opencode-go": {
@@ -491,7 +404,7 @@ export const content = {
     steps: {
       download: {
         title: "Pobierz",
-        line: "Desktop, telefon lub terminal.",
+        line: "Desktop, terminal lub telefon.",
       },
       "use-free-models": {
         title: "Darmowe modele",
@@ -508,7 +421,7 @@ export const content = {
   byos: {
     title: "Własne subskrypcje",
     headline: "Używaj subskrypcji, które już masz.",
-    line: "Zaloguj się przez ChatGPT Plus lub Pro, GitHub Copilot albo Claude Code. Możesz też wybrać subskrypcję OpenCode.",
+    line: "Zaloguj się przez ChatGPT Plus lub Pro albo GitHub Copilot. Możesz też wybrać subskrypcję OpenCode.",
     yours: {
       label: "Twoja subskrypcja",
       items: {
@@ -517,9 +430,6 @@ export const content = {
         },
         "github-copilot": {
           name: "GitHub Copilot",
-        },
-        "claude-code": {
-          name: "Claude Code",
         },
       },
     },
@@ -598,7 +508,7 @@ export const content = {
     },
     colors: {
       title: "Kolory",
-      body: "Logo i logotyp używają jednego koloru w trzech stopniach krycia, z jaśniejszym kolorem na ciemne tła. Wartości poniżej to ten kolor na bieli lub #0B0B0B, tak jak pokazują go standardowe pliki. Kliknij wartość, aby ją skopiować.",
+      body: "Logo i logotyp używają jednego koloru w trzech stopniach krycia, z jaśniejszym kolorem na ciemne tła. Wartości poniżej to kolory użyte w standardowych plikach. Używaj ich wyłącznie w logo i logotypie, nie w innych tekstach ani tłach. Kliknij wartość, aby ją skopiować.",
       palettes: {
         light: {
           name: "Jasna",
@@ -838,7 +748,7 @@ export const content = {
       projects: {
         opencode: {
           name: "OpenCode",
-          body: "Open source'owy agent do programowania, z aplikacjami na desktop, telefon i terminal oraz SDK. Licencja MIT, ponad 220 000 gwiazdek na GitHubie.",
+          body: "Open source'owy agent do programowania, z aplikacjami na desktop, terminal i telefon oraz SDK. Licencja MIT, ponad 220 000 gwiazdek na GitHubie.",
         },
         sst: {
           name: "SST",
@@ -864,10 +774,11 @@ export const content = {
     },
     about: {
       title: "O OpenCode",
+      body: "Opisy OpenCode i jego produktów w wersji długiej i krótkiej, gotowe do skopiowania.",
       boilerplate: {
-        long: "OpenCode to open source'owy agent do programowania. Jest dostępny jako aplikacja desktopowa, aplikacja mobilna, interfejs terminalowy i SDK, i działa z modelami dowolnego dostawcy, w tym Claude, GPT i Gemini. OpenCode ma licencję MIT i jest tworzony przez Anomaly. Ma ponad 220 000 gwiazdek na GitHubie i ponad 1000 współtwórców, a co miesiąc korzysta z niego ponad 22 miliony programistów.",
+        long: "OpenCode to open source'owy agent do programowania. Jest dostępny jako aplikacja desktopowa, interfejs terminalowy, aplikacja mobilna i SDK, i działa z modelami dowolnego dostawcy, w tym Claude, GPT i Gemini. OpenCode ma licencję MIT i jest tworzony przez Anomaly. Ma ponad 220 000 gwiazdek na GitHubie i ponad 1000 współtwórców, a co miesiąc korzysta z niego ponad 22 miliony programistów.",
         short:
-          "OpenCode to open source'owy agent do programowania od Anomaly, z aplikacjami na desktop, telefon i terminal oraz SDK.",
+          "OpenCode to open source'owy agent do programowania od Anomaly, z aplikacjami na desktop, terminal i telefon oraz SDK.",
       },
       products: {
         "opencode-console": {
@@ -1214,19 +1125,6 @@ export const content = {
         },
       },
     },
-    integrations: {
-      title: "Integracje",
-      items: {
-        github: {
-          label: "GitHub",
-          body: "Używaj OpenCode w GitHub Actions.",
-        },
-        gitlab: {
-          label: "GitLab",
-          body: "Używaj OpenCode w GitLab CI/CD lub Duo.",
-        },
-      },
-    },
     faq: {
       items: {},
     },
@@ -1235,20 +1133,6 @@ export const content = {
     sdk: {
       more: {
         label: "Czytaj dokumentację SDK",
-      },
-    },
-    ide: {
-      links: {
-        "vs-code-marketplace": {
-          label: "VS Code Marketplace",
-        },
-        "open-vsx-cursor-windsurf-vscodium": {
-          label: "Open VSX (Cursor, Windsurf, VSCodium)",
-        },
-      },
-      lead: "Uruchom opencode we wbudowanym terminalu edytora, a rozszerzenie zainstaluje się samo, albo zainstaluj je ręcznie.",
-      more: {
-        label: "Skonfiguruj Zeda, IDE JetBrains i inne edytory ACP",
       },
     },
     mini: {

@@ -73,7 +73,7 @@ test("main settings labels react to config locale without changing stable settin
     expect(language.values).toEqual(["zh", "en"])
     expect(tabs.values).toEqual(["off", "on", "auto"])
     expect(verbosity.values).toEqual(["low", "medium", "high"])
-    expect(verbosity.default).toBe("medium")
+    expect(verbosity.default).toBe("low")
   } finally {
     app.renderer.destroy()
   }

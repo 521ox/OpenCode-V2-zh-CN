@@ -22,7 +22,7 @@ New providers should rarely require OpenCode changes. Add the provider to [model
 
 ## Development
 
-OpenCode requires Bun 1.3 or newer. From the repository root:
+OpenCode requires the Bun version in the `packageManager` field of [`package.json`](./package.json) or newer. From the repository root:
 
 ```bash
 bun install
@@ -97,7 +97,7 @@ The initial Windows gate on [run 40645176941](https://github.com/521ox/OpenCode-
 
 Both use the frozen lockfile and declared Bun version. PR code receives no repository secrets, checkout credentials are not persisted, and token permissions are read-only. Dependency cache saves exclude PR events. Upstream-only check workflows remain in source but are restricted to the official repository and their upstream target branches; their check names are not required here.
 
-This is a CLI/custom baseline, **not full-monorepo green**. The recorded Console Vite 8/7 type conflict and two Client default-condition reconnect failures remain unresolved; this workflow neither changes those tests nor reports them as passing. See the October 28 evidence in `UPSTREAM_SYNC.md`. Browser/Electron, Nix, Rust process-daemon, live providers, full Core/Client suites and six-platform builds are outside this baseline.
+This is a CLI/custom baseline, **not full-monorepo green**. The November 15 Windows root check fails on the upstream grey checker's path exceptions; separate root typechecking fails on Site's package-local SolidStart imports under the hoisted install. Two Client default-condition reconnect failures reproduce on accepted-base source with current dependencies. This workflow neither changes those tests nor reports them as passing. See the current evidence in `UPSTREAM_SYNC.md`; older Console/Site observations are historical, not interchangeable current results. Browser/Electron, Nix, Rust process-daemon, live providers, full Core/Client suites and six-platform builds are outside this baseline.
 
 The implementation owner must add relevant evidence in the PR for changed behavior outside that baseline: affected-package tests/typechecks; generated Protocol/Client checks for API changes; migration/compatibility checks for persistence changes; browser/component checks for UI changes; native Rust/Nix checks for those areas; and compiled service smoke for build/service changes. Upstream syncs require checks for the actual integrated delta. Run the canonical root `bun run check` when evaluating repository-wide health and disclose failures rather than relabel a scoped pass. A baseline failure needs diagnosis and an explicit scoped acceptance decision, not test edits or silent skips to manufacture green.
 

@@ -10,10 +10,10 @@
 
 ## 源码与公开二进制
 
-| 类别       | 截至 2026 年 11 月 6 日的状态                                                                                                                                                      |
+| 类别       | 截至 2026 年 11 月 15 日的状态                                                                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 维护源码   | 正在同步官方 V2 **2.2.5**；候选构建验证及验收状态见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。                                                                                         |
-| 公开二进制 | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，2026 年 10 月 4 日发布的未签名预发布版本。2.2.5 源码**不代表六平台版本已公开发布**。 |
+| 维护源码   | 正在同步官方 V2 **2.3.0**；候选构建验证及验收状态见 [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)。                                                                                         |
+| 公开二进制 | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)，2026 年 10 月 4 日发布的未签名预发布版本。2.3.0 源码**不代表六平台版本已公开发布**。 |
 
 已发布附件见[全部 Releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases)。旧 `main` 分支和 `v1.18.4-zhcn.*` Releases 不代表当前 V2 分支。官方安装器、npm 包及更新提供官方构建，可能覆盖二开功能；本分支不改变该更新策略。
 
@@ -55,7 +55,7 @@ $env:ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
 $env:HUSKY = "0"
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.2.5-custom-local.1"
+$env:OPENCODE_VERSION = "2.3.0-custom-local.1"
 $env:OPENCODE_CHANNEL = "latest"
 $env:OPENCODE_TARGET = "windows-x64"
 bun script/build.ts --skip-install
@@ -77,9 +77,9 @@ PR 以 `v2-custom-lite` 为目标。已授权任务通过必要检查与审查�
 
 ## 验证限制
 
-- 必要 CI 覆盖有界的 CLI／定制源码检查和 Windows 夹具，不代表全仓库、浏览器／Electron 或六平台发布验证。已知 Console 类型检查和 Client 重连失败继续保留在维护记录中。
+- 必要 CI 覆盖有界的 CLI／定制源码检查和 Windows 夹具，不代表全仓库、浏览器／Electron 或六平台发布验证。当前 Windows 根 lint、Site 类型检查和 Client 重连失败记录在维护文档中。
 - 本地合成历史验证不证明真实用户数据迁移、未完成旧状态或回滚兼容性。历史 `v2.0.15-zhcn.1` 附件仍有旧图片压缩记录兼容性问题，请查阅维护记录，不要删除会话历史来绕过。
-- 启动／服务生命周期调整，以及后台工作重新激活子会话后的后续父会话通知，不属于这些已保留增强。
+- 服务生命周期与重复子代理报告遵循当前上游实现；本分支不另建调度器或通知策略。
 
 ## 文档与许可
 

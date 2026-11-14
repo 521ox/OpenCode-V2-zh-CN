@@ -801,7 +801,6 @@ function OAuthAuto(props: {
     >
       <DialogPrompt
         title={props.title}
-        subtitle={props.attempt.instructions}
         placeholder={t("main.integration.redirectUrl")}
         onConfirm={paste}
         actions={[
@@ -814,13 +813,9 @@ function OAuthAuto(props: {
         ]}
         description={() => (
           <box gap={1}>
-            <Show when={!newDesigns()}>
-              <text fg={theme.text.muted}>{props.attempt.instructions}</text>
-            </Show>
+            <text fg={theme.text.muted}>{props.attempt.instructions}</text>
             <Link href={props.attempt.url} fg={theme.markdown.link} />
-            <text fg={theme.text.muted}>
-              {t("main.integration.redirectInstructions")}
-            </text>
+            <text fg={theme.text.muted}>{t("main.integration.redirectInstructions")}</text>
             <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
           </box>
         )}
@@ -842,7 +837,6 @@ function OAuthCode(props: {
   const client = useClient()
   const toast = useToast()
   const theme = useTheme().surface("dialog")
-  const newDesigns = useNewDesigns()
   const [error, setError] = createSignal<string>()
   let settled = false
 
@@ -858,7 +852,6 @@ function OAuthCode(props: {
   return (
     <DialogPrompt
       title={props.title}
-      subtitle={props.attempt.instructions}
       placeholder={t("main.integration.authCode")}
       onConfirm={(code) => {
         if (!code) return
@@ -877,9 +870,7 @@ function OAuthCode(props: {
       }}
       description={() => (
         <box gap={1}>
-          <Show when={!newDesigns()}>
-            <text fg={theme.text.muted}>{props.attempt.instructions}</text>
-          </Show>
+          <text fg={theme.text.muted}>{props.attempt.instructions}</text>
           <Link href={props.attempt.url} fg={theme.markdown.link} />
           <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
         </box>

@@ -1,4 +1,4 @@
-import "./products-order.css"
+import "./products-order.dev.css"
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { designMode } from "./design-copy"
 import { productPages, type PageSlug } from "./product-data"
@@ -76,6 +76,8 @@ type Drag = {
  * as the grid's ref). The cards need `data-card`.
  */
 export function sortableProducts(grid: HTMLElement) {
+  // Design mode and saved orders are development only.
+  if (!import.meta.env.DEV) return
   const state: { drag?: Drag; swallow?: boolean } = {}
   const cards = () => [...grid.querySelectorAll<HTMLElement>(":scope > [data-card]")]
   const find = (id: string) => grid.querySelector<HTMLElement>(`:scope > [data-card="${id}"]`)

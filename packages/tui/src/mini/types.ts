@@ -317,7 +317,6 @@ export type FooterSubagentTab = {
   label: string
   description: string
   status: "running" | "completed" | "cancelled" | "error"
-  background?: boolean
   title?: string
 }
 

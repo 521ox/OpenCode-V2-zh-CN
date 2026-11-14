@@ -81,7 +81,7 @@ test.each(["medium", "low"] as const)(
           get: async () => ({
             animations: false,
             locale: "en",
-            tabs: { mode: "off" },
+            tabs: { enabled: false },
             session: { verbosity },
             keybinds: { "session.messages_last_user": "ctrl+shift+u", "session.last": "ctrl+shift+l" },
           }),

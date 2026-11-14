@@ -10,10 +10,10 @@ Based on [OpenCode](https://github.com/anomalyco/opencode), the open-source AI c
 
 ## Source and published binaries
 
-| Track             | Status as of November 6, 2026                                                                                                                                                                                 |
+| Track             | Status as of November 15, 2026                                                                                                                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Maintained source | Official V2 **2.2.5** synchronization; candidate verification and acceptance are tracked in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).                                                                             |
-| Public binaries   | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), an unsigned prerelease published October 4, 2026. The 2.2.5 source is **not a published six-platform release**. |
+| Maintained source | Official V2 **2.3.0** synchronization; candidate verification and acceptance are tracked in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).                                                                             |
+| Public binaries   | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), an unsigned prerelease published October 4, 2026. The 2.3.0 source is **not a published six-platform release**. |
 
 Browse [all releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases) for published assets. Legacy `main` and `v1.18.4-zhcn.*` releases do not represent this V2 branch. Official installers, npm packages and updates provide official builds and may replace the custom additions; this fork does not change that updater policy.
 
@@ -55,7 +55,7 @@ $env:ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
 $env:HUSKY = "0"
 bun install --linker hoisted --frozen-lockfile
 cd packages/cli
-$env:OPENCODE_VERSION = "2.2.5-custom-local.1"
+$env:OPENCODE_VERSION = "2.3.0-custom-local.1"
 $env:OPENCODE_CHANNEL = "latest"
 $env:OPENCODE_TARGET = "windows-x64"
 bun script/build.ts --skip-install
@@ -77,9 +77,9 @@ Use `v2-custom-lite` as the PR base. For authorized tasks, agents may merge afte
 
 ## Verification limits
 
-- Required CI covers scoped CLI/custom source checks and Windows fixtures, not the entire monorepo, browser/Electron or six-platform release validation. Known Console typecheck and Client reconnect failures remain documented in the maintenance record.
+- Required CI covers scoped CLI/custom source checks and Windows fixtures, not the entire monorepo, browser/Electron or six-platform release validation. Current Windows root lint, Site typecheck and Client reconnect failures are documented in the maintenance record.
 - Local synthetic-history checks do not certify real-user migration, unfinished legacy state or rollback. The historical `v2.0.15-zhcn.1` assets retain an old image-checkpoint compatibility issue; see the maintenance record rather than deleting conversation history.
-- Startup/service-lifetime changes and later parent notifications after background work reactivates a child remain outside the retained enhancements.
+- Service lifetime and repeated subagent reports follow the current upstream owners; this fork adds no separate scheduler or notification policy.
 
 ## Documentation and license
 
