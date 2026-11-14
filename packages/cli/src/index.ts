@@ -128,6 +128,11 @@ const Handlers = Runtime.handlers(Commands, {
   uninstall: () => import("./commands/handlers/uninstall"),
   acp: () => import("./commands/handlers/acp"),
   api: () => import("./commands/handlers/api"),
+  identity: {
+    show: () => import("./commands/handlers/identity/show"),
+    verify: () => import("./commands/handlers/identity/verify"),
+    list: () => import("./commands/handlers/identity/list"),
+  },
   auth: {
     list: () => import("./commands/handlers/auth/list"),
     login: () => import("./commands/handlers/auth/login"),

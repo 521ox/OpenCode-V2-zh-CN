@@ -162,6 +162,15 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         }),
       ],
     }),
+    Spec.make("identity", {
+      description: "Agent identity binding diagnostics",
+      globalFlags: ServerFlags,
+      commands: [
+        Spec.make("show", { description: "Show the active binding card", globalFlags: ServerFlags }),
+        Spec.make("verify", { description: "Verify card integrity and registry state", globalFlags: ServerFlags }),
+        Spec.make("list", { description: "List known binding cards", globalFlags: ServerFlags }),
+      ],
+    }),
     Spec.make("auth", {
       description: "manage integrations and credentials",
       globalFlags: ServerFlags,
