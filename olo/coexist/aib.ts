@@ -142,8 +142,15 @@ function pemToDer(pem: string): Buffer {
 }
 
 function readDerNode(data: Buffer, offset: number): { tag: number; start: number; length: number; next: number } {
-  const tag = data[offset]
-  const lenByte = data[offset + 1]
+  // 严格索引（noUncheckedIndexedAccess）下 Buffer[i] 为 number | undefined；畸形 DER 越界即抛错，
+  // 由上层 verifySpiffeAnchorX509 的 try/catch 捕获并返回 false（fail-closed，防伪造锚）。
+  const readByte = (i: number): number => {
+    const b = data[i]
+    if (b === undefined) throw new Error("OLO_MALFORMED_DER: unexpected end of buffer at " + i)
+    return b
+  }
+  const tag = readByte(offset)
+  const lenByte = readByte(offset + 1)
   let length: number
   let valueStart: number
   if (lenByte < 0x80) {
@@ -153,7 +160,7 @@ function readDerNode(data: Buffer, offset: number): { tag: number; start: number
     const numBytes = lenByte & 0x7f
     length = 0
     for (let i = 0; i < numBytes; i++) {
-      length = (length << 8) | data[offset + 2 + i]
+      length = (length << 8) | readByte(offset + 2 + i)
     }
     valueStart = offset + 2 + numBytes
   }
