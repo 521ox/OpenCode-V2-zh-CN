@@ -61,11 +61,11 @@ export type Metadata = typeof Metadata.Type
 export const decodeMetadata = Schema.decodeUnknownSync(Metadata, { onExcessProperty: "error" })
 
 export function validateVersion(version: string) {
-  const prefix = `${root.version}-olo.`
-  // W-24 · M-L：D10 已裁定 ① {upstream_version}-olo.{revision}；前缀由 lineage.json 注入
-  // 历史字面 -zhcn. 保留于注释供审计追溯，不作实施取值。
+  // W-24 · M-L：D10 ① 决议 {upstream_version}-olo.{revision} 尚未落地；当前实现值仍为 -zhcn.N
+  // （见 CUSTOMIZATIONS.md L290 / packages/cli/test/release-artifact.test.ts），故前缀保持 -zhcn.。
+  const prefix = `${root.version}-zhcn.`
   if (!version.startsWith(prefix) || !/^[1-9][0-9]*$/.test(version.slice(prefix.length))) {
-    throw new Error(`Release version must be ${root.version}-olo.<positive integer>: ${version}`)
+    throw new Error(`Release version must be ${root.version}-zhcn.<positive integer>: ${version}`)
   }
   return version
 }
