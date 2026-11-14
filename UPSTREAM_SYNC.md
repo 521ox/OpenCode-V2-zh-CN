@@ -50,7 +50,13 @@ compatibility are outside this evidence.
 
 The frozen hoisted install, 13 scoped TypeScript gates and canonical migration,
 Protocol and Client generation checks passed. Protocol/Client output matches the
-frozen upstream target; historical migration bodies remain unchanged. Initial lock
+frozen upstream target. One historical migration helper differs from the accepted
+base: upstream's `20260805200742_import_legacy_credentials.ts` now warns and skips
+a non-object legacy auth file instead of failing startup, with a new upstream
+bootstrap regression. The integration owner must resolve this exception to the
+task's historical-body preservation requirement before acceptance. Other historical
+migration files are unchanged; the private populated-database check preserves all
+60 existing migration rows. Initial lock
 conflict resolution was invalid and caused an unconstrained diagnostic install;
 it was replaced by upstream-lock-based reconciliation and a passing frozen install.
 
