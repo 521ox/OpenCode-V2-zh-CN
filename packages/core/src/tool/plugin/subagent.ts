@@ -150,6 +150,26 @@ export const Plugin = {
                 })
                 .pipe(Effect.mapError((error) => new ToolFailure({ message: `Subagent denied: ${agent.id}`, error })))
 
+              // W-5c · M-B3 第四道身份闸（opt-in fail-closed，不替换既有三闸门）。
+              // 仅当 OLO_AIB_CARD_PATH 配置时启用；未配置保持既有行为不拦截。
+              const oloCardPath = globalThis.process.env.OLO_AIB_CARD_PATH
+              let oloBindingId: string | undefined
+              if (oloCardPath) {
+                const card = yield* Effect.tryPromise({
+                  try: async () => {
+                    const aibMod = await import("olo-coexist/aib")
+                    return aibMod.loadCard(oloCardPath)
+                  },
+                  catch: (e) =>
+                    new ToolFailure({ message: `OLO_BINDING_INVALID: ${(e as Error).message}` }),
+                })
+                if (card.status !== "registered" && card.status !== "active")
+                  return yield* new ToolFailure({
+                    message: "OLO_BINDING_INVALID: agent binding not enrolled (fail-closed, WP-5)",
+                  })
+                oloBindingId = card.binding_id
+              }
+
               const existing =
                 input.sessionID === undefined
                   ? undefined
@@ -223,6 +243,12 @@ export const Plugin = {
                 childSessionID: child.id,
                 agent: agent.name,
                 description: input.description,
+                // W-5c · M-B3：AIB 绑定锚（active 卡 binding_id；child/parent 同卡 ⇒ 同值）。
+                // 未配置 OLO_AIB_CARD_PATH 时 undefined（向后兼容）。
+                binding:
+                  oloBindingId !== undefined
+                    ? { childID: oloBindingId, parentID: oloBindingId }
+                    : undefined,
               }
               yield* subagents.start(recovery)
 

@@ -11,7 +11,7 @@ import {
   OLO_WRITE_GUARD_CONTRACT,
   type WriteAuthorizationResult,
 } from "./write-guard.ts"
-import { canonical, bindingId, loadCard, type BindingSeed, type BindingCard } from "./aib.ts"
+import { bindingId, loadCard, type BindingSeed, type BindingCard } from "./aib.ts"
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { LeaseEventSink } from "./lease.ts"

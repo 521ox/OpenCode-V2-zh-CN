@@ -46,8 +46,12 @@ export const deliver = Effect.fnUntraced(function* (
       childID: recovery.childSessionID,
       agent: recovery.agent,
       state: input.status,
+      // W-12 · M-B3：委派链身份字段（T13：四字段 + 两可空 agent_uid/parent_agent_uid）。
       agent_uid: null as string | null,
       parent_agent_uid: null as string | null,
+      // W-5c · M-B3：AIB 绑定锚（与 agent_uid 并列，非替代；T13 阶段 2 绑定判据）。
+      childBindingID: recovery.binding?.childID ?? null,
+      parentBindingID: recovery.binding?.parentID ?? null,
     },
   })
   if (input.notificationID) yield* jobs.completeBackground(input.notificationID)
