@@ -19,6 +19,7 @@ import { Heap } from "./heap"
 import { CpuProfile } from "./cpu-profile"
 import { translate } from "@opencode/tui/i18n"
 import { ShutdownDeadline } from "./shutdown-deadline"
+import { readFileSync, existsSync } from "node:fs"
 
 // Keep requests to the local service off any proxy. Bun reads lowercase `no_proxy` alone whenever it is set, so both
 // spellings get the same merged list.
@@ -39,6 +40,85 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   const { askpass } = await import("./ssh-askpass")
   process.exit(await Effect.runPromise(askpass.pipe(Effect.provide(NodeServices.layer))))
 }
+
+// §11.8-15 (WP-5 / W5-c) fail-closed 启动闸：未入册 Agent 不得运行（仅定制版侧）。
+// 本代码仅存在于定制版 d:\code-custom ⇒ 官方构建天然不含此闸，满足「仅定制版侧」。
+// 自举白名单（§4.4）：version / identity / install / uninstall / help 等自管理命令豁免，避免自锁。
+function oloCoexistIsAgentEnrolled(
+  registryPath: string,
+  agentId: string,
+  permissionDomain: string,
+): boolean {
+  if (!existsSync(registryPath)) return false
+  let raw: string
+  try {
+    raw = readFileSync(registryPath, "utf8")
+  } catch {
+    return false
+  }
+  // 最小 YAML 解析：仅抽取 agents[] 中 (agent_id, permission_domain) 复合键（与 validate_registry.py 同源字段；v3 复合唯一）。
+  const lines = raw.split("\n")
+  let inAgents = false
+  let curId: string | null = null
+  let curDomain: string | null = null
+  const enrolled = new Set<string>()
+  const flush = () => {
+    if (curId !== null && curDomain !== null) enrolled.add(`${curId}|${curDomain}`)
+  }
+  for (const line of lines) {
+    const indent = line.length - line.trimStart().length
+    const content = line.trim()
+    if (!inAgents) {
+      if (/^agents:\s*$/.test(content)) inAgents = true
+      continue
+    }
+    if (indent === 0 && !content.startsWith("-") && content.length > 0) {
+      flush()
+      inAgents = false
+      curId = null
+      curDomain = null
+      continue
+    }
+    if (/^-\s*agent_id:\s*/.test(content)) {
+      flush()
+      curId = content.replace(/^-\s*agent_id:\s*/, "").trim()
+      curDomain = null
+    } else if (/^permission_domain:\s*/.test(content)) {
+      curDomain = content.replace(/^permission_domain:\s*/, "").replace(/^["']|["']$/g, "").trim()
+    }
+  }
+  flush()
+  return enrolled.has(`${agentId}|${permissionDomain}`)
+}
+
+const OLO_COEXIST_BOOTSTRAP_CMDS = new Set([
+  "--version", "-v", "--help", "-h", "version", "identity", "install", "uninstall", "help",
+])
+
+function oloCoexistBootstrapGate(): void {
+  // 编译二进制经 bun 重_exec：argv = ["bun", "<bundled-root>", ...userArgs]；
+  // 脚本态 argv = ["bun", "index.ts", ...userArgs]。剥离前两个非用户段，取纯用户输入。
+  const raw = process.argv.slice(1)
+  const argv = raw[0] && /\.(ts|js|mjs|cjs)$/.test(raw[0]) ? raw.slice(1) : raw
+  // 自举白名单（§4.4）：version/identity/install/uninstall/help 等自管理命令豁免，避免自锁。
+  const isBootstrap = argv.some((a) => OLO_COEXIST_BOOTSTRAP_CMDS.has(a))
+  if (isBootstrap) return
+
+  const agentId = process.env.OLO_AGENT_ID ?? "codecustom"
+  const permissionDomain = process.env.OLO_PERMISSION_DOMAIN ?? "repository-local"
+  const registryPath =
+    process.env.OLO_AGENT_REGISTRY ?? "D:\\Agent\\configs\\agent-registry.yaml"
+
+  if (!oloCoexistIsAgentEnrolled(registryPath, agentId, permissionDomain)) {
+    process.stderr.write(
+      `OLO_AGENT_NOT_ENROLLED: agent_id=${agentId} permission_domain=${permissionDomain} ` +
+        `not found in registry ${registryPath} — startup rejected (fail-closed, §11.8-15 / WP-5 W5-c)\n`,
+    )
+    process.exit(1)
+  }
+}
+
+oloCoexistBootstrapGate()
 
 let terminated = false
 
