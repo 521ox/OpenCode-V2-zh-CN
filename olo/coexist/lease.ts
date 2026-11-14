@@ -32,6 +32,12 @@ export interface LeaseEvent {
   agent_uid: string
   worktree: string
   at: number
+  /** R-CC-5（方案 §20）：冲突事件中须同时指认对方 agent_uid（持锁方 / 被回收方），供审计指认双方 */
+  other_agent_uid?: string
+  /** R-CC-5（方案 §20）：冲突涉及的路径（租约文件路径 / 越界暂存路径）；事件须携带「路径」 */
+  path?: string
+  /** R-CC-5：多路径冲突（如暂存集越界）全部路径 */
+  paths?: string[]
   detail?: string
 }
 
@@ -129,21 +135,21 @@ export function claimLease(opts: LeaseOptions): ClaimResult {
     if (e && e.code === "EEXIST") {
       const existing = readRecord(opts.leasePath)
       if (!existing) {
-        emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, detail: "race: record unreadable after EEXIST" })
+        emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath, detail: "race: record unreadable after EEXIST" })
         return { ok: false, code: OLO_LEASE_HELD, reason: "lease exists but record unreadable" }
       }
       if (isExpired(existing, now)) {
-        emit({ type: "lease_expired", agent_uid: existing.agent_uid, worktree: existing.worktree, at: now, detail: `reclaimed by ${opts.agentUid}` })
+        emit({ type: "lease_expired", agent_uid: existing.agent_uid, worktree: existing.worktree, at: now, other_agent_uid: opts.agentUid, path: opts.leasePath, detail: `reclaimed by ${opts.agentUid}` })
         writeFileSync(opts.leasePath, JSON.stringify(rec), "utf8")
-        emit({ type: "lease_reclaim", agent_uid: opts.agentUid, worktree: opts.worktree, at: now })
+        emit({ type: "lease_reclaim", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, other_agent_uid: existing.agent_uid, path: opts.leasePath })
         return { ok: true, reclaimed: true }
       }
       if (existing.agent_uid === opts.agentUid) {
         writeFileSync(opts.leasePath, JSON.stringify({ ...existing, last_heartbeat: now }))
-        emit({ type: "lease_renew", agent_uid: opts.agentUid, worktree: opts.worktree, at: now })
+        emit({ type: "lease_renew", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath })
         return { ok: true }
       }
-      emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, detail: `held by ${existing.agent_uid}` })
+      emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, other_agent_uid: existing.agent_uid, path: opts.leasePath, detail: `held by ${existing.agent_uid}` })
       return { ok: false, code: OLO_LEASE_HELD, reason: `lease held by ${existing.agent_uid}` }
     }
     throw e
@@ -153,7 +159,7 @@ export function claimLease(opts: LeaseOptions): ClaimResult {
   } finally {
     closeSync(fd)
   }
-  emit({ type: "lease_acquire", agent_uid: opts.agentUid, worktree: opts.worktree, at: now })
+  emit({ type: "lease_acquire", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath })
   return { ok: true }
 }
 
@@ -163,7 +169,7 @@ export function renewLease(opts: LeaseOptions): { ok: boolean; code?: string; re
   const emit = opts.emit ?? defaultSink(opts.leasePath)
   const existing = readRecord(opts.leasePath)
   if (!existing) {
-    emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, detail: "renew without held lease" })
+    emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath, detail: "renew without held lease" })
     return { ok: false, code: OLO_LEASE_NOT_HELD, reason: "no held lease to renew" }
   }
   if (existing.agent_uid !== opts.agentUid) {
@@ -173,7 +179,7 @@ export function renewLease(opts: LeaseOptions): { ok: boolean; code?: string; re
     return { ok: false, code: OLO_LEASE_EXPIRED, reason: "lease expired, re-claim required" }
   }
   writeFileSync(opts.leasePath, JSON.stringify({ ...existing, last_heartbeat: now }))
-  emit({ type: "lease_renew", agent_uid: opts.agentUid, worktree: opts.worktree, at: now })
+  emit({ type: "lease_renew", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath })
   return { ok: true }
 }
 
@@ -184,10 +190,10 @@ export function releaseLease(opts: LeaseOptions): { ok: boolean; code?: string; 
   const existing = readRecord(opts.leasePath)
   if (!existing) return { ok: true }
   if (existing.agent_uid !== opts.agentUid) {
-    emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, detail: `release blocked: held by ${existing.agent_uid}` })
+    emit({ type: "lease_denied", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, other_agent_uid: existing.agent_uid, path: opts.leasePath, detail: `release blocked: held by ${existing.agent_uid}` })
     return { ok: false, code: OLO_LEASE_HELD, reason: `lease held by ${existing.agent_uid}; cannot release others` }
   }
   unlinkSync(opts.leasePath)
-  emit({ type: "lease_released", agent_uid: opts.agentUid, worktree: opts.worktree, at: now })
+  emit({ type: "lease_released", agent_uid: opts.agentUid, worktree: opts.worktree, at: now, path: opts.leasePath })
   return { ok: true }
 }

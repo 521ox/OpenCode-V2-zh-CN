@@ -45,6 +45,11 @@ try {
   assert.equal(r3.ok, false, "concurrent claim by other agent must be denied")
   assert.equal(r3.code, OLO_LEASE_HELD)
   assert.ok(events.slice(before).some((e) => e.type === "lease_denied"), "denied event must be logged")
+  // 3b. R-CC-5：并发拒绝事件须双 agent_uid + 路径（审计可指认双方 + 冲突路径）
+  const deniedEvt = events.slice(before).find((e) => e.type === "lease_denied")
+  assert.ok(deniedEvt, "denied event exists")
+  assert.equal(deniedEvt!.other_agent_uid, "agentA", "denied event must name holder agent_uid (R-CC-5)")
+  assert.equal(deniedEvt!.path, leasePath, "denied event must carry lease path (R-CC-5)")
 
   // 4. 他人过期锁 ⇒ 回收成功（reclaim）+ 过期事件
   clock += 60_000 // 超过 TTL
@@ -54,6 +59,11 @@ try {
   assert.equal(r4.reclaimed, true)
   assert.ok(events.slice(beforeReclaim).some((e) => e.type === "lease_expired"), "expired event must be logged")
   assert.ok(events.slice(beforeReclaim).some((e) => e.type === "lease_reclaim"), "reclaim event must be logged")
+  // 4b. R-CC-5：回收事件须双 agent_uid（前持锁方 agentA + 回收方 agentC）+ 路径
+  const reclaimEvt = events.slice(beforeReclaim).find((e) => e.type === "lease_reclaim")
+  assert.ok(reclaimEvt, "reclaim event exists")
+  assert.equal(reclaimEvt!.other_agent_uid, "agentA", "reclaim event must name previous holder (R-CC-5)")
+  assert.equal(reclaimEvt!.path, leasePath, "reclaim event must carry lease path (R-CC-5)")
   assert.equal(readLease({ leasePath, now }).owner, "agentC")
 
   // 5. 续约：持锁者成功；非持锁者失败

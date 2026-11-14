@@ -58,6 +58,10 @@ const now = () => CLOCK
   const rB = authorizeWrite({ contract: OLO_WRITE_GUARD_CONTRACT, commandId: "write", agentUid: "agent-B", worktree: "wt1", leasePath: lp, staged: [], declared: ["x"], now, emit: memSink(evB) })
   check("2 B denied", rB.allow === false, rB)
   check("2 B lease_denied emitted", evB.some((e) => e.type === "lease_denied" && e.detail?.includes("agent-A")), evB)
+  // R-CC-5：拒绝事件须双 agent_uid（持锁方 agent-A）+ 路径
+  const dn2 = evB.find((e) => e.type === "lease_denied")
+  check("2 R-CC-5 other_agent_uid=agent-A", dn2?.other_agent_uid === "agent-A", dn2)
+  check("2 R-CC-5 path=lp", dn2?.path === lp, dn2)
 }
 
 // 3) 自持锁续约：A 再次申请 ⇒ 放行（renew，不重 acquire）
@@ -81,6 +85,10 @@ const now = () => CLOCK
   check("4 reclaim allow", r.allow === true, r)
   check("4 lease_expired emitted", evB.some((e) => e.type === "lease_expired"), evB)
   check("4 lease_reclaim emitted", evB.some((e) => e.type === "lease_reclaim"), evB)
+  // R-CC-5：回收事件须双 agent_uid（前持锁方 agent-A）+ 路径
+  const rc4 = evB.find((e) => e.type === "lease_reclaim")
+  check("4 R-CC-5 other_agent_uid=agent-A", rc4?.other_agent_uid === "agent-A", rc4)
+  check("4 R-CC-5 path=lp", rc4?.path === lp, rc4)
 }
 
 // 5) 暂存集越界：staged 含未声明路径 ⇒ 拒 + staging_violation 指名越界路径
@@ -100,6 +108,10 @@ const now = () => CLOCK
   check("5 staging denied", r.allow === false, r)
   check("5 violation named", (r.stagingViolations ?? []).includes("src/foreign.ts"), r)
   check("5 staging_violation emitted", events.some((e) => e.type === "staging_violation" && e.detail?.includes("src/foreign.ts")), events)
+  // R-CC-5：越界事件须携带路径字段（paths 全量 + path 代表）
+  const sv5 = events.find((e) => e.type === "staging_violation")
+  check("5 R-CC-5 paths includes foreign", Array.isArray(sv5?.paths) && sv5!.paths!.includes("src/foreign.ts"), sv5)
+  check("5 R-CC-5 path=foreign", sv5?.path === "src/foreign.ts", sv5)
 }
 
 // 6) 非写工具：read ⇒ 经统一门 + 暂存校验，放行

@@ -84,6 +84,8 @@ export function authorizeWrite(input: WriteAuthorizationInput): WriteAuthorizati
       agent_uid: input.agentUid,
       worktree: input.worktree,
       at,
+      paths: staging.violations,
+      path: staging.violations[0],
       detail: `paths: ${staging.violations.join(",")}`,
     })
     return {
