@@ -8,8 +8,9 @@
 // 注意：当前为 opt-in fail-open——env 未设即跳过，非默认 fail-closed，详见账本 §10）。
 // 状态：代码已落码 + 注入式自测通过；运行期实跑验收（方案 §20.7 四项 DoD）尚未达成
 // （账本 v1.62：81 条 0 [RUNTIME]；r630-10 仅为 AVX2 回退构建机，不替代生产门禁）。
-// 事件落盘：默认汇写租约同目录 lease.events.jsonl（非 agents.jsonl），生产串联未接线，详见账本 §10。
-import { claimLease, readLease, type LeaseEventSink, type LeaseStatus } from "./lease.ts"
+// 事件落盘：租约与 staging_violation 事件均经 defaultSink 落 lease.events.jsonl（修复账本 §10「staging_violation 生产静默丢弃」缺口）；
+// 生产调用点 direct-exec.ts 仍未透传 emit 汇（仅默认落盘），agents.jsonl 为独立 RegistryEvent 流（W-36 注册表，未创建）。
+import { claimLease, readLease, defaultSink, type LeaseEventSink, type LeaseStatus } from "./lease.ts"
 import { evaluateWriteToolGuard, type GuardResult, type WriteGuardInput } from "./guard.ts"
 import { assertStagingSet } from "./staging-assert.ts"
 
@@ -79,7 +80,8 @@ export function authorizeWrite(input: WriteAuthorizationInput): WriteAuthorizati
   })
   if (!staging.ok) {
     const at = input.now ? input.now() : Date.now()
-    input.emit?.({
+    const sink = input.emit ?? defaultSink(input.leasePath)
+    sink({
       type: "staging_violation",
       agent_uid: input.agentUid,
       worktree: input.worktree,

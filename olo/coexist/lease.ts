@@ -63,7 +63,7 @@ export interface LeaseOptions {
 const DEFAULT_TTL_MS = 30_000
 
 // 默认事件汇：运行时追加到租约同目录 lease.events.jsonl；测试注入记忆汇覆盖。
-function defaultSink(leasePath: string): LeaseEventSink {
+export function defaultSink(leasePath: string): LeaseEventSink {
   const eventsPath = `${dirname(leasePath)}/lease.events.jsonl`
   return (e) => {
     try {

@@ -1,5 +1,5 @@
 // W-56/57/58 · R-CC 阶段 3 编排注入式自测（node --experimental-strip-types · 与 lease/guard/staging-assert 同风格）
-import { mkdtempSync } from "node:fs"
+import { mkdtempSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { authorizeWrite, OLO_WRITE_GUARD_CONTRACT, type WriteAuthorizationResult } from "./write-guard.ts"
@@ -160,6 +160,32 @@ const now = () => CLOCK
     emit: memSink([]),
   })
   check("8 empty staged allow", r.allow === true, r)
+}
+
+// 9) staging_violation 无 emit 时仍落盘（账本 §10：生产静默丢弃缺口 → 修复）
+{
+  const td = mkdtempSync(join(tmpdir(), "wg-nofb-"))
+  const lp = join(td, "lease.json")
+  writeFileSync(lp, JSON.stringify({ agent_uid: "agent-A", worktree: td, acquired: Date.now(), last_heartbeat: Date.now() }))
+  const r = authorizeWrite({
+    contract: OLO_WRITE_GUARD_CONTRACT,
+    commandId: "write",
+    agentUid: "agent-A",
+    worktree: td,
+    leasePath: lp,
+    staged: ["src/foreign.ts"],
+    declared: ["src/a.ts"],
+    now,
+    // 不传 emit：验证 defaultSink 落盘（修复生产静默丢弃）
+  })
+  check("9 staging denied (no emit)", r.allow === false, r)
+  const auditPath = join(td, "lease.events.jsonl")
+  let found = false
+  if (existsSync(auditPath)) {
+    const lines = readFileSync(auditPath, "utf8").trim().split("\n").filter(Boolean)
+    found = lines.some((l) => { try { return JSON.parse(l).type === "staging_violation" } catch { return false } })
+  }
+  check("9 staging_violation persisted to defaultSink", found, { auditPath, found })
 }
 
 console.log(`write-guard.test.ts: ${passed}/${(passed + failed)} PASS${failed > 0 ? " (FAIL: " + fails.join(" | ") + ")" : ""}`)
