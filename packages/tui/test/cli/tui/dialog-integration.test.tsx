@@ -621,7 +621,7 @@ test("leaves a blank row between the OAuth title and its instructions under new 
   await using fixture = await renderOAuth({ paste: true, newDesigns: true })
   const frame = await fixture.app.waitForFrame((frame) => frame.includes("Redirect URL"))
   const lines = frame.split("\n")
-  const title = lines.findIndex((line) => line.includes("opensend") && line.includes("esc"))
+  const title = lines.findIndex((line) => line.includes("opensend") && line.includes("×"))
 
   expect(lines[title + 1]?.trim()).toBe("")
   expect(lines[title + 2]).toContain("Authorize opensend in your browser.")
@@ -631,7 +631,7 @@ test("keeps the OAuth paste prompt layout without new designs", async () => {
   await using fixture = await renderOAuth({ paste: true, newDesigns: false })
   const frame = await fixture.app.waitForFrame((frame) => frame.includes("Redirect URL"))
   const lines = frame.split("\n")
-  const title = lines.findIndex((line) => line.includes("opensend") && line.includes("esc"))
+  const title = lines.findIndex((line) => line.includes("opensend") && line.includes("×"))
 
   expect(lines[title + 1]?.trim()).toBe("")
   expect(lines[title + 2]).toContain("Authorize opensend in your browser.")
@@ -688,22 +688,26 @@ async function renderOAuth(input: { paste?: true; newDesigns: boolean }) {
   const app = await testRender(
     () => (
       <TestTuiContexts>
-        <ConfigProvider config={createTuiResolvedConfig({ experimental: { "new-designs": input.newDesigns } })}>
-          <Keymap.Provider>
-            <ToastProvider>
-              <ClientProvider api={createApi(calls.fetch)}>
-                <DataProvider directory={process.cwd()}>
-                  <LocationProvider>
-                    <ThemeProvider mode="dark" source={emptyThemeSource}>
-                      <DialogProvider>
-                        <Probe />
-                      </DialogProvider>
-                    </ThemeProvider>
-                  </LocationProvider>
-                </DataProvider>
-              </ClientProvider>
-            </ToastProvider>
-          </Keymap.Provider>
+        <ConfigProvider
+          config={createTuiResolvedConfig({ locale: "en", experimental: { "new-designs": input.newDesigns } })}
+        >
+          <I18nProvider>
+            <Keymap.Provider>
+              <ToastProvider>
+                <ClientProvider api={createApi(calls.fetch)}>
+                  <DataProvider directory={process.cwd()}>
+                    <LocationProvider>
+                      <ThemeProvider mode="dark" source={emptyThemeSource}>
+                        <DialogProvider>
+                          <Probe />
+                        </DialogProvider>
+                      </ThemeProvider>
+                    </LocationProvider>
+                  </DataProvider>
+                </ClientProvider>
+              </ToastProvider>
+            </Keymap.Provider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),
