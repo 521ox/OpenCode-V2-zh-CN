@@ -4,8 +4,8 @@
 //           aib 卡 spiffe_id 恒 null（禁冒充已签发）；SVID 外部锚（W-43）仍 [CONTRACT]，属阶段 3。
 //           本件使 R-CC-1/2 机制在"本地身份"下可运行 + 可实证，但完整规格（SVID 密码学锚）仍待 G-CV-1 解除。
 // 纯函数 + 文件/内存存储适配，零 OpenCode 运行时依赖；可由 node/bun --experimental-strip-types 直接验证。
-import { buildAgentUid, newUlid, type AgentUidContext } from "./agent-uid.ts"
-import { Registry, type RegistryStore, type AgentKey } from "./registry.ts"
+import { buildAgentUid, newUlid, type AgentKey, type AgentUidContext } from "./agent-uid.ts"
+import { Registry, type RegistryStore } from "./registry.ts"
 import {
   authorizeWrite,
   OLO_WRITE_GUARD_CONTRACT,

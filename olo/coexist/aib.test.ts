@@ -15,6 +15,7 @@ function makeCard(overrides: Partial<BindingCard> = {}): BindingCard {
   return {
     ...seed,
     binding_id,
+    runtime: {},
     spiffe_id: null,
     scope: "repository-local",
     risk_tier: "T1",

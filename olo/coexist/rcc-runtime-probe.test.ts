@@ -43,7 +43,7 @@ check("all scenarios pass", res.allPass, res.scenarios)
 // 3) 事件覆盖：R-CC-1 acquire / 并发独占 / R-CC-2 / R-CC-3 / 过期回收 全部事件类型出现
 {
   const types = new Set(res.events.map((e) => e.type))
-  for (const t of ["lease_acquire", "lease_denied", "staging_violation", "lease_expired", "lease_reclaim"]) {
+  for (const t of ["lease_acquire", "lease_denied", "staging_violation", "lease_expired", "lease_reclaim"] as const) {
     check(`event ${t} present`, types.has(t), [...types])
   }
 }

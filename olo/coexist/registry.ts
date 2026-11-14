@@ -92,7 +92,8 @@ export class Registry {
   private assertAppend(e: RegistryEvent): void {
     this.assertSchema(e)
     const all = this.parseAll()
-    const lastTs = all.length ? all[all.length - 1].ts : ""
+    const last = all[all.length - 1]
+    const lastTs = last ? last.ts : ""
     if (lastTs && e.ts < lastTs) throw new Error("OLO_REGISTRY_TS_REGRESSION")
     this.store.append(JSON.stringify(e))
   }
@@ -219,6 +220,7 @@ export class Registry {
     const present = chains.filter((c): c is string[] => Array.isArray(c))
     if (present.length < 3) throw new Error("OLO_DELEGATION_CHAIN_INCOMPLETE")
     const [a, b, c] = present
+    if (a === undefined || b === undefined || c === undefined) throw new Error("OLO_DELEGATION_CHAIN_INCOMPLETE")
     const eq = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i])
     if (!eq(a, b) || !eq(b, c)) throw new Error("OLO_DELEGATION_CHAIN_MISMATCH")
   }

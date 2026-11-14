@@ -13,8 +13,8 @@ import {
   writeLocalCard,
   type LocalAgent,
 } from "../agent-identity.ts"
-import { FileStore, type LeaseEvent, type LeaseEventSink } from "../registry.ts"
-import { defaultSink } from "../lease.ts"
+import { FileStore } from "../registry.ts"
+import { defaultSink, type LeaseEvent, type LeaseEventSink } from "../lease.ts"
 
 export interface ScenarioResult {
   name: string
@@ -228,10 +228,10 @@ export function runScenarios(outDir: string, opts?: { machine?: string; role?: s
 if (process.argv[1] && process.argv[1].endsWith("rcc-runtime-probe.ts")) {
   const outIdx = process.argv.indexOf("--out")
   // 每次运行隔离到 run-<ts> 子目录，避免复用 --out 时残留 lease.json 造成租约碰撞。
-  const outDir =
-    outIdx >= 0 && process.argv[outIdx + 1]
-      ? join(process.argv[outIdx + 1], `run-${Date.now()}`)
-      : mkdtempSync(join(tmpdir(), "rcc-local-"))
+  const outArg = outIdx >= 0 ? process.argv[outIdx + 1] : undefined
+  const outDir = outArg
+    ? join(outArg, `run-${Date.now()}`)
+    : mkdtempSync(join(tmpdir(), "rcc-local-"))
   const res = runScenarios(outDir)
   console.log(`R-CC-1/2 本地身份接线 dev 实证：${res.allPass ? "ALL PASS" : "FAIL"}`)
   console.log(`  agent_uid_a = ${res.agent_uid_a}`)

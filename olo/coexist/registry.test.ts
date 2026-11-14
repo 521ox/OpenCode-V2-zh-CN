@@ -3,9 +3,8 @@ import {
   Registry,
   MemoryStore,
   defaultRegistryStore,
-  type AgentKey,
 } from "./registry.ts"
-import { buildAgentUid, ULID_ALPHABET } from "./agent-uid.ts"
+import { buildAgentUid, ULID_ALPHABET, type AgentKey } from "./agent-uid.ts"
 import { sep } from "node:path"
 
 let passed = 0
@@ -75,8 +74,8 @@ check("spawn: write-ahead 落 spawn_intent + spawned 两行", () => {
   const uid = r.spawn(KEY, ctx(1, 1), { ts: "2026-11-12T10:00:00", source_sha: SHA })
   const lines = s.read().trim().split("\n")
   if (lines.length !== 2) throw new Error("expected 2 lines, got " + lines.length)
-  if (JSON.parse(lines[0]).event !== "spawn_intent") throw new Error("first must be spawn_intent")
-  if (JSON.parse(lines[1]).event !== "spawned") throw new Error("second must be spawned")
+  if (JSON.parse(lines[0]!).event !== "spawn_intent") throw new Error("first must be spawn_intent")
+  if (JSON.parse(lines[1]!).event !== "spawned") throw new Error("second must be spawned")
   if (uid !== buildAgentUid(ctx(1, 1))) throw new Error("uid mismatch")
 })
 

@@ -51,8 +51,7 @@ export function scanAndQuarantine(
     skipped_valid: 0,
     quarantined_legacy_ids: [],
   }
-  for (let i = 0; i < records.length; i++) {
-    const rec = records[i]
+  for (const [i, rec] of records.entries()) {
     if (rec.agent_uid && UID_RE.test(rec.agent_uid)) {
       report.skipped_valid++
       continue
