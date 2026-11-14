@@ -168,6 +168,8 @@ function splitPemCerts(pem: string): string[] {
  */
 export function verifySvidX509(binding: SvidBinding, svidPem: string, caBundlePem: string): "PASS" {
   const svid = new X509Certificate(svidPem)
+  // 链校验：SVID 须由 CA bundle 中某张 CA 证书签名（支持 root+intermediate 链）；
+  // 真实 SPIRE 的 SVID 由其签发 CA（subject == SVID issuer）签名，标准 X.509 名称链校验即成立。
   let chainOk = false
   for (const c of splitPemCerts(caBundlePem)) {
     try {
@@ -175,7 +177,7 @@ export function verifySvidX509(binding: SvidBinding, svidPem: string, caBundlePe
     } catch { /* try next */ }
   }
   if (!chainOk) {
-    throw new Error("OLO_SVID_VERIFY_FAILED: X509 chain does not verify against CA bundle")
+    throw new Error("OLO_SVID_VERIFY_FAILED: SVID signature does not verify against CA bundle")
   }
   const serialHash = createHash("sha256").update(svid.serialNumber, "utf8").digest("hex")
   if (serialHash !== binding.svid_serial_hash) {

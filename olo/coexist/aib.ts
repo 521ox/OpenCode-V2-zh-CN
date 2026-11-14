@@ -207,6 +207,8 @@ function splitPemCerts(pem: string): string[] {
 export function verifySpiffeAnchorX509(spiffe_id: string, anchor: SpiffeAnchor): boolean {
   try {
     const svid = new X509Certificate(anchor.svidPem)
+    // 链校验：遍历 CA bundle，SVID 须由其中某张 CA 证书签名（支持 root+intermediate 链）。
+    // 真实 SPIRE 的 SVID 由其签发 CA（subject == SVID issuer）签名，标准 X.509 名称链校验即成立。
     let chainOk = false
     for (const c of splitPemCerts(anchor.caBundlePem)) {
       try {
