@@ -1,10 +1,10 @@
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { useNewDesigns } from "../config"
-import { DialogHeader, DialogLayout, useDialog } from "./dialog"
+import { DialogButtons, DialogHeader, DialogLayout, useDialog } from "./dialog"
 import { createStore } from "solid-js/store"
-import { For } from "solid-js"
 import { useI18n } from "../context/i18n"
+import { Locale } from "../util/locale"
 
 export type DialogConfirmProps = {
   title: string
@@ -16,6 +16,8 @@ export type DialogConfirmProps = {
     cancel?: string
   }
 }
+
+const keys = ["cancel", "confirm"] as const
 
 export function DialogConfirm(props: DialogConfirmProps) {
   const { t } = useI18n()
@@ -32,75 +34,38 @@ export function DialogConfirm(props: DialogConfirmProps) {
     dialog.clear()
   }
 
+  const toggle = () => setStore("active", store.active === "confirm" ? "cancel" : "confirm")
+
   Keymap.createLayer(() => ({
     mode: "modal",
-    commands: newDesigns()
-      ? [
-          { bind: "return", title: t("main.confirm"), group: t("main.group.dialog"), run: () => choose("confirm") },
-          { bind: "escape", title: t("main.cancel"), group: t("main.group.dialog"), run: () => choose("cancel") },
-        ]
-      : [
-          {
-            bind: "return",
-            title: t("main.dialog.confirm"),
-            group: t("main.group.dialog"),
-            run: () => choose(store.active),
-          },
-          {
-            bind: "left",
-            title: t("main.dialog.previous"),
-            group: t("main.group.dialog"),
-            run: () => {
-              setStore("active", store.active === "confirm" ? "cancel" : "confirm")
-            },
-          },
-          {
-            bind: "right",
-            title: t("main.dialog.next"),
-            group: t("main.group.dialog"),
-            run: () => {
-              setStore("active", store.active === "confirm" ? "cancel" : "confirm")
-            },
-          },
-        ],
+    commands: [
+      {
+        bind: "return",
+        title: t("main.dialog.confirm"),
+        group: t("main.group.dialog"),
+        run: () => choose(store.active),
+      },
+      { bind: "left", title: t("main.dialog.previous"), group: t("main.group.dialog"), run: toggle },
+      { bind: "right", title: t("main.dialog.next"), group: t("main.group.dialog"), run: toggle },
+      { bind: "tab", title: t("main.dialog.next"), group: t("main.group.dialog"), run: toggle },
+      { bind: "shift+tab", title: t("main.dialog.previous"), group: t("main.group.dialog"), run: toggle },
+      ...(newDesigns()
+        ? [{ bind: "escape", title: t("main.cancel"), group: t("main.group.dialog"), run: () => choose("cancel") }]
+        : []),
+    ],
   }))
   return (
     <DialogLayout
       header={<DialogHeader title={props.title} />}
-      footer={{
-        actions: {
-          primary: [
-            // Footer labels are lowercase; the legacy buttons title-case the same labels.
-            {
-              title: (props.label?.cancel ?? t("main.cancel")).toLowerCase(),
-              key: "esc",
-              onTrigger: () => choose("cancel"),
-            },
-            {
-              title: (props.label?.confirm ?? t("main.confirm")).toLowerCase(),
-              key: "enter",
-              onTrigger: () => choose("confirm"),
-            },
-          ],
-        },
-      }}
-      legacyFooter={
-        <box flexDirection="row" justifyContent="flex-end">
-          <For each={["cancel", "confirm"] as const}>
-            {(key) => (
-              <box
-                paddingLeft={1}
-                paddingRight={1}
-                backgroundColor={key === store.active ? theme.background.action.primary.focused : undefined}
-                onMouseUp={() => choose(key)}
-              >
-                <text fg={key === store.active ? theme.text.action.primary.focused : theme.text.muted}>
-                  {props.label?.[key] ?? (key === "confirm" ? t("main.confirm") : t("main.cancel"))}
-                </text>
-              </box>
-            )}
-          </For>
-        </box>
+      buttons={
+        <DialogButtons
+          buttons={keys.map((key) => ({
+            label: Locale.titlecase(props.label?.[key] ?? t(key === "confirm" ? "main.confirm" : "main.cancel")),
+            run: () => choose(key),
+          }))}
+          active={keys.indexOf(store.active)}
+          onActive={(index) => setStore("active", keys[index]!)}
+        />
       }
     >
       <text fg={theme.text.muted}>{props.message}</text>

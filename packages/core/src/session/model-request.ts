@@ -24,6 +24,7 @@ import type {
   SessionGenerate,
   SessionRequest,
   SessionRequestKind,
+  SessionRequestMessage,
   SessionTitle,
 } from "@opencode/plugin/effect/session"
 import type { Agent } from "@opencode/schema/agent"
@@ -87,7 +88,7 @@ export interface Input {
   readonly model: SessionRunnerModel.Resolved
   readonly tools?: Tool.Snapshot
   readonly system: Array<SystemPart>
-  readonly messages: Array<Message>
+  readonly messages: Array<SessionRequestMessage>
   readonly toolChoice?: LLM.LLMRequestInput["toolChoice"]
   /** Only the durable runner may use a stateful WebSocket. */
   readonly webSocket?: "session"
@@ -127,7 +128,13 @@ export const baseTranscript = (input: {
         metadata: { experimental: { instructions: input.initial } },
       },
     ].filter((part) => part.text.length > 0),
-    messages: toLLMMessages(input.messages, input.model.ref, providerMetadataKey),
+    // Hooks read each stored message's metadata on the messages built from it; `prepare` strips it before the request.
+    messages: input.messages.flatMap((message) =>
+      toLLMMessages([message], input.model.ref, providerMetadataKey).map(
+        (item): SessionRequestMessage =>
+          message.metadata === undefined || item.id !== message.id ? item : { ...item, metadata: message.metadata },
+      ),
+    ),
   }
 }
 
@@ -266,8 +273,8 @@ export const layer = Layer.effect(
     const transport = yield* SessionModelTransport.Service
     const permission = yield* Permission.Service
     const websearch = yield* WebSearch.Service
-    const app = yield* App.Metadata
     const store = yield* SessionStore.Service
+    const app = yield* App.Service
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },
     >(kind: SessionRequestKind, input: Input, shape: (draft: SessionRequest, tools: Definitions) => Effect.Effect<S>) {
@@ -348,9 +355,23 @@ export const layer = Layer.effect(
           kind === "primary"
             ? [...shaped.system, SystemPart.make(SessionRulesLocation.render(yield* store.rulesLocation(session.id)))]
             : shaped.system,
-        messages: boundImages(unsupportedParts(shaped.messages, model.capabilities, model.model.provider)),
+        // Strip the stored metadata hooks could read, so it never reaches the provider.
+        messages: boundImages(
+          unsupportedParts(
+            shaped.messages.map((message) => {
+              const { metadata, ...rest } = message
+              return metadata === undefined ? message : Message.make(rest)
+            }),
+            model.capabilities,
+            model.model.provider,
+          ),
+        ),
         tools: [
-          ...Array.from(search.tools, ([name, t]) => ({ ...t, name })),
+          ...Array.from(search.tools, ([name, t]) => ({
+            ...t,
+            name,
+            freeform: t.freeform && model.capabilities.freeform?.includes(t.freeform.type) ? t.freeform : undefined,
+          })),
           ...(search.hosted ? [search.hosted] : []),
         ],
         toolChoice: input.toolChoice,

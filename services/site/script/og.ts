@@ -4,6 +4,14 @@
 // title, image or template gives it a new URL and link previews refresh. Cards are English at
 // every locale.
 //
+// OG Studio (a local design tool) can replace any card. For each page it makes an English PNG, an
+// optional MP4 for og:video and an optional PNG for each locale, and writes a manifest to
+// src/asset/og-studio/manifest.json. Pages in that manifest use its files; every other page renders
+// here. A version 2 manifest has a `base` (/files/site/og): OG Studio uploads the files to the
+// files bucket there (MEDIA.md) and only the manifest is in git, so pages link `${base}/<file>`
+// and nothing is copied. A manifest without `base` (version 1) keeps its files beside it, and they
+// are copied into public/og/.
+//
 // This file is the cards' source of truth. The layout is David's template frame in Paper (the
 // "OG images" file, frame "/ — dark"): a grid of #2e2e2e lines at x 72, 900 and 1128 and y 72,
 // 557 and 629, the logo icon in the top-left cell, the title and a description of at most two
@@ -19,6 +27,7 @@ import { decompress } from "wawoff2"
 
 const root = path.resolve(import.meta.dir, "..")
 const out = path.join(root, "public/og")
+const STUDIO = "src/asset/og-studio"
 
 const W = 1200
 const H = 630
@@ -58,14 +67,14 @@ const cards: Card[] = [
   {
     path: "/",
     title: "OpenCode",
-    description: "The open source coding agent. Available on your desktop, phone, the terminal or your own code.",
-    shows: "the home page with the desktop, mobile, terminal and SDK product cards, at an angle",
+    description: "The open source coding agent for your desktop, the terminal, your phone and your own code.",
+    shows: "the home page with the desktop, terminal, mobile and SDK product cards, at an angle",
     shot: angled(`${stills}/home.jpg`, [290, 20, 1150, 860], 470),
   },
   {
     path: "/product",
     title: "Product",
-    description: "One agent on your desktop, your phone, the terminal and in your own code.",
+    description: "One agent on your desktop, the terminal, your phone and in your own code.",
     shows: "the product page's grid of product cards, at an angle",
     shot: angled(`${stills}/product.jpg`, [290, 40, 1150, 860], 470),
   },
@@ -79,7 +88,7 @@ const cards: Card[] = [
   {
     path: "/mobile",
     title: "Mobile",
-    description: "Start, steer and approve your coding sessions from your phone.",
+    description: "Start and steer your coding sessions from your phone.",
     shows: "the mobile app's dotted voice orb",
     shot: "orb",
   },
@@ -98,13 +107,6 @@ const cards: Card[] = [
     shot: angled(`${covers}/sdk.webp`, [100, 420, 964, 440], 300),
   },
   {
-    path: "/ide",
-    title: "IDE extensions",
-    description: "Open OpenCode in VS Code, Cursor, Windsurf, Zed and JetBrains IDEs.",
-    shows: "the OpenCode terminal UI that the extensions open beside your code, at an angle",
-    shot: angled("public/product-videos/heroes/terminal-landscape-dark.webp", [430, 380, 1100, 560], 270),
-  },
-  {
     path: "/mini",
     title: "Mini",
     description: "A minimal terminal interface. Replies print into your own scrollback.",
@@ -112,7 +114,7 @@ const cards: Card[] = [
     shot: angled(`${covers}/mini.webp`, [250, 540, 680, 260], 150),
   },
   {
-    path: "/extensions/browse",
+    path: "/product/browse",
     title: "Browse",
     description: "Let your agents use your real browser, with your tabs and logins.",
     shows: "the desktop app setting up the Browse extension, at an angle",
@@ -202,8 +204,33 @@ const fonts = [
 ]
 
 await mkdir(out, { recursive: true })
-const manifest: Record<string, { src: string; alt: string }> = {}
-for (const card of cards) {
+const manifest: Record<string, OgEntry> = {}
+const studio = await readStudio()
+const studioBase = studio?.base?.replace(/\/+$/, "") ?? "/og"
+for (const [page, entry] of Object.entries(studio?.cards ?? {})) {
+  if (!studio?.base) {
+    const files = [entry.image, entry.video, ...Object.values(entry.locales ?? {}).map((l) => l.image)].filter(
+      (file): file is string => Boolean(file),
+    )
+    await Promise.all(files.map((file) => Bun.write(path.join(out, file), Bun.file(path.join(root, STUDIO, file)))))
+  }
+  manifest[page] = {
+    src: `${studioBase}/${entry.image}`,
+    alt: entry.alt,
+    ...(entry.video ? { video: `${studioBase}/${entry.video}` } : {}),
+    ...(entry.locales
+      ? {
+          locales: Object.fromEntries(
+            Object.entries(entry.locales).map(([locale, l]) => [
+              locale,
+              { src: `${studioBase}/${l.image}`, alt: l.alt },
+            ]),
+          ),
+        }
+      : {}),
+  }
+}
+for (const card of cards.filter((card) => !manifest[card.path])) {
   await checkDescription(card)
   const image = card.shot === "orb" ? await orb() : await project(card.shot)
   const svg = await satori(plate(card, image), { width: W, height: H, fonts })
@@ -216,12 +243,34 @@ for (const card of cards) {
     alt: `OpenCode link card: “${card.title}” and “${card.description}” beside ${card.shows}.`,
   }
 }
-const keep = new Set(Object.values(manifest).map((card) => path.basename(card.src)))
+const keep = new Set(
+  Object.values(manifest).flatMap((card) =>
+    [card.src, card.video, ...Object.values(card.locales ?? {}).map((l) => l.src)]
+      .filter((src): src is string => Boolean(src))
+      .map((src) => path.basename(src)),
+  ),
+)
 await Promise.all(
   (await readdir(out)).filter((file) => !keep.has(file)).map((file) => rm(path.join(out, file), { force: true })),
 )
 await Bun.write(path.join(root, "src/lib/og-images.json"), JSON.stringify(manifest, null, 2) + "\n")
-console.log(`og: ${cards.length} cards in public/og`)
+console.log(
+  `og: ${Object.keys(manifest).length} cards (${Object.keys(studio?.cards ?? {}).length} from OG Studio${studio?.base ? ` at ${studioBase}` : ""})`,
+)
+
+type OgEntry = { src: string; alt: string; video?: string; locales?: Record<string, { src: string; alt: string }> }
+
+type Studio = {
+  /** Version 2: where the files are served (the files bucket's /files/site/og). */
+  base?: string
+  cards: Record<string, { image: string; alt: string; video?: string; locales?: Record<string, { image: string; alt: string }> }>
+}
+
+async function readStudio() {
+  const file = Bun.file(path.join(root, STUDIO, "manifest.json"))
+  if (!(await file.exists())) return undefined
+  return (await file.json()) as Studio
+}
 
 function plate(card: Card, image: string) {
   const size = titleSize(card.title)

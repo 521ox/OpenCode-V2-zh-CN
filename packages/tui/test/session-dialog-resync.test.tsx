@@ -52,7 +52,7 @@ async function openDialogThenResync(target: string, dialog: string) {
   await using setup = await createAppFixture({
     width: 112,
     height: 34,
-    config: { locale: "en", animations: false, tabs: { enabled: false } },
+    config: { locale: "en", animations: false, session: { verbosity: "medium" }, tabs: { enabled: false } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })

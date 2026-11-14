@@ -49,6 +49,7 @@ const it = testEffect(
     ),
     Mcp.node.replace(
       Layer.mock(Mcp.Service, {
+        awaitStartup: Effect.void,
         tools: () =>
           Effect.succeed(
             ["visible", "restricted"].map((server) => ({

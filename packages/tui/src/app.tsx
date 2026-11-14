@@ -1176,7 +1176,7 @@ function App() {
         name: "docs.open",
         title: t("main.command.docs"),
         run: () => {
-          openUrl("https://opencode.ai/v2/docs").catch(() => {})
+          openUrl("https://opencode.ai/docs").catch(() => {})
           dialog.clear()
         },
         category: t("main.group.system"),

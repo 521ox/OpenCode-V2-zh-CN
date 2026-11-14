@@ -1,7 +1,5 @@
 import {
-  acpDocs,
   androidSoon,
-  extensions,
   installs,
   mobileStores,
   sdkDocs,
@@ -48,32 +46,14 @@ export function downloadContent(t: Translate, route: (path: string) => string) {
         href: v1DocsUrl("/ide/"),
       })),
     },
-    integrations: {
-      title: "Integrations",
-      items: [
-        // One line each, from the GitHub and GitLab docs.
-        {
-          id: "github",
-          label: "GitHub",
-          body: "Use OpenCode in GitHub Actions.",
-          href: v1DocsUrl("/github/"),
-        },
-        {
-          id: "gitlab",
-          label: "GitLab",
-          body: "Use OpenCode in GitLab CI/CD or Duo.",
-          href: v1DocsUrl("/gitlab/"),
-        },
-      ],
-    },
     actions: { download: t("download.action.download"), install: t("download.action.install") },
     faq: homeFaq(t, route),
   }
 }
 
 /**
- * The download sections. `apps: false` leaves out Desktop, Mobile and
- * Terminal, as at the bottom of /product.
+ * The download sections. `apps: false` leaves out Desktop, Terminal and
+ * Mobile, as at the bottom of /product.
  */
 export function downloadSectionsMarkdown(
   context: MarkdownContext,
@@ -84,8 +64,6 @@ export function downloadSectionsMarkdown(
     options?.apps !== false && downloadAppsMarkdown(context),
     options?.editors !== false && `## ${content.extensions.title}`,
     options?.editors !== false && content.extensions.items.map((item) => `- ${link(item.label, item.href)}`).join("\n"),
-    `## ${content.integrations.title}`,
-    content.integrations.items.map((item) => `- ${link(item.label, item.href)}: ${item.body}`).join("\n"),
     options?.beforeFaq,
     `## ${content.faq.title}`,
     ...content.faq.items.map((item) => blocks(`### ${item.question}`, richToMarkdown(item.answer)).trimEnd()),
@@ -114,36 +92,22 @@ export function productDownloads(slug: PageSlug, route: (path: string) => string
         ? { ...none, commands: installs }
         : slug === "sdk"
           ? { ...none, commands: sdkInstalls, more: { label: "Read the SDK docs", href: route(sdkDocs) } }
-          : slug === "ide"
+          : slug === "mini"
             ? {
                 ...none,
-                lead: "Run opencode in your editor's integrated terminal and the extension installs itself, or install it yourself.",
-                links: [
-                  { label: "VS Code Marketplace", href: extensions.href, external: true },
-                  {
-                    label: "Open VSX (Cursor, Windsurf, VSCodium)",
-                    href: "https://open-vsx.org/extension/sst-dev/opencode",
-                    external: true,
-                  },
-                ],
-                more: { label: "Set up Zed, JetBrains IDEs and other ACP editors", href: route(acpDocs) },
+                lead: "Mini comes with the OpenCode CLI. Install it with any of these, then run opencode mini.",
+                commands: [...installs, { id: "run", command: "opencode mini" }],
               }
-            : slug === "mini"
-              ? {
-                  ...none,
-                  lead: "Mini comes with the OpenCode CLI. Install it with any of these, then run opencode mini.",
-                  commands: [...installs, { id: "run", command: "opencode mini" }],
-                }
-              : none
+            : none
   return result
 }
 
-/** A product page's Download section as Markdown. */
+/** A product page's Download section (Install on the Terminal page) as Markdown. */
 export function productDownloadMarkdown(slug: PageSlug, context: MarkdownContext) {
   const content = downloadContent(context.t, context.route)
   const details = productDownloads(slug, context.route)
   return blocks(
-    "## Download",
+    slug === "terminal" ? "## Install" : "## Download",
     details.lead,
     slug === "desktop" &&
       blocks(
@@ -167,17 +131,17 @@ export function storeMarkdown(store: { label: string; device: string; href: stri
   return `${link(store.label, store.href)} (${store.device})`
 }
 
-/** The Desktop, Mobile and Terminal download sections. */
+/** The Desktop, Terminal and Mobile download sections. */
 function downloadAppsMarkdown(context: MarkdownContext) {
   const content = downloadContent(context.t, context.route)
   return blocks(
     `## ${content.desktop.title}`,
     content.desktop.builds.map((build) => `- ${link(build.label, build.href)}`).join("\n"),
     codeFence("bash", content.desktop.install.command),
-    `## ${content.mobile.title}`,
-    content.mobile.stores.map((store) => `- ${storeMarkdown(store)}`).join("\n"),
     `## ${content.terminal.title}`,
     codeFence("bash", content.terminal.installs.map((item) => `# ${item.id}\n${item.command}`).join("\n\n")),
+    `## ${content.mobile.title}`,
+    content.mobile.stores.map((store) => `- ${storeMarkdown(store)}`).join("\n"),
   ).trimEnd()
 }
 

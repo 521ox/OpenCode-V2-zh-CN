@@ -3,14 +3,12 @@ import "./index.css"
 import "~/component/site/hero-title.css"
 import { rollsByCharacter, titleCells } from "~/component/site/hero-title"
 import { Title, Meta } from "@solidjs/meta"
-import { createAsync } from "@solidjs/router"
 import {
   createEffect,
   createMemo,
   createSignal,
   createUniqueId,
   For,
-  Index,
   lazy,
   on,
   onCleanup,
@@ -20,11 +18,11 @@ import {
   Suspense,
   Switch,
 } from "solid-js"
-import { Faq } from "~/component/faq"
 import { ConsoleField } from "~/component/site/console-field"
 import { ChevronRight, ExternalArrow } from "~/component/site/icons"
 import { LogoWall } from "~/component/site/logo-wall"
-import { createWash, revealMotion, washStartTime, washStep } from "~/component/site/reveal"
+import { revealMotion, washStartTime, washStep } from "~/component/site/reveal"
+import { createWash } from "~/component/site/use-wash"
 import { OpenSourceFork } from "~/component/site/open-source-fork"
 import { OpenSourceProof } from "~/component/site/open-source-proof"
 import { ConsoleWidget } from "~/component/site/console-widget"
@@ -35,21 +33,22 @@ import {
   ProductCarouselSkeleton,
   useDevicePlatform,
 } from "~/component/site/products"
+import ProductsArrows from "~/component/site/products-arrows"
 import { ProviderLogos } from "~/component/site/provider-logos"
 import { PhoneFeatures } from "~/component/site/phone-features"
 import { byos } from "~/lib/byos"
 import { localize, useArea } from "~/i18n/content"
 import { announcementsSource } from "~/i18n/content/areas/announcements"
 import "~/component/site/byos.css"
+import { ByosOptionLeads, ByosOptions } from "~/component/site/byos-options"
 import { getStarted } from "~/lib/get-started"
 import "~/component/site/get-started.css"
-import { SignupSection } from "~/component/site/signup"
 import { installs } from "~/component/site/product-data"
 import { isMobile } from "~/lib/platform"
 import { LocaleLinks } from "~/component/locale-links"
 import { ShareMeta } from "~/component/share-meta"
 import { ogImage } from "~/lib/og"
-import { faqData, JsonLd, organizationData, softwareData, websiteData } from "~/component/structured-data"
+import { JsonLd, organizationData, softwareData, websiteData } from "~/component/structured-data"
 import { Rich } from "~/component/site/rich-text"
 import { homeOrderDefaultCss, homeOrderScript, homeOrderStyleId, useHomeOrder } from "~/component/site/home-order"
 import { designCopy, designEditing } from "~/component/site/design-copy"
@@ -63,25 +62,32 @@ import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 import { homeContent, linkPhrases } from "~/lib/home-content"
 import { tag } from "~/lib/language"
-import { homeMarkdown } from "~/lib/home-markdown"
 import { repoStats, type RepoStats } from "~/lib/github"
+import { pageData } from "~/lib/page-data"
 import { inlineKey } from "~/lib/direction"
 import { copyOnClick } from "~/lib/clipboard"
+import { spinReel } from "~/component/site/slot-stat"
 
+// Settings › Hero text and Stats pick these in development; production shows the static title and
+// the slot stats, so the rolling chunk isn't built.
+const HeroTitle = import.meta.env.DEV
+  ? lazy(() => import("~/component/site/rolling").then((module) => ({ default: module.HeroTitle })))
+  : () => undefined
+const RollingStat = import.meta.env.DEV
+  ? lazy(() => import("~/component/site/rolling").then((module) => ({ default: module.RollingStat })))
+  : () => undefined
 // Only rendered inside the settings panel, so it loads with it.
 // Settings rows are a development tool (component/site/settings-panel.tsx), left out of production.
-const HeroTitle = lazy(() => import("~/component/site/rolling").then((module) => ({ default: module.HeroTitle })))
-const RollingStat = lazy(() => import("~/component/site/rolling").then((module) => ({ default: module.RollingStat })))
 const PageSettings = import.meta.env.DEV ? lazy(() => import("~/component/site/page-settings")) : () => undefined
 
 export default function Home() {
   const i18n = useI18n()
   const language = useLanguage()
-  const markdown = useMarkdown("/", homeMarkdown)
+  const markdown = useMarkdown("/", (context, pages) => pages.homeMarkdown(context))
   useHomeOrder()
   const [statsVisible, setStatsVisible] = createSignal(false)
   // Live repo numbers (lib/github.ts), streamed in under the config's numbers.
-  const repo = createAsync(() => repoStats())
+  const repo = pageData(() => repoStats())
 
   const heroVariant = () => siteSettings.hero
   // Console layout "block" is the whole section, so it sets the panel option and the name on the
@@ -101,11 +107,11 @@ export default function Home() {
   const subtitleParts = () => designCopy("home.hero.subtitle", content().hero.subtitle.join("\n")).split("\n")
 
   // The open source numbers start as they approach the window (a fifth of a window early), so they
-  // are already spinning when they come into view; the avatars' wash follows once the wall itself is
-  // in view, never before the numbers. Already on screen at load, they start 300ms after the page's
-  // code runs. With reduced motion the numbers simply show. The stats render twice when the live
-  // numbers stream in after the page (first with the config's numbers), so a second one joins a
-  // start already set.
+  // are already spinning when they come into view; the avatars' wash follows once the wall itself
+  // is in view, never before the numbers (on a static page, src/client/islands/home.ts). Already on
+  // screen at load, they start 300ms after the page's code runs. With reduced motion the numbers
+  // simply show. The stats render twice when the live numbers stream in after the page (first with
+  // the config's numbers), so a second one joins a start already set.
   const [openSourceStart, setOpenSourceStart] = createSignal<number>()
   const observeStats = (element: HTMLDListElement) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setStatsVisible(true)
@@ -218,7 +224,6 @@ export default function Home() {
           operatingSystem: "macOS, Windows, Linux",
         })}
       />
-      <JsonLd data={faqData(content().faq.items)} />
 
       {/* The default section order from the server; a saved one (Design mode, development only)
           replaces it before the sections paint. */}
@@ -228,9 +233,11 @@ export default function Home() {
           card width): here, ahead of the hero, as the carousel's own copy of these rules only arrives
           with the carousel, and the hero would otherwise resize once it has painted. */}
       <style>{carouselCss()}</style>
-      <Announcement />
+      {/* Production keeps the announcement off (Settings › Announcement), so only development renders it. */}
+      {import.meta.env.DEV && <Announcement />}
       <section
         data-component="hero"
+        data-section="hero"
         data-design="hero heroTitleSize heroText heroInstall homeAnnouncement"
         data-variant={heroVariant()}
         data-title-size={siteSettings.heroTitleSize}
@@ -255,13 +262,19 @@ export default function Home() {
           <span>{subtitleParts()[1] ?? ""}</span>
         </p>
         {/* Every Hero install option renders; the site root's data-hero-install (set before first
-            paint for a saved value) shows the chosen one, so nothing appears or goes after load. */}
-        <HeroInstall mode="line" />
-        <HeroInstall mode="tabs" />
+            paint for a saved value) shows the chosen one, so nothing appears or goes after load.
+            Production renders only the default's (script/fold-settings.ts). */}
+        <Show when={import.meta.env.DEV || siteSettings.heroInstall === "line"}>
+          <HeroInstall mode="line" />
+        </Show>
+        <Show when={import.meta.env.DEV || siteSettings.heroInstall === "tabs"}>
+          <HeroInstall mode="tabs" />
+        </Show>
       </section>
 
-      {/* The carousel's frame until the carousel itself has streamed in (products.tsx). */}
-      <ProductCarouselSkeleton />
+      {/* The carousel's frame until the carousel itself has streamed in (products.tsx), on the
+          development server: production renders the page in one piece (src/static/render.tsx). */}
+      {import.meta.env.DEV && <ProductCarouselSkeleton />}
 
       <Show when={siteSettings.logoWall !== "off"}>
         <Show when={siteSettings.logoLayout === "section"} fallback={logoWall()}>
@@ -278,7 +291,25 @@ export default function Home() {
         </Show>
       </Show>
 
-      <ProductCarousel header={<InstallRow />} />
+      <ProductCarousel
+        header={
+          <Show
+            when={
+              import.meta.env.DEV ||
+              siteSettings.heroInstall === "above carousel" ||
+              siteSettings.heroInstall === "agent only"
+            }
+          >
+            <InstallRow />
+          </Show>
+        }
+        // A mouse wheel can't scroll the cards sideways, so a fine pointer gets arrows.
+        arrows={<ProductsArrows track="products-track" />}
+      />
+      {/* Before first paint: where the carousel's cards (or its skeleton's) start on the page, so on
+          phones a card runs down to the bottom of the small viewport (products.css) and never past
+          it. Again on resize. */}
+      <script innerHTML={cardTopScript} />
 
       <section
         data-component="block"
@@ -297,7 +328,9 @@ export default function Home() {
             </span>{" "}
             <Rich value={content().what.lead.slice(1)} />
           </p>
-          <ProviderLogos />
+          <Show when={import.meta.env.DEV || siteSettings.providerLogos !== "none"}>
+            <ProviderLogos />
+          </Show>
           <ul id="home-features" data-component="features">
             <For each={content().what.features}>
               {(feature) => (
@@ -406,7 +439,9 @@ export default function Home() {
             </Show>
           </Suspense>
         </div>
-        <OpenSourceFork />
+        <Show when={import.meta.env.DEV || siteSettings.ossVariant === "fork"}>
+          <OpenSourceFork />
+        </Show>
       </section>
 
       <Show when={siteSettings.ossProof === "section"}>
@@ -424,55 +459,6 @@ export default function Home() {
           </div>
         </section>
       </Show>
-
-      <section
-        data-component="block"
-        data-section="privacy"
-        data-design="privacyColumns spacer spacerLength spacerCount spacerStartDash spacerStartGap spacerCurve ditherHeight ditherOrientation ditherDirection ditherLength ditherPixel ditherPattern ditherDensity ditherOpacity ditherCurve ditherLine"
-        data-columns={siteSettings.privacyColumns.charAt(0)}
-      >
-        <h2 data-slot="label" data-design-copy="home.privacy.title">
-          {designCopy("home.privacy.title", content().privacy.title)}
-        </h2>
-        <div data-slot="body">
-          <p data-slot="lead" data-design-copy="home.privacy.body">
-            <Rich value={richCopy("home.privacy.body", content().privacy.body, content().copyLinks)} />
-          </p>
-        </div>
-      </section>
-
-      <section
-        data-component="block"
-        data-section="faq"
-        data-design="faqColumns spacer spacerLength spacerCount spacerStartDash spacerStartGap spacerCurve ditherHeight ditherOrientation ditherDirection ditherLength ditherPixel ditherPattern ditherDensity ditherOpacity ditherCurve ditherLine"
-        data-columns={siteSettings.faqColumns.charAt(0)}
-      >
-        <h2 data-slot="label">{content().faq.title}</h2>
-        <div data-slot="body">
-          <ul data-component="faq">
-            <For each={content().faq.items}>
-              {(item) => (
-                <li>
-                  <Faq question={item.question}>
-                    <Show
-                      when={"copy" in item && item.copy ? (item.copy as CopyId) : undefined}
-                      fallback={<Rich value={item.answer} />}
-                    >
-                      {(copy) => (
-                        <span data-design-copy={copy()}>
-                          <Rich value={richCopy(copy(), item.answer, content().copyLinks)} />
-                        </span>
-                      )}
-                    </Show>
-                  </Faq>
-                </li>
-              )}
-            </For>
-          </ul>
-        </div>
-      </section>
-
-      <SignupSection />
 
       <section
         data-component="block"
@@ -533,7 +519,8 @@ export default function Home() {
  * Settings › Announcement: a "New" bar level with the logo, over the hero's three card columns
  * (in the page's flow on phones). It always renders; the site root's data-home-announcement (set
  * before first paint for a saved value) opens it, and changes animate its height and opacity.
- * ⇧A (or the older ⇧N) toggles it, like ⇧S and ⇧D for Settings and Design mode, except while typing.
+ * On the development server ⇧A (or the older ⇧N) toggles it, like ⇧S and ⇧D for Settings and Design
+ * mode, except while typing.
  */
 function Announcement() {
   const language = useLanguage()
@@ -556,36 +543,47 @@ function Announcement() {
       aria-label={i18n.t("site.announcement.aside")}
     >
       <div data-slot="clip">
-        {/* Both styles render; data-style (set before first paint for a saved value) shows one. */}
-        <p data-slot="line">
-          <span data-slot="new">{i18n.t("home.banner.badge")}</span>{" "}
-          <span data-design-copy="home.announcement">
-            <Show when={item()} fallback={message()}>
-              {(entry) => (
-                <a href={language.route(entry().href)}>
-                  {shown()}
-                  <ChevronRight />
-                </a>
-              )}
-            </Show>
-          </span>
-        </p>
-        <div data-slot="bar">
-          <span data-slot="badge">{i18n.t("home.banner.badge")}</span>
-          <p data-design-copy="home.announcement">
-            <Show when={item()} fallback={message()}>
-              {(entry) => (
-                <>
-                  {local()?.text ?? entry().text}{" "}
+        {/* Both styles render; data-style (set before first paint for a saved value) shows one.
+            Production renders only the default's (script/fold-settings.ts). */}
+        <Show
+          when={
+            import.meta.env.DEV ||
+            siteSettings.announcementStyle === "text" ||
+            siteSettings.announcementStyle === "chip"
+          }
+        >
+          <p data-slot="line">
+            <span data-slot="new">{i18n.t("home.banner.badge")}</span>{" "}
+            <span data-design-copy="home.announcement">
+              <Show when={item()} fallback={message()}>
+                {(entry) => (
                   <a href={language.route(entry().href)}>
-                    {local()?.link ?? entry().link}
+                    {shown()}
                     <ChevronRight />
                   </a>
-                </>
-              )}
-            </Show>
+                )}
+              </Show>
+            </span>
           </p>
-        </div>
+        </Show>
+        <Show when={import.meta.env.DEV || siteSettings.announcementStyle === "bar"}>
+          <div data-slot="bar">
+            <span data-slot="badge">{i18n.t("home.banner.badge")}</span>
+            <p data-design-copy="home.announcement">
+              <Show when={item()} fallback={message()}>
+                {(entry) => (
+                  <>
+                    {local()?.text ?? entry().text}{" "}
+                    <a href={language.route(entry().href)}>
+                      {local()?.link ?? entry().link}
+                      <ChevronRight />
+                    </a>
+                  </>
+                )}
+              </Show>
+            </p>
+          </div>
+        </Show>
       </div>
     </aside>
   )
@@ -679,6 +677,7 @@ function HeroInstall(props: { mode: "line" | "tabs" }) {
  * Terminal card's install menu, and an action that copies an install prompt for a coding agent.
  * Every layout of Settings › Install row style renders; the row's data-style (set before first
  * paint for a saved value) shows the parts that layout uses, so a saved style never moves the page.
+ * Production renders the row only when the default Hero install uses it (script/fold-settings.ts).
  */
 function InstallRow() {
   const i18n = useI18n()
@@ -878,43 +877,21 @@ function SlotStat(props: { value: string; start?: number; stat: number }) {
 }
 
 function SlotDigit(props: { digit: number; start?: number; place: number; stat: number }) {
-  const [reel, setReel] = createSignal([props.digit])
   let strip: HTMLSpanElement | undefined
   createEffect(
     on(
       () => props.start,
       (start) => {
         if (start === undefined || !strip) return
-        // More turns for later digits, so the right of the number spins faster and lands last.
-        const turns = 14 + props.place * 5 + props.stat * 3
-        const digits = [
-          props.digit,
-          ...Array.from({ length: turns }, () => Math.floor(Math.random() * 10)),
-          props.digit,
-        ]
-        setReel(digits)
-        const line = strip.parentElement?.getBoundingClientRect().height ?? 0
-        const animation = strip.animate(
-          [{ transform: "translateY(0)" }, { transform: `translateY(${-(digits.length - 1) * line}px)` }],
-          {
-            duration: 1100,
-            delay: Math.max(0, start - performance.now()) + props.stat * 120 + props.place * 70,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            fill: "both",
-          },
-        )
-        animation.onfinish = () => {
-          setReel([props.digit])
-          animation.cancel()
-        }
-        onCleanup(() => animation.cancel())
+        onCleanup(spinReel(strip, props.digit, props.place, props.stat, start))
       },
     ),
   )
+  // spinReel fills the strip with the reel's cells.
   return (
-    <span data-slot="reel" aria-hidden="true" data-spinning={reel().length > 1 ? "" : undefined}>
+    <span data-slot="reel" aria-hidden="true">
       <span data-slot="strip" ref={strip}>
-        <Index each={reel()}>{(digit) => <span>{digit()}</span>}</Index>
+        <span>{props.digit}</span>
       </span>
     </span>
   )
@@ -972,8 +949,8 @@ function stripTags(html: string) {
  * "Get started", before "Bring your own subs": download, start with the free models, then bring a
  * subscription or use OpenCode Go (lib/get-started.ts). Laid out like the sections below it, with
  * the tools' column settings. Settings › Get started style explores five treatments of the body;
- * every one renders and the section's data-style (set before first paint for a saved value) shows
- * one.
+ * every one renders in development and the section's data-style (set before first paint for a saved
+ * value) shows one; production renders only the default's (script/fold-settings.ts).
  */
 function GetStarted() {
   const i18n = useI18n()
@@ -1024,161 +1001,173 @@ function GetStarted() {
         </p>
 
         {/* "steps": a numbered path, each step with its action. */}
-        <ol data-slot="steps">
-          <For each={content().steps}>
-            {(step, index) => (
-              <li>
-                <span data-slot="number" aria-hidden="true">
-                  {String(index() + 1).padStart(2, "0")}
-                </span>
-                <div data-slot="text">
-                  <h3>{step.title}</h3>
-                  <p>{step.line}</p>
-                </div>
-                <div data-slot="action">
-                  <Switch>
-                    <Match when={index() === 0}>
-                      <ProductAction slug={downloadSlug()} split />
-                    </Match>
-                    <Match when={index() === 1}>
-                      <a href={content().links.free} data-slot="more">
-                        {i18n.t("home.getStarted.freeModels")}
-                        <ChevronRight />
-                      </a>
-                    </Match>
-                    <Match when={index() === 2}>
-                      <a href={content().links.go} data-slot="more">
-                        OpenCode Go
-                        <ChevronRight />
-                      </a>
-                    </Match>
-                  </Switch>
-                </div>
-              </li>
-            )}
-          </For>
-        </ol>
+        <Show when={import.meta.env.DEV || siteSettings.getStartedStyle === "steps"}>
+          <ol data-slot="steps">
+            <For each={content().steps}>
+              {(step, index) => (
+                <li>
+                  <span data-slot="number" aria-hidden="true">
+                    {String(index() + 1).padStart(2, "0")}
+                  </span>
+                  <div data-slot="text">
+                    <h3>{step.title}</h3>
+                    <p>{step.line}</p>
+                  </div>
+                  <div data-slot="action">
+                    <Switch>
+                      <Match when={index() === 0}>
+                        <ProductAction slug={downloadSlug()} split />
+                      </Match>
+                      <Match when={index() === 1}>
+                        <a href={content().links.free} data-slot="more">
+                          {i18n.t("home.getStarted.freeModels")}
+                          <ChevronRight />
+                        </a>
+                      </Match>
+                      <Match when={index() === 2}>
+                        <a href={content().links.go} data-slot="more">
+                          OpenCode Go
+                          <ChevronRight />
+                        </a>
+                      </Match>
+                    </Switch>
+                  </div>
+                </li>
+              )}
+            </For>
+          </ol>
+        </Show>
 
         {/* "ladder": three rungs, free first. */}
-        <ul data-slot="ladder">
-          <li>
-            <a href={content().links.download}>
-              <span data-slot="rung">
-                {i18n.t("home.getStarted.free")}
-                <span data-slot="marker">{i18n.t("home.getStarted.mostPeople")}</span>
-              </span>
-              <span data-slot="detail">{i18n.t("home.getStarted.freeDetail", { model: content().freeModels[0] })}</span>
-              <span data-slot="price">$0</span>
-              <ChevronRight />
-            </a>
-          </li>
-          <li>
-            <a href={content().links.subs}>
-              <span data-slot="rung">{i18n.t("home.getStarted.yours")}</span>
-              <span data-slot="detail">
-                <span data-slot="logos" aria-hidden="true">
-                  <For each={content().subscriptions}>
-                    {(item) => (
-                      <span
-                        data-slot="logo"
-                        style={{ "mask-image": `url(${item.logo})`, "-webkit-mask-image": `url(${item.logo})` }}
-                      />
-                    )}
-                  </For>
+        <Show when={import.meta.env.DEV || siteSettings.getStartedStyle === "ladder"}>
+          <ul data-slot="ladder">
+            <li>
+              <a href={content().links.download}>
+                <span data-slot="rung">
+                  {i18n.t("home.getStarted.free")}
+                  <span data-slot="marker">{i18n.t("home.getStarted.mostPeople")}</span>
                 </span>
-                ChatGPT, Copilot, Claude Code
-              </span>
-              <span data-slot="price">{i18n.t("home.getStarted.yourPlan")}</span>
-              <ChevronRight />
-            </a>
-          </li>
-          <li>
-            <a href={content().links.go}>
-              <span data-slot="rung">OpenCode Go</span>
-              <span data-slot="detail">{i18n.t("home.getStarted.goDetail")}</span>
-              <span data-slot="price">$10 / $40</span>
-              <ChevronRight />
-            </a>
-          </li>
-        </ul>
+                <span data-slot="detail">
+                  {i18n.t("home.getStarted.freeDetail", { model: content().freeModels[0] })}
+                </span>
+                <span data-slot="price">$0</span>
+                <ChevronRight />
+              </a>
+            </li>
+            <li>
+              <a href={content().links.subs}>
+                <span data-slot="rung">{i18n.t("home.getStarted.yours")}</span>
+                <span data-slot="detail">
+                  <span data-slot="logos" aria-hidden="true">
+                    <For each={content().subscriptions}>
+                      {(item) => (
+                        <span
+                          data-slot="logo"
+                          style={{ "mask-image": `url(${item.logo})`, "-webkit-mask-image": `url(${item.logo})` }}
+                        />
+                      )}
+                    </For>
+                  </span>
+                  ChatGPT, Copilot
+                </span>
+                <span data-slot="price">{i18n.t("home.getStarted.yourPlan")}</span>
+                <ChevronRight />
+              </a>
+            </li>
+            <li>
+              <a href={content().links.go}>
+                <span data-slot="rung">OpenCode Go</span>
+                <span data-slot="detail">{i18n.t("home.getStarted.goDetail")}</span>
+                <span data-slot="price">$10 / $40</span>
+                <ChevronRight />
+              </a>
+            </li>
+          </ul>
+        </Show>
 
         {/* "sentence": the whole path in one large sentence, then the download button. */}
-        <div data-slot="sentence">
-          <p>
-            <Rich value={linkPhrases(content().sentence, content().phrases)} />
-          </p>
-          <ProductAction slug={downloadSlug()} split />
-        </div>
+        <Show when={import.meta.env.DEV || siteSettings.getStartedStyle === "sentence"}>
+          <div data-slot="sentence">
+            <p>
+              <Rich value={linkPhrases(content().sentence, content().phrases)} />
+            </p>
+            <ProductAction slug={downloadSlug()} split />
+          </div>
+        </Show>
 
         {/* "terminal": install, run, pick a free model. */}
-        <div data-slot="terminal">
-          <div data-slot="window">
-            <button
-              type="button"
-              data-slot="copy"
-              aria-label={i18n.t("home.install.copyCommand", { command: installs[0].command })}
-              onClick={copy}
-            >
-              <Show when={copied()} fallback={<CopyIcon />}>
-                <CheckIcon />
-              </Show>
-              <span aria-live="polite">{copied() ? i18n.t("site.action.copied") : i18n.t("site.action.copy")}</span>
-            </button>
-            <pre>
-              <code>
-                <span data-slot="input" data-copy-command {...copyOnClick(copy)}>
-                  {installs[0].command}
-                </span>
-                {"\n"}
-                <span data-slot="input">opencode</span>
-                {"\n"}
-                <span data-slot="input">/models</span>
-                {"\n\n"}
-                <span data-slot="output">Select model</span>
-                {"\n"}
-                <span data-slot="output">OpenCode</span>
-                <For each={content().freeModels}>
-                  {(model, index) => (
-                    <>
-                      {"\n"}
-                      <span data-slot={index() === 0 ? "selected" : "option"}>
-                        {`${index() === 0 ? "●" : " "} ${model.padEnd(28)}Free`}
-                      </span>
-                    </>
-                  )}
-                </For>
-              </code>
-            </pre>
+        <Show when={import.meta.env.DEV || siteSettings.getStartedStyle === "terminal"}>
+          <div data-slot="terminal">
+            <div data-slot="window">
+              <button
+                type="button"
+                data-slot="copy"
+                aria-label={i18n.t("home.install.copyCommand", { command: installs[0].command })}
+                onClick={copy}
+              >
+                <Show when={copied()} fallback={<CopyIcon />}>
+                  <CheckIcon />
+                </Show>
+                <span aria-live="polite">{copied() ? i18n.t("site.action.copied") : i18n.t("site.action.copy")}</span>
+              </button>
+              <pre>
+                <code>
+                  <span data-slot="input" data-copy-command {...copyOnClick(copy)}>
+                    {installs[0].command}
+                  </span>
+                  {"\n"}
+                  <span data-slot="input">opencode</span>
+                  {"\n"}
+                  <span data-slot="input">/models</span>
+                  {"\n\n"}
+                  <span data-slot="output">Select model</span>
+                  {"\n"}
+                  <span data-slot="output">OpenCode</span>
+                  <For each={content().freeModels}>
+                    {(model, index) => (
+                      <>
+                        {"\n"}
+                        <span data-slot={index() === 0 ? "selected" : "option"}>
+                          {`${index() === 0 ? "●" : " "} ${model.padEnd(28)}Free`}
+                        </span>
+                      </>
+                    )}
+                  </For>
+                </code>
+              </pre>
+            </div>
+            <p data-slot="caption">{subscriptionLinks()}</p>
           </div>
-          <p data-slot="caption">{subscriptionLinks()}</p>
-        </div>
+        </Show>
 
         {/* "cards": two cells in the tools grid's borders. */}
-        <ul
-          data-component="tools"
-          data-slot="cards"
-          data-grid={siteSettings.toolGrid}
-          aria-label={i18n.t("home.getStarted.waysToStart")}
-        >
-          <li>
-            <a href={content().links.download}>
-              <h3>
-                {i18n.t("home.getStarted.startFree")}
-                <ChevronRight />
-              </h3>
-              <p>{i18n.t("home.getStarted.startFreeBody")}</p>
-            </a>
-          </li>
-          <li>
-            <a href={content().links.go}>
-              <h3>
-                {i18n.t("home.getStarted.goFurther")}
-                <ChevronRight />
-              </h3>
-              <p>{i18n.t("home.getStarted.goFurtherBody")}</p>
-            </a>
-          </li>
-        </ul>
+        <Show when={import.meta.env.DEV || siteSettings.getStartedStyle === "cards"}>
+          <ul
+            data-component="tools"
+            data-slot="cards"
+            data-grid={siteSettings.toolGrid}
+            aria-label={i18n.t("home.getStarted.waysToStart")}
+          >
+            <li>
+              <a href={content().links.download}>
+                <h3>
+                  {i18n.t("home.getStarted.startFree")}
+                  <ChevronRight />
+                </h3>
+                <p>{i18n.t("home.getStarted.startFreeBody")}</p>
+              </a>
+            </li>
+            <li>
+              <a href={content().links.go}>
+                <h3>
+                  {i18n.t("home.getStarted.goFurther")}
+                  <ChevronRight />
+                </h3>
+                <p>{i18n.t("home.getStarted.goFurtherBody")}</p>
+              </a>
+            </li>
+          </ul>
+        </Show>
       </div>
     </section>
   )
@@ -1188,8 +1177,9 @@ function GetStarted() {
  * "Bring your own subs", before "Bring your own tools": log in with a subscription you have, or use
  * an OpenCode plan (lib/byos.ts). Laid out like that section, and the logos are its grid's tiles
  * (logos only, the names as tooltips), so they arrive with the same entrance. Settings ›
- * Subscriptions style explores three arrangements; every one renders and the section's data-style
- * (set before first paint for a saved value) shows one.
+ * Subscriptions style explores three arrangements; every one renders in development and the
+ * section's data-style (set before first paint for a saved value) shows one; production renders only
+ * the default's (script/fold-settings.ts).
  */
 function BringYourOwnSubs() {
   const i18n = useI18n()
@@ -1225,54 +1215,83 @@ function BringYourOwnSubs() {
               )}
             />
           </span>
+          {/* Spelled out so the production build folds it (script/fold-settings.ts). */}
+          <Show
+            when={
+              import.meta.env.DEV ||
+              siteSettings.subsStyle === "A rows" ||
+              siteSettings.subsStyle === "B wall" ||
+              siteSettings.subsStyle === "C names"
+            }
+          >
+            <ByosOptionLeads />
+          </Show>
         </p>
 
         {/* "grid": the providers' grid. */}
-        <div data-slot="grid">{providers()}</div>
+        <Show when={import.meta.env.DEV || siteSettings.subsStyle === "grid"}>
+          <div data-slot="grid">{providers()}</div>
+        </Show>
 
         {/* "split": your subscriptions beside the models in OpenCode's plans. */}
-        <div data-slot="split">
-          <div>
-            <h3>{subs().yours.label}</h3>
-            {yours()}
+        <Show when={import.meta.env.DEV || siteSettings.subsStyle === "split"}>
+          <div data-slot="split">
+            <div>
+              <h3>{subs().yours.label}</h3>
+              {yours()}
+            </div>
+            <div>
+              <h3>{subs().ours.label}</h3>
+              {providers()}
+            </div>
           </div>
-          <div>
-            <h3>{subs().ours.label}</h3>
-            {providers()}
-          </div>
-        </div>
+        </Show>
 
         {/* "tabs": one side at a time, in /brand's badge tabs. */}
-        <div data-slot="tabs">
-          <div data-slot="tab-list" role="tablist" aria-label={i18n.t("site.nav.subscriptions")}>
-            <For each={["yours", "ours"] as const}>
-              {(id) => (
-                <button
-                  type="button"
-                  role="tab"
-                  id={`byos-tab-${id}`}
-                  aria-controls={`byos-panel-${id}`}
-                  aria-selected={tab() === id ? "true" : "false"}
-                  tabIndex={tab() === id ? 0 : -1}
-                  onClick={() => select(id)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
-                    event.preventDefault()
-                    select(id === "yours" ? "ours" : "yours", true)
-                  }}
-                >
-                  {id === "yours" ? subs().yours.label : subs().ours.label}
-                </button>
-              )}
-            </For>
+        <Show when={import.meta.env.DEV || siteSettings.subsStyle === "tabs"}>
+          <div data-slot="tabs">
+            <div data-slot="tab-list" role="tablist" aria-label={i18n.t("site.nav.subscriptions")}>
+              <For each={["yours", "ours"] as const}>
+                {(id) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`byos-tab-${id}`}
+                    aria-controls={`byos-panel-${id}`}
+                    aria-selected={tab() === id ? "true" : "false"}
+                    tabIndex={tab() === id ? 0 : -1}
+                    onClick={() => select(id)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
+                      event.preventDefault()
+                      select(id === "yours" ? "ours" : "yours", true)
+                    }}
+                  >
+                    {id === "yours" ? subs().yours.label : subs().ours.label}
+                  </button>
+                )}
+              </For>
+            </div>
+            <div id="byos-panel-yours" role="tabpanel" aria-labelledby="byos-tab-yours" hidden={tab() !== "yours"}>
+              {yours()}
+            </div>
+            <div id="byos-panel-ours" role="tabpanel" aria-labelledby="byos-tab-ours" hidden={tab() !== "ours"}>
+              {providers()}
+            </div>
           </div>
-          <div id="byos-panel-yours" role="tabpanel" aria-labelledby="byos-tab-yours" hidden={tab() !== "yours"}>
-            {yours()}
-          </div>
-          <div id="byos-panel-ours" role="tabpanel" aria-labelledby="byos-tab-ours" hidden={tab() !== "ours"}>
-            {providers()}
-          </div>
-        </div>
+        </Show>
+
+        {/* A, B and C: showing that OpenCode works with nearly every subscription, provider and model. */}
+        <Show
+          when={
+            import.meta.env.DEV ||
+            siteSettings.subsStyle === "A rows" ||
+            siteSettings.subsStyle === "B wall" ||
+            siteSettings.subsStyle === "C names"
+          }
+        >
+          <ByosOptions />
+        </Show>
       </div>
     </section>
   )
@@ -1281,7 +1300,7 @@ function BringYourOwnSubs() {
 /**
  * "Bring your own tools": a tile per service. With Settings › Tools animation on, the tiles arrive
  * in the shared entrance wash (reveal.ts), diagonally from the top left, the first time the grid
- * scrolls into view. Off by default.
+ * scrolls into view. Off by default. On a static page, src/client/islands/home.ts plays the wash.
  */
 function ToolGrid(props: {
   items: readonly {
@@ -1311,6 +1330,20 @@ function ToolGrid(props: {
     return wash.armed() && style ? { animation: style, vars: revealMotion(style, siteSettings.logoTuning) } : undefined
   }
   createEffect(on([animation, () => siteSettings.toolsStagger], wash.replay, { defer: true }))
+  // The tiles' logos (SVG masks, index.css) load once the grid is within a screen of the window, so
+  // a page doesn't fetch them with its first screen.
+  onMount(() => {
+    const near = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        grid?.setAttribute("data-near", "")
+        near.disconnect()
+      },
+      { rootMargin: "100% 0px" },
+    )
+    if (grid) near.observe(grid)
+    onCleanup(() => near.disconnect())
+  })
 
   return (
     <ul
@@ -1354,7 +1387,7 @@ function ToolGrid(props: {
                           role={props.iconTiles ? "img" : undefined}
                           aria-label={props.iconTiles ? tool.name : undefined}
                           aria-hidden={props.iconTiles ? undefined : "true"}
-                          style={{ "mask-image": `url(${tool.logo})`, "-webkit-mask-image": `url(${tool.logo})` }}
+                          style={{ "--logo": `url(${tool.logo})` }}
                         />
                         {props.iconTiles ? null : tool.name}
                       </>
@@ -1364,8 +1397,7 @@ function ToolGrid(props: {
                       data-slot="wordmark"
                       aria-hidden="true"
                       style={{
-                        "mask-image": `url(${tool.wordmark})`,
-                        "-webkit-mask-image": `url(${tool.wordmark})`,
+                        "--logo": `url(${tool.wordmark})`,
                         ...(tool.metrics ? balanceLogo(tool.metrics) : {}),
                       }}
                     />
@@ -1399,3 +1431,7 @@ function balanceLogo(metrics: { aspect: number; density: number; centerY: number
 function copyColumnsAttribute(copy: "2 columns" | "3 columns", body: "2 columns" | "3 columns") {
   return copy === body ? undefined : copy.charAt(0)
 }
+
+// The top of the first visible carousel card (the skeleton's until the carousel streams in), in
+// page coordinates, as --card-top on the root.
+const cardTopScript = `(()=>{const r=document.documentElement,f=()=>{const m=[...document.querySelectorAll('[data-component="products-skeleton"] [data-slot="media"],[data-component="products"] [data-slot="media"]')].find(e=>e.getClientRects().length&&e.getBoundingClientRect().height);if(m)r.style.setProperty("--card-top",Math.round(m.getBoundingClientRect().top+scrollY)+"px")};f();addEventListener("resize",f)})()`

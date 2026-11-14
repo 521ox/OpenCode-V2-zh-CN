@@ -61,7 +61,12 @@ test("clicking a backfilled thought group toggles it", async () => {
       app: { name: "test", version: "test", channel: "test" },
       server: { endpoint: { url: server.url.toString() } },
       config: {
-        get: async () => ({ locale: "en", animations: false, tabs: { mode: "off" } }),
+        get: async () => ({
+          locale: "en",
+          animations: false,
+          session: { verbosity: "medium" },
+          tabs: { enabled: false },
+        }),
         update: async () => ({}),
       },
       packages: { prepare: async () => ({ directory: "" }) },

@@ -13,6 +13,8 @@ import { Workspace } from "@opencode/core/workspace"
 import { Event } from "@opencode/schema/shell"
 import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { PersistentPty } from "@opencode/core/persistent-pty"
+import { disabledPersistentPtyLayer } from "./fixture/persistent-pty"
 import { hostEnvironmentLayer } from "./fixture/environment"
 import { tempGlobalLayer } from "./fixture/global"
 import { location, tempLocationLayer } from "./fixture/location"
@@ -98,6 +100,7 @@ it.live("eviction makes progress past an already-removed shell", () =>
           Global.node.replace(tempGlobalLayer),
           Config.node.replace(Config.testLayer()),
           Environment.node.replace(environment),
+          PersistentPty.node.replace(disabledPersistentPtyLayer),
         ]),
       ),
     )
@@ -176,6 +179,7 @@ it.live("publishes shell completion only after captured output is complete", () 
           Global.node.replace(tempGlobalLayer),
           Config.node.replace(Config.testLayer()),
           Environment.node.replace(environment),
+          PersistentPty.node.replace(disabledPersistentPtyLayer),
         ]),
       ),
     )

@@ -40,9 +40,9 @@ test("a pending tool does not hide a later tool reusing its call ID in another m
   const rows: SessionRow[] = []
   const blocked = { messageID: "assistant-a", partID: "call-reused" }
   const later = { messageID: "assistant-b", partID: "call-reused" }
-  append(rows, blocked, { type: "tool", name: "read" })
+  append(rows, blocked, { type: "tool", name: "read" }, rows.length, "medium")
   partitionPending(rows, new Set([blocked.partID]))
-  append(rows, later, { type: "tool", name: "read" })
+  append(rows, later, { type: "tool", name: "read" }, rows.length, "medium")
 
   const group = rows[0]
   if (group.type !== "group" || group.kind !== "exploration") throw new Error("Expected exploration group")
@@ -64,7 +64,7 @@ test("execution history and incremental groups retain cross-message identity and
   }))
   const rows: SessionRow[] = []
   refs.forEach((ref) => {
-    append(rows, ref, { type: "tool", name: "direct_exec" })
+    append(rows, ref, { type: "tool", name: "direct_exec" }, rows.length, "medium")
     partitionPending(rows, new Set([ref.partID]))
   })
   expect(rows).toEqual(projectEntries(entries))
@@ -103,7 +103,7 @@ test.each(["text", "reasoning", "read", "shell", "environment_tools", "functions
       },
     ]
     entries.forEach((item) => {
-      if (item.entry.type === "part" && item.part) append(rows, item.entry.ref, item.part)
+      if (item.entry.type === "part" && item.part) append(rows, item.entry.ref, item.part, rows.length, "medium")
     })
     expect(rows).toEqual(projectEntries(entries))
     expect(rows).toHaveLength(3)

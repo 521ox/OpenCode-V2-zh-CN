@@ -16,6 +16,7 @@ import { use } from "./render-context"
 import { generateThinkingSyntax } from "./thinking-syntax"
 import { useI18n } from "../../context/i18n"
 import { canonicalToolName } from "../../util/tool-display"
+import { useSessionLinks } from "../../ui/session-link"
 
 export const INLINE_TOOL_ICON_WIDTH = 2
 
@@ -190,6 +191,7 @@ export function TextPart(props: {
       <box paddingLeft={3} flexShrink={0}>
         {/* Configure custom nodes before parsing; apply content before streaming so completion keeps the final tokens. */}
         <markdown
+          ref={useSessionLinks()}
           syntaxStyle={syntax()}
           renderNode={plugins.markdown()}
           content={props.part.text.trim()}

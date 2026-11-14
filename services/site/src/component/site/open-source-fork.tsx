@@ -3,10 +3,10 @@ import { rich } from "~/i18n/rich"
 import { useI18n } from "~/context/i18n"
 import "./open-source-fork.css"
 import { createSignal, For, onCleanup } from "solid-js"
-import { config } from "~/config"
 import { docsUrl } from "~/lib/docs"
 import { designCopy } from "./design-copy"
-import { createWash, revealMotion } from "./reveal"
+import { revealMotion } from "./reveal"
+import { createWash } from "./use-wash"
 import { siteSettings } from "./settings"
 
 // The steps from CONTRIBUTING.md (Development: Bun 1.3 or newer, `bun install`, `bun dev [directory]`),
@@ -24,17 +24,13 @@ const transcript = [
   { kind: "comment", text: "# runs the CLI and TUI from your fork" },
 ] as const
 
-const commands = transcript
-  .filter((line) => line.kind === "command")
-  .map((line) => line.text)
-  .join("\n")
-
 /**
  * Settings › Open source variant "fork": a "fork it" block under the open source proof. A short
  * terminal transcript of forking and running OpenCode types in, line by line, the first time it
  * scrolls into view (the shared entrance, reveal.ts, in its "type" style; static with reduced
- * motion), beside three things a fork lets you do. It always renders; the section's
- * data-oss-variant (set before first paint from Settings) shows it.
+ * motion), beside three things a fork lets you do. In development it always renders and the
+ * section's data-oss-variant (set before first paint from Settings) shows it; production renders it
+ * only when "fork" is the default (index.tsx, script/fold-settings.ts).
  */
 export function OpenSourceFork() {
   const i18n = useI18n()
@@ -45,7 +41,8 @@ export function OpenSourceFork() {
   onCleanup(() => clearTimeout(timer))
 
   const copy = () => {
-    void navigator.clipboard.writeText(commands).then(() => {
+    const commands = transcript.filter((line) => line.kind === "command").map((line) => line.text)
+    void navigator.clipboard.writeText(commands.join("\n")).then(() => {
       clearTimeout(timer)
       setCopied(true)
       timer = setTimeout(() => setCopied(false), 1500)
@@ -66,6 +63,7 @@ export function OpenSourceFork() {
       </h3>
       <div
         data-slot="terminal"
+        data-funnel-copy="fork"
         ref={terminal}
         data-entrance
         data-mounted={wash.mounted() ? "" : undefined}
@@ -129,6 +127,3 @@ export function OpenSourceFork() {
     </div>
   )
 }
-
-/** "Fork on GitHub", beside "Star on GitHub" in the open source proof (fork variant only). */
-export const forkUrl = `${config.github.repoUrl}/fork`

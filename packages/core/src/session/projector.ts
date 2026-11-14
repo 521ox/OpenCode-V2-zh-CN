@@ -1088,6 +1088,7 @@ const layer = Layer.effectDiscard(
         yield* touch(db, event)
       }),
     )
+    yield* bus.project(SessionEvent.Step.FirstToken, (event) => run(db, event))
     yield* bus.project(SessionEvent.Step.Streamed, (event) => run(db, event))
     yield* bus.project(SessionEvent.Step.Ended, (event) =>
       Effect.gen(function* () {
