@@ -1,4 +1,4 @@
-// W-13 · M-B4 tool-guard 决策逻辑（W-13 仍 [CONTRACT]：需 OLO_AIB_CARD_PATH 身份卡，本环境未加载；R-CC-2 写工具门 [RUNTIME]：r630-10 bun 实测通过）
+// W-13 · M-B4 tool-guard 决策逻辑（W-13 仍 [CONTRACT]：需 OLO_AIB_CARD_PATH 身份卡，本环境未加载；R-CC-2 写工具门机制已落码 + 注入式自测 PASS，尚未翻 [RUNTIME]）
 // T11：白名单外任意命令无卡 fail-closed；T14：身份卡写入零真实身份证号（扫描防御）。
 // R-CC-2（W-57）：写工具须持本 agent 的有效租约，否则 fail-closed 拒写。
 // 纯函数、零 OpenCode 运行时依赖，可由 node --experimental-strip-types 直接执行验证。
@@ -6,7 +6,7 @@ import type { LeaseStatus } from "./lease.ts"
 
 export const OLO_TOOL_GUARD_CONTRACT = "olo-coexist/tool-guard/v1" as const
 
-// R-CC-2：写类工具集合（方案 §20.2 R-CC-2）。运行期接线已由 direct-exec.ts rccAuthorizeBeforeExec 调用（r630-10 bun 实测通过）。
+// R-CC-2：写类工具集合（方案 §20.2 R-CC-2）。运行期接线已由 direct-exec.ts rccAuthorizeBeforeExec 调用（机制落码 + 注入式自测 PASS；尚未翻 [RUNTIME]，r630-10 仅为回退构建机）。
 export const OLO_WRITE_TOOLS = ["write", "edit", "patch", "apply_patch"] as const
 export type WriteTool = (typeof OLO_WRITE_TOOLS)[number]
 
@@ -58,7 +58,7 @@ export function evaluateToolGuard(input: GuardInput): GuardResult {
   return { allow: true, bindingId: input.card.binding_id }
 }
 
-// W-57 · R-CC-2 写工具 fail-closed 前置门（[RUNTIME] · r630-10 bun 运行期实测：非持有者拒写事件已产；运行期接线已落 direct-exec.ts rccAuthorizeBeforeExec）。
+// W-57 · R-CC-2 写工具 fail-closed 前置门（机制落码 + 注入式自测 PASS；尚未翻 [RUNTIME]；运行期接线已落 direct-exec.ts rccAuthorizeBeforeExec）。
 // 判据（方案 §20.2 R-CC-2）：write/edit/patch/apply_patch 一律经本门校验租约；
 // 无租约 / 非持有者 / 租约过期 ⇒ 100% 拒绝且 caller 须落事件。非写工具不在此门约束。
 export interface WriteGuardInput {

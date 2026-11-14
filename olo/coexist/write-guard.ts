@@ -1,11 +1,14 @@
-// W-56/57/58 · R-CC 阶段 3 运行期接线编排（[RUNTIME] · r630-10 AVX2 主机 bun 构建/运行期实测通过）
+// W-56/57/58 · R-CC 阶段 3 运行期接线编排（机制落码 + 注入式自测 39/39 PASS；尚未翻 [RUNTIME]）
 // 将三机制编排为「写工具调用前」单一授权入口，供定制版 OpenCode 扩展在 direct-exec.ts
 // 写路径前调用：① R-CC-1 单写者租约 claim/renew ② R-CC-2 写工具 fail-closed 门
 // ③ R-CC-3 暂存集断言 ④ 事件留痕（租约/越界）。
 // 纯函数式组合 + 注入式事件汇，可由 node --experimental-strip-types 直接验证；
-// 实际调用点（direct-exec.ts 在写前持锁 / pre-commit 调 assertStagingSet / 租约事件落 agents.jsonl）
-// 属 OpenCode 运行时接线：direct-exec.ts 已落 rccAuthorizeBeforeExec（OLO_WRITE_GUARD_PATH 启用、fail-closed）。
-// r630-10（AVX2）上 bun 构建/运行期实测已可产：bun --cwd packages/core check 1,046 文件 0 错 + rcc-runtime-probe 9/9 PASS（R-CC-1/2/3 事件齐），[RUNTIME] 证据齐备（§20.7 DoD 第②项满足）。
+// 实际调用点（direct-exec.ts 在写前持锁 / pre-commit 调 assertStagingSet）。
+// 属 OpenCode 运行时接线：direct-exec.ts 已落 rccAuthorizeBeforeExec（OLO_WRITE_GUARD_PATH 启用；
+// 注意：当前为 opt-in fail-open——env 未设即跳过，非默认 fail-closed，详见账本 §10）。
+// 状态：代码已落码 + 注入式自测通过；运行期实跑验收（方案 §20.7 四项 DoD）尚未达成
+// （账本 v1.62：81 条 0 [RUNTIME]；r630-10 仅为 AVX2 回退构建机，不替代生产门禁）。
+// 事件落盘：默认汇写租约同目录 lease.events.jsonl（非 agents.jsonl），生产串联未接线，详见账本 §10。
 import { claimLease, readLease, type LeaseEventSink, type LeaseStatus } from "./lease.ts"
 import { evaluateWriteToolGuard, type GuardResult, type WriteGuardInput } from "./guard.ts"
 import { assertStagingSet } from "./staging-assert.ts"
