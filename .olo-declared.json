@@ -5,5 +5,6 @@
   "packages/cli/test/",
   "CUSTOMIZATIONS.md",
   "patches/",
+  "packages/core/src/tool/plugin/direct-exec.ts",
   ".olo-declared.json"
 ]

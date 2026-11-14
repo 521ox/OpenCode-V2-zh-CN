@@ -11,6 +11,7 @@ import { FileAccess } from "../../file-access.js"
 import { Location } from "../../location.js"
 import { Permission } from "../../permission.js"
 import type { LeaseEventSink } from "olo-coexist/lease"
+import { resolveRuntimeAgentUid } from "olo-coexist/agent-identity"
 
 const DEFAULT_TIMEOUT_MS = 120_000
 const MAX_TIMEOUT_MS = 600_000
@@ -160,7 +161,7 @@ export const Plugin = {
               if (oloWgPath) {
                 const wg = yield* rccAuthorizeBeforeExec({
                   commandId: valid.id,
-                  agentUid: context.agent,
+                  agentUid: resolveRuntimeAgentUid(),
                   worktree: location.directory,
                   leasePath: oloWgPath,
                   declared: (globalThis.process.env.OLO_WRITE_GUARD_ALLOW ?? "")

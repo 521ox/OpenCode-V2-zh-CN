@@ -8,6 +8,7 @@ import { runScenarios } from "./scripts/rcc-runtime-probe.ts"
 import { FileStore } from "./registry.ts"
 import { loadCard } from "./aib.ts"
 import { UID_RE } from "./agent-uid.ts"
+import { resolveRuntimeAgentUid } from "./agent-identity.ts"
 
 let passed = 0
 let failed = 0
@@ -74,6 +75,16 @@ check("all scenarios pass", res.allPass, res.scenarios)
 {
   const persisted = existsSync(res.leaseEventsJsonl) ? readFileSync(res.leaseEventsJsonl, "utf8") : ""
   check("lease.events.jsonl persisted", persisted.includes("lease_acquire"), { len: persisted.length })
+}
+
+// 8) 稳定身份解析（上游接线）：显式 instance_nonce ⇒ 稳定 + 格式合法 + 与输入 nonce 一致
+{
+  const cfg = { role: "codecustom", machine: "GTX75060", instance_nonce: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
+  const u1 = resolveRuntimeAgentUid(cfg)
+  const u2 = resolveRuntimeAgentUid(cfg)
+  check("resolveRuntimeAgentUid stable across calls", u1 === u2, { u1, u2 })
+  check("resolveRuntimeAgentUid well-formed", UID_RE.test(u1), u1)
+  check("resolveRuntimeAgentUid embeds input nonce", u1 === "agent-codecustom-GTX75060-01ARZ3NDEKTSV4RRFFQ69G5FAV", u1)
 }
 
 console.log(`rcc-runtime-probe.test.ts: ${passed}/${(passed + failed)} PASS${failed > 0 ? " (FAIL: " + fails.join(" | ") + ")" : ""}`)

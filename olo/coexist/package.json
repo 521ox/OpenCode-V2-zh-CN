@@ -27,6 +27,10 @@
     "./write-guard": {
       "types": "./write-guard.ts",
       "default": "./write-guard.ts"
+    },
+    "./agent-identity": {
+      "types": "./agent-identity.ts",
+      "default": "./agent-identity.ts"
     }
   }
 }

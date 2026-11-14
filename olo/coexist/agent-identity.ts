@@ -12,7 +12,7 @@ import {
   type WriteAuthorizationResult,
 } from "./write-guard.ts"
 import { canonical, bindingId, loadCard, type BindingSeed, type BindingCard } from "./aib.ts"
-import { writeFileSync, mkdirSync } from "node:fs"
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { LeaseEventSink } from "./lease.ts"
 
@@ -140,6 +140,47 @@ export function writeLocalCard(
   // 回读校验：证明本地卡满足 aib.ts loadCard 全部约束（含 binding_id 一致性、spiffe_id 恒 null）。
   loadCard(path)
   return card
+}
+
+// ---- 运行时稳定身份解析（上游接线用）----
+// R-CC-1/2 上游接线要求 agent_uid 在 agent 生命周期内稳定（租约归属不可每次调用漂移）。
+// 稳定 instance_nonce 来源优先级：① 显式 partial.instance_nonce ② env OLO_AGENT_INSTANCE（须合法 ULID）
+// ③ 持久化文件 .olo-agent-identity.json（首次生成后落盘，后续复用）④ 以上皆无 ⇒ 生成并持久化。
+const AGENT_IDENTITY_FILE = ".olo-agent-identity.json"
+const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/
+
+function readPersistedNonce(): string | null {
+  const p = join(process.cwd(), AGENT_IDENTITY_FILE)
+  if (existsSync(p)) {
+    try {
+      const v = JSON.parse(readFileSync(p, "utf8"))
+      if (typeof v?.instance_nonce === "string") return v.instance_nonce
+    } catch {
+      /* 忽略损坏文件 */
+    }
+  }
+  return null
+}
+function persistNonce(nonce: string): void {
+  const p = join(process.cwd(), AGENT_IDENTITY_FILE)
+  try {
+    writeFileSync(p, JSON.stringify({ instance_nonce: nonce }, null, 2), "utf8")
+  } catch {
+    /* 写失败不阻断（如只读目录），下次仍重新生成 */
+  }
+}
+
+/** 解析运行时稳定本地 agent_uid（W-35/W-51 格式）；显式 instance_nonce / env 注入时不落盘。 */
+export function resolveRuntimeAgentUid(partial?: Partial<LocalAgentConfig>): string {
+  const role = partial?.role ?? process.env.OLO_AGENT_ROLE ?? "codecustom"
+  const machine = partial?.machine ?? process.env.OLO_AGENT_MACHINE ?? defaultMachine()
+  const envNonce = partial?.instance_nonce ?? process.env.OLO_AGENT_INSTANCE
+  let nonce: string | null = envNonce && ULID_RE.test(envNonce) ? envNonce : readPersistedNonce()
+  if (!nonce) {
+    nonce = newUlid()
+    if (!envNonce) persistNonce(nonce) // 仅未显式提供 nonce 时持久化（config 注入场景不落盘）
+  }
+  return buildAgentUid({ role, machine, ulid: nonce })
 }
 
 export { join }
