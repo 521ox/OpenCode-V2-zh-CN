@@ -199,11 +199,20 @@ function extractUriSans(sanValue: Buffer): string[] {
   return uris
 }
 
+/** 拆分 PEM 证书 bundle（支持真实 SPIRE 的 root+intermediate 多证书链）。 */
+function splitPemCerts(pem: string): string[] {
+  return pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) ?? []
+}
+
 export function verifySpiffeAnchorX509(spiffe_id: string, anchor: SpiffeAnchor): boolean {
   try {
     const svid = new X509Certificate(anchor.svidPem)
-    const ca = new X509Certificate(anchor.caBundlePem)
-    const chainOk = svid.verify(ca.publicKey)
+    let chainOk = false
+    for (const c of splitPemCerts(anchor.caBundlePem)) {
+      try {
+        if (svid.verify(new X509Certificate(c).publicKey)) { chainOk = true; break }
+      } catch { /* try next */ }
+    }
     const der = pemToDer(anchor.svidPem)
     const sanValue = findSanExtensionValue(der)
     const uris = sanValue ? extractUriSans(sanValue) : []

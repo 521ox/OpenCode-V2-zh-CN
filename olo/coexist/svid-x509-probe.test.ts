@@ -1,8 +1,9 @@
 // X）SVID 外部锚 dev 实证（node/bun --experimental-strip-types · 与 svid-binding/aib 同风格）
-// 用本地自签 CA 生成的真实 SPIFFE X509-SVID（ca.pem 信任锚 + svid.pem，URI SAN=spiffe://olo/agent/codecustom-dev）
+// 用本地 iot.internal 域自签 CA 生成的真实 SPIFFE X509-SVID（ca.pem 信任锚 + svid.pem，URI SAN=spiffe://iot.internal/agent/codecustom-dev）
 // 验证 W-43/aib 的 SVID 外部锚机制：X509 链校验 + SPIFFE ID 匹配 + 序列号哈希回查。
-// 验证逻辑与 SPIRE 签发的 X509-SVID 完全一致（同一 cert 格式 + 同一 CA bundle），故 SPIRE-ready；
-// 仅 SVID 由本地 CA 签发而非运行期 SPIRE 服务器（G-CV-1 之外 dev 可证缺口的填补）。
+// 运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器，spiffe://olo 不可签发；olo 仅作概念域）；
+// 验证逻辑与运行期真实签发完全一致（同一 cert 格式 + 同一 CA bundle 形态），故 SPIRE-ready；
+// 此处 SVID 由本地 iot.internal 域自签 CA 签发以 dev 实证代码逻辑（真实签发由运行期服务器完成）。
 import { X509Certificate, createHash } from "node:crypto"
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -18,7 +19,7 @@ import { verifySvidX509, emptySvidBinding } from "./svid-binding.ts"
 
 const CA = readFileSync(join(import.meta.dir, "test-fixtures/svid/ca.pem"), "utf8")
 const SVID = readFileSync(join(import.meta.dir, "test-fixtures/svid/svid.pem"), "utf8")
-const SPIFFE_ID = "spiffe://olo/agent/codecustom-dev"
+const SPIFFE_ID = "spiffe://iot.internal/agent/codecustom-dev"
 
 function makeSeed(): BindingSeed {
   return {
@@ -75,7 +76,7 @@ try {
 }
 
 // 2) SPIFFE ID 不匹配 → 拒（防伪造）
-writeCard(cardWrong, { spiffe_id: "spiffe://olo/agent/other" })
+writeCard(cardWrong, { spiffe_id: "spiffe://iot.internal/agent/other" })
 try {
   loadCardWithAnchor(cardWrong, anchor)
   check("mismatched SPIFFE ID rejected", false)
@@ -101,7 +102,7 @@ try {
   check("signed card with verified anchor passes", false, (e as Error).message)
 }
 
-// 5) SVID 外部锚真实 X509 校验（W-43）：serial hash 一致 + 链 + trust_domain=olo
+// 5) SVID 外部锚真实 X509 校验（W-43）：serial hash 一致 + 链 + trust_domain=iot.internal
 {
   const svid = new X509Certificate(SVID)
   const serialHash = createHash("sha256").update(svid.serialNumber, "utf8").digest("hex")
@@ -109,7 +110,7 @@ try {
     ...emptySvidBinding("agent-dev-gtx75060-01ARZ3NDEKTSV4RRFFQ69G5FAV"),
     agent_uid: "agent-x",
     svid_serial_hash: serialHash,
-    svid_trust_domain: "olo",
+    svid_trust_domain: "iot.internal",
   }
   let pass = false
   let msg = ""
@@ -130,7 +131,7 @@ try {
     ...emptySvidBinding("agent-dev-gtx75060-01ARZ3NDEKTSV4RRFFQ69G5FAV"),
     agent_uid: "agent-x",
     svid_serial_hash: "deadbeef",
-    svid_trust_domain: "olo",
+    svid_trust_domain: "iot.internal",
   }
   try {
     verifySvidX509(binding, CA, CA)

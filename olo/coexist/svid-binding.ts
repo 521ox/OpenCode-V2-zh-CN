@@ -154,23 +154,35 @@ export function embedReceiptSvidBinding<T extends Record<string, unknown>>(
   }
 }
 
+/** 拆分 PEM 证书 bundle（支持真实 SPIRE 的 root+intermediate 多证书链）。 */
+function splitPemCerts(pem: string): string[] {
+  return pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) ?? []
+}
+
 /**
- * X）SVID 外部锚真实 X509 校验（SPIRE-ready）：验证 SVID 证书链到 CA bundle，
- * 且其序列号 sha256 与 binding.svid_serial_hash 一致（W-43 UID↔SVID 绑定回查）。
- * 与 SPIRE 签发的 X509-SVID 验证逻辑完全一致；本件用本地自签 CA 生成的 SVID 做 dev 实证。
+ * X）SVID 外部锚真实 X509 校验（SPIRE-ready）：验证 SVID 证书链到 CA bundle
+ * （支持 root+intermediate 多证书），且其序列号 sha256 与 binding.svid_serial_hash 一致
+ * （W-43 UID↔SVID 绑定回查）。运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器，
+ * spiffe://olo 不可签发）；olo 仅作概念域。dev 实证用本地自签 iot.internal CA 生成的 SVID，
+ * 验证逻辑与运行期真实签发完全一致（同一 cert 格式 + 同一 CA bundle 形态）。
  */
 export function verifySvidX509(binding: SvidBinding, svidPem: string, caBundlePem: string): "PASS" {
   const svid = new X509Certificate(svidPem)
-  const ca = new X509Certificate(caBundlePem)
-  if (!svid.verify(ca.publicKey)) {
+  let chainOk = false
+  for (const c of splitPemCerts(caBundlePem)) {
+    try {
+      if (svid.verify(new X509Certificate(c).publicKey)) { chainOk = true; break }
+    } catch { /* try next */ }
+  }
+  if (!chainOk) {
     throw new Error("OLO_SVID_VERIFY_FAILED: X509 chain does not verify against CA bundle")
   }
   const serialHash = createHash("sha256").update(svid.serialNumber, "utf8").digest("hex")
   if (serialHash !== binding.svid_serial_hash) {
     throw new Error("OLO_SVID_VERIFY_FAILED: SVID serial hash mismatch (binding not tied to this SVID)")
   }
-  if (binding.svid_trust_domain !== "olo") {
-    throw new Error("OLO_SVID_TRUST_DOMAIN_MISMATCH: expected olo, got " + String(binding.svid_trust_domain))
+  if (binding.svid_trust_domain !== "iot.internal") {
+    throw new Error("OLO_SVID_TRUST_DOMAIN_MISMATCH: expected iot.internal, got " + String(binding.svid_trust_domain))
   }
   return "PASS"
 }
