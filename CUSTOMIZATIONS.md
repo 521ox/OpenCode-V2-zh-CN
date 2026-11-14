@@ -1,5 +1,24 @@
 # Minimal Custom V2 Distribution
 
+## November 15 synchronization
+
+The frozen official target is `38bd73789a43bf043599d6196af96583228035d7` (2.3.0).
+Selected behavior remains on the current official owners. Subagents now always
+run in the background; official execution reports deliver complete final text and
+the child identity envelope through the parent's inbox. The obsolete synchronous
+completed-tool-result branch and its output-bounding exemption are retired.
+Focused tests cover oversized final conclusions through the real report path.
+No custom lease, execution scheduler or report ledger is introduced.
+
+Plugin crash localization follows the official move to the TUI API owner, without
+retaining a duplicate render boundary. Dialog confirmation/update buttons adopt
+the shared official primitive and keyboard behavior while retaining locale labels
+and visible close controls. Official low transcript verbosity is the default;
+native execution collection visibility and approval order remain supported in
+low, medium and high verbosity. The retired global ManagedPolicy service remains
+absent. Local candidate evidence and current root-check limits are in
+`UPSTREAM_SYNC.md`; review and integration are tracked in PR #8.
+
 ## November 6 synchronization — candidate ready for independent review
 
 The frozen upstream target is official dev `0e655ff2a2b7ee2234a6ebd5e61048b58a188b7c`
@@ -175,8 +194,8 @@ instructions are outside the Main/Mini/run-chrome translation scope.
 
 ### Complete subagent conclusions
 
-Trusted completed subagent results return the complete final assistant text and
-the official child Session identity envelope, not a generic tool preview. Other
+Trusted completed subagent reports deliver the complete final assistant text and
+the official child Session identity envelope through the parent's inbox. Other
 tool outputs retain normal bounds. Child trajectories are not copied into the
 parent. Official Agent/model switching, continuation and notification recovery
 remain unchanged. Provider context limits still apply and are not hidden.
