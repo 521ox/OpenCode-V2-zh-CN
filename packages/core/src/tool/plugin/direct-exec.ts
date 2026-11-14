@@ -22,7 +22,7 @@ const MAX_OUTPUT_BYTES = 65_536
 // T14 身份卡写入零真实身份证号；白名单外任意命令无卡 fail-closed（T11）。
 const OLO_TOOL_GUARD_CONTRACT = "olo-coexist/tool-guard/v1" as const
 
-// W-56/57/58 · R-CC 阶段 3 运行期接线（AVX2 主机 r630-10 上 bun 构建已可用 → [RUNTIME] 证据可产）
+// W-56/57/58 · R-CC 阶段 3 运行期接线（机制落码 + 注入式自测 PASS；尚未翻 [RUNTIME]：r630-10 仅为 AVX2 回退构建机，本机 bun 1.4.4 已可用，不替代生产门禁）
 // 写工具/直执行前授权入口，供 execute 在持锁/授权前调用；OLO_WRITE_GUARD_PATH 配置时启用（fail-closed）。
 // 复刻 W-13 的 env-gated 动态 import 模式：未配置时保持既有行为不拦截。
 export interface RccExecGuardInput {

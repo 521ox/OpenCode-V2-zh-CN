@@ -1,6 +1,6 @@
 // W-58 · R-CC-3 pre-commit 暂存集断言执行器（opt-in，violation 时 fail-closed）
 // 由 .husky/pre-commit 在 commit 前调用。仅当声明路径集已配置时启用；未配置则放行（不影响普通提交）。
-// 复用 olo/coexist 真正的 assertStagingSet；其运行期实测见 rcc-runtime-probe.ts（r630-10 bun 9/9 PASS）。
+// 复用 olo/coexist 真正的 assertStagingSet；其运行期实跑见 rcc-runtime-probe.ts（本机 bun 1.4.4 运行 9/9 PASS；非 [RUNTIME]：pre-commit 链路默认休眠 HUSKY=0，账本 v1.62）
 import { execFileSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"

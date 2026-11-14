@@ -2,7 +2,7 @@
 // per-worktree 租约文件：O_CREAT|O_EXCL 原子创建 + TTL 心跳 + 归属 agent_uid；仅持锁者可写。
 // 判据（方案 §20.2 R-CC-1）：两实例同时申请 ⇒ 恰一个成功，另一个 OLO_LEASE_HELD 并留事件。
 // 失败封闭（fail-closed）：无锁 / 他持锁 / 过期未续约 ⇒ 写操作被拒（由 guard.ts R-CC-2 门执行）。
-// 运行期接线已落：direct-exec.ts 写前持锁（rccAuthorizeBeforeExec，机制落码 + 注入式自测 PASS，尚未翻 [RUNTIME]）；pre-commit 钩子在 commit 前持锁（本轮已接 .husky/pre-commit）。
+// 运行期接线已落码（env-gated · opt-in fail-open，env 未设即跳过，非默认 fail-closed，尚未翻 [RUNTIME]）：direct-exec.ts 写前授权 rccAuthorizeBeforeExec；pre-commit 钩子已接 `.husky/pre-commit` → `staging-precommit.ts` → `assertStagingSet`，但默认休眠（`OLO_DECLARED_PATHS` / `.olo-declared.json` 不存在 ⇒ exit(0)、`HUSKY=0` 整链跳过）。
 import { openSync, writeSync, closeSync, readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, appendFileSync } from "node:fs"
 import { dirname } from "node:path"
 

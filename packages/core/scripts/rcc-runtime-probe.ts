@@ -1,4 +1,4 @@
-// W-56/57/58 · R-CC 运行期实跑探针（在 r630-10 AVX2 主机经 bun 运行，产 [RUNTIME] 证据）
+// W-56/57/58 · R-CC 运行期实跑探针（本机 bun 1.4.4 运行，产运行期实跑证据；非 [RUNTIME] 翻态：fail-open 默认 / 生产接线未做，账本 v1.62：0 [RUNTIME]）
 // 直接调用 production 接线函数 rccAuthorizeBeforeExec（packages/core direct-exec.ts），
 // 经真实 olo-coexist/write-guard 模块解析 + 真实 FS 租约文件，捕获事件并断言 R-CC-1/3。
 import { mkdtempSync } from "node:fs"
