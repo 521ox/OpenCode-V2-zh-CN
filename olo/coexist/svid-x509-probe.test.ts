@@ -1,9 +1,11 @@
 // X）SVID 外部锚 dev 实证（node/bun --experimental-strip-types · 与 svid-binding/aib 同风格）
-// 用本地 iot.internal 域自签 CA 生成的真实 SPIFFE X509-SVID（ca.pem 信任锚 + svid.pem，URI SAN=spiffe://iot.internal/agent/codecustom-dev）
+// 用从 r620-66 归档的 iot.internal 真信任锚（SPIRE ServerCA）签发的真实 SPIFFE X509-SVID
+// （ca.pem 信任锚 + svid.pem，URI SAN=spiffe://iot.internal/agent/codecustom-dev）。
 // 验证 W-43/aib 的 SVID 外部锚机制：X509 链校验 + SPIFFE ID 匹配 + 序列号哈希回查。
-// 运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器，spiffe://olo 不可签发；olo 仅作概念域）；
-// 验证逻辑与运行期真实签发完全一致（同一 cert 格式 + 同一 CA bundle 形态），故 SPIRE-ready；
-// 此处 SVID 由本地 iot.internal 域自签 CA 签发以 dev 实证代码逻辑（真实签发由运行期服务器完成）。
+// 运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器签发，spiffe://olo 不可签发；olo 仅作概念域）；
+// 验证逻辑与运行期真实签发完全一致（同一 cert 格式 + 同一 CA bundle 形态），故 SPIRE-ready。
+// **证书来源唯一正确方法：从 r620-66 获取 iot.internal 真信任锚（已归档于 test-fixtures/svid/）；
+//   禁止在本机另起自签 SPIRE/PKI**（SVID 即该归档真锚签发，非本地自签）。
 import { X509Certificate, createHash } from "node:crypto"
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"

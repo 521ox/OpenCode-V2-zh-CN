@@ -162,9 +162,11 @@ function splitPemCerts(pem: string): string[] {
 /**
  * X）SVID 外部锚真实 X509 校验（SPIRE-ready）：验证 SVID 证书链到 CA bundle
  * （支持 root+intermediate 多证书），且其序列号 sha256 与 binding.svid_serial_hash 一致
- * （W-43 UID↔SVID 绑定回查）。运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器，
- * spiffe://olo 不可签发）；olo 仅作概念域。dev 实证用本地自签 iot.internal CA 生成的 SVID，
- * 验证逻辑与运行期真实签发完全一致（同一 cert 格式 + 同一 CA bundle 形态）。
+ * （W-43 UID↔SVID 绑定回查）。运行期信任域 = iot.internal（r620-66 既有 SPIRE 服务器签发的
+ * 企业信任锚，spiffe://olo 不可签发）；olo 仅作概念域。**证书来源唯一正确方法：从 r620-66
+ * 获取 iot.internal 真信任锚（SPIRE ServerCA，已归档于 test-fixtures/svid/）；禁止在本机另起
+ * 自签 SPIRE/PKI**。dev 实证用该归档真信任锚生成的 SVID，验证逻辑与运行期真实签发完全一致
+ * （同一 cert 格式 + 同一 CA bundle 形态）。
  */
 export function verifySvidX509(binding: SvidBinding, svidPem: string, caBundlePem: string): "PASS" {
   const svid = new X509Certificate(svidPem)
