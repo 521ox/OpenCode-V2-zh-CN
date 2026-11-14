@@ -1,0 +1,9 @@
+[
+  "olo/",
+  ".husky/",
+  "packages/cli/script/",
+  "packages/cli/test/",
+  "CUSTOMIZATIONS.md",
+  "patches/",
+  ".olo-declared.json"
+]

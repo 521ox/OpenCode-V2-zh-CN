@@ -1,16 +1,18 @@
 #!/usr/bin/env sh
-# W-58 · R-CC-3 暂存集断言（olo/coexist staging-assert）。opt-in：
-# 仅当 OLO_DECLARED_PATHS 或仓库根 .olo-declared.json 已配置时启用；未配置则放行（不影响普通提交）。
-# 配置后若检出越界暂存文件 ⇒ fail-closed 拒绝提交并指名越界路径。
+# W-58 · R-CC-3 暂存集断言（olo/coexist staging-assert）。**默认 fail-closed**：
+# 只要 coexist 扩展已安装（CHECKER 存在）即运行校验；声明集经 OLO_DECLARED_PATHS / .olo-declared.json 注入。
+# 未配置声明集时由 staging-precommit.ts 拒绝提交（deny-unknown），防静默放行；配置后若检出越界暂存文件 ⇒ 拒绝并指名越界路径。
+# 2026-11-14：原 opt-in 放行语义翻为 fail-closed（账本 v1.64/v1.65）；钩子不再以「声明集是否配置」为运行门槛，
+# 改为以「coexist 扩展是否存在」为门槛——扩展在则强制校验，扩展不在则本钩子无操作。
 ROOT="$(git rev-parse --show-toplevel)"
 CHECKER="$ROOT/olo/coexist/scripts/staging-precommit.ts"
-if [ -n "$OLO_DECLARED_PATHS" ] || [ -f "$ROOT/.olo-declared.json" ]; then
+if [ -f "$CHECKER" ]; then
   if command -v bun >/dev/null 2>&1; then
     bun "$CHECKER"
   elif command -v node >/dev/null 2>&1; then
     node "$CHECKER"
   else
-    echo "R-CC-3: 已配置声明集却找不到 bun/node 运行器，无法校验暂存集 ⇒ fail-closed" >&2
+    echo "R-CC-3: 找不到 bun/node 运行器，无法校验暂存集 ⇒ fail-closed" >&2
     exit 1
   fi
 fi
