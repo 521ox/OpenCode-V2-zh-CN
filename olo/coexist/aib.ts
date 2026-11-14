@@ -2,6 +2,7 @@
 // IAM Canon C3：AIB 绑定卡是机内 Agent 身份唯一权威；schema 以上游 §11 为设计权威，本件只引用不复制。
 // 层间挂点唯一：卡内 spiffe_id 是机内身份获得密码学锚的唯一字段；SPIRE 未签发时恒 null（禁伪造，R9 全项目口径）。
 import { readFileSync } from "node:fs"
+import { X509Certificate } from "node:crypto"
 
 export type Scope = "repository-local"
 
@@ -44,7 +45,7 @@ export function bindingId(seed: BindingSeed): string {
 }
 
 // B8：每轮加载校验 hash/signature，失败抛错（W-10 落码 · 仍 [CONTRACT] 未编译）
-export function loadCard(file: string): BindingCard {
+export function loadCard(file: string, anchor?: SpiffeAnchor): BindingCard {
   let raw: string
   try {
     raw = readFileSync(file, "utf8")
@@ -91,8 +92,8 @@ export function loadCard(file: string): BindingCard {
 
   const bindingCard = card as unknown as BindingCard
 
-  // 挂点唯一：未签发恒 null 断言（复用已有守卫）
-  assertSpiffeAnchor(bindingCard)
+  // 挂点唯一：未签发恒 null 断言（带 SVID 锚时由 X509 真实校验放行，见 assertSpiffeAnchor）
+  assertSpiffeAnchor(bindingCard, anchor)
 
   // B8：binding_id 须与种子规范化一致（防篡改/漂移）
   const seed: BindingSeed = {
@@ -107,10 +108,10 @@ export function loadCard(file: string): BindingCard {
     throw new Error("OLO_CARD_INVALID: binding_id mismatch (tamper/drift)")
   }
 
-  // B8：签名校验——预签发（key_id/signature 均为 null）放行；已签发须验签。
-  // 验签器随 SPIRE/签署门在阶段 3 落地；本件不伪造验签，显式拒绝未验签卡。
-  if (bindingCard.signature !== null || bindingCard.key_id !== null) {
-    throw new Error("OLO_CARD_UNVERIFIED: signature present but verifier not provisioned (phase 3)")
+  // B8：签名校验——预签发（key_id/signature 均为 null）放行；已签发须由 SVID 锚验签（X）。
+  // 无锚且签名/密钥非空 ≡ 伪造（阶段3 未提供验签器）；有锚且 X509 验过 ≡ 合法已签发卡。
+  if ((bindingCard.signature !== null || bindingCard.key_id !== null) && !anchor) {
+    throw new Error("OLO_CARD_UNVERIFIED: signature present but SVID anchor not provided (unverified)")
   }
 
   return bindingCard
@@ -119,7 +120,108 @@ export function loadCard(file: string): BindingCard {
 export function assertRegistered(seed: BindingSeed): void {
   if (!seed.agent_id) throw new Error("OLO_AGENT_NOT_REGISTERED")
 }
-// spiffe_id 恒 null 断言：未签发即 null，任何非空值须经 SPIRE 签发回填 + 验签回查（阶段 3）
-export function assertSpiffeAnchor(card: BindingCard): void {
-  if (card.spiffe_id !== null) throw new Error("OLO_SPIFFE_NOT_ISSUED: unsigned anchor forbidden")
+// SVID 外部锚（X）：spiffe_id 非空须由真实 SVID（X509 链 + SPIFFE ID 匹配）锚定；否则仍判未签发（防伪造）。
+// 未签发恒 null 红线保留：无锚路径（loadCard 不带 anchor）对非空 spiffe_id 仍抛 OLO_SPIFFE_NOT_ISSUED。
+// 验证逻辑与 SPIRE 签发的 X509-SVID 完全一致（同一 cert 格式 + 同一 CA bundle），故 SPIRE-ready。
+export interface SpiffeAnchor {
+  /** SVID 证书（含链，PEM） */
+  svidPem: string
+  /** 信任锚 CA bundle（PEM） */
+  caBundlePem: string
+}
+// URI SAN 提取：Node/Bun 的 X509Certificate.san 不暴露 URI SAN（只暴露 DNS/IP/email），
+// 且 Bun 无 getExtension。改为直接从 DER 字节解析 SAN 扩展（[6] IMPLICIT IA5String）。
+// 与 SPIRE 签发的 X509-SVID 同一 cert 格式，故 SPIRE-ready。
+function pemToDer(pem: string): Buffer {
+  const base64 = pem
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("-----"))
+    .join("")
+  return Buffer.from(base64, "base64")
+}
+
+function readDerNode(data: Buffer, offset: number): { tag: number; start: number; length: number; next: number } {
+  const tag = data[offset]
+  const lenByte = data[offset + 1]
+  let length: number
+  let valueStart: number
+  if (lenByte < 0x80) {
+    length = lenByte
+    valueStart = offset + 2
+  } else {
+    const numBytes = lenByte & 0x7f
+    length = 0
+    for (let i = 0; i < numBytes; i++) {
+      length = (length << 8) | data[offset + 2 + i]
+    }
+    valueStart = offset + 2 + numBytes
+  }
+  return { tag, start: valueStart, length, next: valueStart + length }
+}
+
+// 在 DER 中定位 SAN 扩展（OID 2.5.29.17 = 06 03 55 1d 11）的 OCTET STRING 值。
+function findSanExtensionValue(der: Buffer): Buffer | null {
+  const needle = [0x06, 0x03, 0x55, 0x1d, 0x11]
+  for (let i = 0; i + needle.length <= der.length; i++) {
+    let match = true
+    for (let j = 0; j < needle.length; j++) {
+      if (der[i + j] !== needle[j]) {
+        match = false
+        break
+      }
+    }
+    if (!match) continue
+    let k = i + needle.length
+    // 可选 critical BOOLEAN（tag 0x01）
+    if (der[k] === 0x01) k += 2
+    // 期望 OCTET STRING（tag 0x04）
+    if (der[k] !== 0x04) continue
+    const node = readDerNode(der, k)
+    return der.subarray(node.start, node.start + node.length)
+  }
+  return null
+}
+
+// 从 SAN 扩展值（GeneralNames SEQUENCE）中提取 URI SAN（[6] IMPLICIT IA5String，tag 0x86）。
+function extractUriSans(sanValue: Buffer): string[] {
+  const seq = readDerNode(sanValue, 0)
+  const uris: string[] = []
+  let off = seq.start
+  const end = seq.start + seq.length
+  while (off < end) {
+    const node = readDerNode(sanValue, off)
+    if (node.tag === 0x86) {
+      uris.push(sanValue.subarray(node.start, node.start + node.length).toString("utf8"))
+    }
+    off = node.next
+  }
+  return uris
+}
+
+export function verifySpiffeAnchorX509(spiffe_id: string, anchor: SpiffeAnchor): boolean {
+  try {
+    const svid = new X509Certificate(anchor.svidPem)
+    const ca = new X509Certificate(anchor.caBundlePem)
+    const chainOk = svid.verify(ca.publicKey)
+    const der = pemToDer(anchor.svidPem)
+    const sanValue = findSanExtensionValue(der)
+    const uris = sanValue ? extractUriSans(sanValue) : []
+    const idOk = uris.includes(spiffe_id)
+    const notExpired = svid.validTo ? new Date(svid.validTo).getTime() > Date.now() : true
+    return Boolean(chainOk) && Boolean(idOk) && Boolean(notExpired)
+  } catch {
+    return false
+  }
+}
+export function assertSpiffeAnchor(card: BindingCard, anchor?: SpiffeAnchor): void {
+  if (card.spiffe_id === null) return
+  if (!anchor) throw new Error("OLO_SPIFFE_NOT_ISSUED: unsigned anchor forbidden (no SVID anchor provided)")
+  if (!verifySpiffeAnchorX509(card.spiffe_id, anchor)) {
+    throw new Error("OLO_SPIFFE_NOT_ISSUED: SVID X509 anchor verification failed (fake anchor)")
+  }
+}
+/** 带 SVID 锚加载：非空 spiffe_id 须经 X509 锚验证通过，否则仍判未签发（防伪造）。 */
+export function loadCardWithAnchor(file: string, anchor: SpiffeAnchor): BindingCard {
+  return loadCard(file, anchor)
 }

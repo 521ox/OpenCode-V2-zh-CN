@@ -5,7 +5,7 @@
 // 边界：本模块只提供可空列 + 签发回填 + 验签回查的纯函数，零 OpenCode 运行时依赖、
 //       零真实 SPIRE 依赖；verifier 由调用方注入（dev/test shim 工程解法）。
 //       真实签发、卡-SVID 双向验证与运行期接线属阶段 3，本模块不冒充已具备。
-import { createHash } from "node:crypto"
+import { createHash, X509Certificate } from "node:crypto"
 import { UID_RE } from "./agent-uid.ts"
 
 /** 已签发 SVID 的调用方凭据；spiffe_id 恒 null（未签发身份不得虚构）。 */
@@ -152,6 +152,27 @@ export function embedReceiptSvidBinding<T extends Record<string, unknown>>(
       svid_trust_domain: binding.svid_trust_domain as string,
     },
   }
+}
+
+/**
+ * X）SVID 外部锚真实 X509 校验（SPIRE-ready）：验证 SVID 证书链到 CA bundle，
+ * 且其序列号 sha256 与 binding.svid_serial_hash 一致（W-43 UID↔SVID 绑定回查）。
+ * 与 SPIRE 签发的 X509-SVID 验证逻辑完全一致；本件用本地自签 CA 生成的 SVID 做 dev 实证。
+ */
+export function verifySvidX509(binding: SvidBinding, svidPem: string, caBundlePem: string): "PASS" {
+  const svid = new X509Certificate(svidPem)
+  const ca = new X509Certificate(caBundlePem)
+  if (!svid.verify(ca.publicKey)) {
+    throw new Error("OLO_SVID_VERIFY_FAILED: X509 chain does not verify against CA bundle")
+  }
+  const serialHash = createHash("sha256").update(svid.serialNumber, "utf8").digest("hex")
+  if (serialHash !== binding.svid_serial_hash) {
+    throw new Error("OLO_SVID_VERIFY_FAILED: SVID serial hash mismatch (binding not tied to this SVID)")
+  }
+  if (binding.svid_trust_domain !== "olo") {
+    throw new Error("OLO_SVID_TRUST_DOMAIN_MISMATCH: expected olo, got " + String(binding.svid_trust_domain))
+  }
+  return "PASS"
 }
 
 /** receipt v2 验签回查：缺投影即 FAIL，UID 与 receipt 既有 agent_uid 不一致即 FAIL。 */
