@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
-import { ToolDefinition } from "@opencode/ai/effect"
+import { Message, ToolDefinition } from "@opencode/ai/effect"
+import { compileRequest } from "@opencode/ai/testing"
 import { Azure, OpenAI, OpenAICompatibleResponses, XAI } from "@opencode/ai/providers"
 import { OpenAIChat, OpenAIResponses } from "@opencode/ai/protocols"
 import { Agent } from "@opencode/schema/agent"
@@ -51,6 +52,51 @@ const policy = (effect: Schema.Schema.Type<typeof Permission.Effect>) =>
   })
 
 describe("hosted search selection", () => {
+  it.effect("compiled tool declarations follow current search policy and preserve other updates", () =>
+    Effect.gen(function* () {
+      const registry = yield* Tool.Service
+      yield* registry.transform((editor) =>
+        editor.add({
+          name: "websearch",
+          description: "Search",
+          options: { codemode: false },
+          input: Schema.Struct({}),
+          execute: () => Effect.die("No tool execution"),
+        }),
+      )
+      const websearch = yield* WebSearch.Service
+      const snapshot = yield* registry.snapshot()
+      const model = SessionRunnerModel.resolved(OpenAI.configure({ apiKey: "fixture" }).responses("fixture"), {
+        capabilities: { tools: true, input: ["text"], output: ["text"] },
+        cost: [],
+        limit: { context: 200_000, output: 32_000 },
+      })
+      const messages = [
+        Message.user("History"),
+        Message.make(Message.tools({ remove: ["web_search"], add: [other] })),
+        Message.make(
+          Message.tools({ add: [OpenAI.webSearch(), ToolDefinition.make({ ...other, name: "inspect" })] }),
+        ),
+      ]
+      for (const state of ["allow", "deny", "disabled"] as const) {
+        if (state === "disabled") yield* websearch.select(false)
+        const permission = yield* policy(state === "deny" ? "deny" : "allow")
+        const builder = yield* SessionModelRequest.Service.pipe(
+          Effect.provide(SessionModelRequest.layer),
+          Effect.provideService(Permission.Service, permission),
+          Effect.provideService(SessionModelTransport.Service, transport),
+        )
+        const prepared = yield* builder.primary({ session, agent, model, tools: snapshot, system: [], messages })
+        const { body } = yield* compileRequest(prepared.request)
+        expect(body.tools).toEqual([
+          expect.objectContaining({ name: "execute" }),
+          ...(state === "allow" ? [{ type: "web_search" }] : []),
+          expect.objectContaining({ name: "read" }),
+          expect.objectContaining({ name: "inspect" }),
+        ])
+      }
+    }),
+  )
   for (const effect of ["allow", "ask", "deny"] as const) {
     it.effect(`${effect} never leaves a duplicate local search`, () =>
       Effect.gen(function* () {

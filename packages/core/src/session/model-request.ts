@@ -360,7 +360,11 @@ export const layer = Layer.effect(
           unsupportedParts(
             shaped.messages.map((message) => {
               const { metadata, ...rest } = message
-              return metadata === undefined ? message : Message.make(rest)
+              return HostedWebSearch.history(
+                metadata === undefined ? message : Message.make(rest),
+                search.hosted,
+                search.replaceLocal,
+              )
             }),
             model.capabilities,
             model.model.provider,
