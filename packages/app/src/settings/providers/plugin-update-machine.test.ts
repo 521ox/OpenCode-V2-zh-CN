@@ -88,13 +88,13 @@ test("a list read before the server reloaded keeps an update's finding until a s
   run.dispatch({ type: "update.succeeded", id: 0 })
   const updated = run.machine.state
 
-  run.dispatch({ type: "list.loaded", ready: false, outdated: { [a]: true } })
-  run.dispatch({ type: "list.loaded", ready: true, outdated: { [a]: true } })
+  run.dispatch({ type: "list.loaded", outdated: {} })
+  run.dispatch({ type: "list.loaded", outdated: { [a]: true } })
 
   expect(run.machine.state).toBe(updated)
   expect(pluginUpdateView(run.machine.state, listed(a, true)).outdated).toBe(false)
 
-  run.dispatch({ type: "list.loaded", ready: true, outdated: { [a]: false } })
+  run.dispatch({ type: "list.loaded", outdated: { [a]: false } })
 
   expect(run.machine.state).not.toBe(updated)
   expect(pluginUpdateView(run.machine.state, listed(a, true)).outdated).toBe(true)

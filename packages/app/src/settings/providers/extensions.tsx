@@ -166,7 +166,6 @@ export const SettingsExtensions: Component<{
         if (current.status !== "ready") return
         dispatchUpdate({
           type: "list.loaded",
-          ready: current.value.ready !== false,
           outdated: packageFlags(current.value.data),
         })
       },
