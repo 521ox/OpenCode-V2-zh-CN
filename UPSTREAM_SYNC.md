@@ -24,9 +24,13 @@ their task-specific no-publication statements do not replace this current PR flo
 
 Issue #9 and PR #10 track the merge of frozen official `64630cfd651fac7cc057c8de689f07f75ade3449`
 into `4f6dcec003b0ee67d8c5f3042427d4ad178a5111`. Merge source
-`12586ce715d6f9b8ac7d9976e4189ced3f1d9e97` was followed by an App fix for reconciling plugin update findings from partial lists. Build source `21177889a3ac3cc6f7e8bc4a67c983fa840b4ec0` produced `2.3.0-custom-lite.20261118.1`,
+`12586ce715d6f9b8ac7d9976e4189ced3f1d9e97` remains in history. The second freeze adds only official
+`ea79f69bcf566aa385570814f8624a5c4fa72d7e` (#64527), bringing the official range to 136 commits.
+All three App files match that commit exactly; the interim fork repair and preceding candidates are superseded.
+The new-designs export dialog translates the destination label and choices while submitting `project` or `temp`.
+Build source `f64217223484af8b24dc42eaa526df6bce7ed5d3` produced `2.3.0-custom-lite.20261118.1`,
 Windows x64 bytecode with embedded WebUI, latest channel, Bun `1.4.4+38afee6c8`.
-Size: 267,936,768 bytes. SHA256: `46759cdb1170094e752a03211738de19e91e1584142eaffb7479c27116504958`.
+Size: 267,937,792 bytes. SHA256: `963190ffe3c4485cb86684bb38d5877412ad26bf695f10a9f333ddf38a419298`.
 Compiled version, Chinese help, native runtime and private service/API/WebUI/MCP smoke passed.
 The accepted November 15 executable imported two synthetic sessions with six messages
 through the private import API. Both the old executable and the candidate cold-read the
