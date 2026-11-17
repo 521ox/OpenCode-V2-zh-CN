@@ -6,6 +6,7 @@ import {
   LLMEvent,
   LanguageModel,
   Message,
+  SystemPart,
   ToolDefinition,
   type LLMRequest,
 } from "@opencode/ai/effect"
@@ -24,6 +25,7 @@ import { SessionEvent } from "@opencode/core/session/event"
 import { SessionHistory } from "@opencode/core/session/history"
 import { SessionMessage } from "@opencode/core/session/message"
 import { SessionModelRequest } from "@opencode/core/session/model-request"
+import { SessionRulesLocation } from "@opencode/core/session/rules-location"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Token } from "@opencode/core/util/token"
 import { SessionProjector } from "@opencode/core/session/projector"
@@ -1055,7 +1057,7 @@ const summaryFixture = Effect.fnUntraced(function* (messages: readonly SessionMe
 })
 
 for (const background of [false, true]) {
-  it.effect(`summary cache prefix uses measured input with old reasoning (background=${background})`, () =>
+  it.effect(`summary preserves shared context using measured input with old reasoning (background=${background})`, () =>
     Effect.gen(function* () {
       const messages = [
         textUser("Earlier question"),
@@ -1078,8 +1080,13 @@ for (const background of [false, true]) {
       if (background) yield* fixture.compaction.precompute(Effect.succeed(fixture.context))
       expect(yield* fixture.run()).toEqual({ status: "completed" })
       expect(requests).toHaveLength(1)
+      const store = yield* SessionStore.Service
+      const rules = yield* store.rulesLocation(fixture.context.session.id)
+      expect(normal.request.system).toEqual([
+        ...requests[0]!.system,
+        SystemPart.make(SessionRulesLocation.render(rules)),
+      ])
       expect(requests[0]).toMatchObject({
-        system: normal.request.system,
         tools: normal.request.tools,
         messages: [...normal.request.messages, Message.user(SessionCompaction.buildPrompt(false))],
         maxTokens: summaryBuffer,
