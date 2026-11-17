@@ -6,7 +6,7 @@ This community-maintained edition of [OpenCode](https://github.com/anomalyco/ope
 
 [Features](#features) · [Download and verify](#downloads) · [Build from source](#build-from-source) · [Contribute](CONTRIBUTING.md)
 
-**[Download the CLI for Windows, macOS or Linux: v2.0.22-zhcn.1](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)** (unsigned prerelease, October 4, 2026). The maintained source is **2.3.0**; its six-platform binaries have not been published.
+**[Download the CLI for Windows, macOS or Linux: v2.3.0-zhcn.1](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.3.0-zhcn.1)** (unsigned prerelease). Both x64 and ARM64 packages are available for each system, built from [this fork’s 2.3.0 source](https://github.com/521ox/OpenCode-V2-zh-CN/commit/6a74bb086c327eecf8c8a7f8c61d1d7878f0fda8).
 
 ## Features
 
