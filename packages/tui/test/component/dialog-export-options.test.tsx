@@ -4,6 +4,7 @@ import { expect, test } from "bun:test"
 import { onMount } from "solid-js"
 import { ConfigProvider } from "../../src/config"
 import { Keymap } from "../../src/context/keymap"
+import { I18nProvider } from "../../src/context/i18n"
 import { ThemeProvider, useTheme } from "../../src/context/theme"
 import { DialogProvider, useDialog } from "../../src/ui/dialog"
 import { DialogExportOptions } from "../../src/ui/dialog-export-options"
@@ -12,27 +13,44 @@ import { emptyThemeSource, tmpdir } from "../fixture/fixture"
 import { TestTuiContexts } from "../fixture/tui-environment"
 import { createTuiResolvedConfig } from "../fixture/tui-runtime"
 
-test("tab and shift+tab move a visible focus through the export options", async () => {
+test.each(["legacy", "zh", "en"] as const)("export options interaction: %s", async (mode) => {
+  const saved: string[] = []
   await using temporary = await tmpdir()
   let theme: ReturnType<ReturnType<typeof useTheme>["surface"]> | undefined
   const app = await testRender(
     () => (
       <TestTuiContexts directory={temporary.path} paths={{ state: temporary.path }}>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <Keymap.Provider>
-              <ToastProvider>
-                <DialogProvider>
-                  {(() => {
-                    theme = useTheme().surface("dialog")
-                    const dialog = useDialog()
-                    onMount(() => dialog.replace(() => <DialogExportOptions defaultThinking={true} />))
-                    return null
-                  })()}
-                </DialogProvider>
-              </ToastProvider>
-            </Keymap.Provider>
-          </ThemeProvider>
+        <ConfigProvider
+          config={createTuiResolvedConfig({
+            locale: mode === "zh" ? "zh" : "en",
+            experimental: { "new-designs": mode !== "legacy" },
+          })}
+        >
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <Keymap.Provider>
+                <ToastProvider>
+                  <DialogProvider>
+                    {(() => {
+                      theme = useTheme().surface("dialog")
+                      const dialog = useDialog()
+                      onMount(() =>
+                        dialog.replace(() => (
+                          <DialogExportOptions
+                            defaultThinking={true}
+                            onConfirm={(options) => {
+                              if (options.action === "export" && options.location) saved.push(options.location)
+                            }}
+                          />
+                        )),
+                      )
+                      return null
+                    })()}
+                  </DialogProvider>
+                </ToastProvider>
+              </Keymap.Provider>
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </TestTuiContexts>
     ),
@@ -49,6 +67,21 @@ test("tab and shift+tab move a visible focus through the export options", async 
 
   try {
     app.renderer.start()
+    if (mode !== "legacy") {
+      await app.waitForFrame(
+        (frame) =>
+          frame.includes(mode === "zh" ? "保存位置" : "Location") &&
+          frame.includes(mode === "zh" ? "当前工作目录" : "project"),
+      )
+      app.mockInput.pressEnter()
+      app.mockInput.pressArrow("down")
+      app.mockInput.pressArrow("right")
+      await app.waitForFrame((frame) => frame.includes(mode === "zh" ? "临时目录" : "temp"))
+      app.mockInput.pressEnter()
+      await app.waitForFrame(() => saved.length === 2)
+      expect(saved).toEqual(["project", "temp"])
+      return
+    }
     await app.waitForFrame((frame) => frame.includes("Copy") && frame.includes("Include tools"))
     // Only the focused field is highlighted; checked fields keep the base label colour.
     expect(span("Markdown")?.fg.equals(focusedField())).toBe(true)

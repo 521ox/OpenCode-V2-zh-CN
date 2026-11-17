@@ -23,7 +23,7 @@ test("Home and End navigate a subagent transcript", async () => {
   await using setup = await createAppFixture({
     width: 100,
     height: 30,
-    config: { animations: false, tabs: { mode: "off" } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" } },
     args: { sessionID: session.id },
     fetch: (url) => {
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })

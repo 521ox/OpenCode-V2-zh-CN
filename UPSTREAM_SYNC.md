@@ -42,6 +42,42 @@ a public release. Documentation-only and other non-sync merges do not qualify.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 18 synchronization — draft candidate
+
+Issue #9 and PR #10 track the merge of frozen official `64630cfd651fac7cc057c8de689f07f75ade3449`
+into `4f6dcec003b0ee67d8c5f3042427d4ad178a5111`. Merge source
+`12586ce715d6f9b8ac7d9976e4189ced3f1d9e97` remains in history. The second freeze adds only official
+`ea79f69bcf566aa385570814f8624a5c4fa72d7e` (#64527), bringing the official range to 136 commits.
+All three App files match that commit exactly; the interim fork repair and preceding candidates are superseded.
+The new-designs export dialog translates the destination label and choices while submitting `project` or `temp`.
+Following independent review, the Core request builder applies the current hosted-search selection to tool declarations throughout the request. Offline compiled-request tests cover allow, deny and explicit disable while preserving the order of other tools. The prior build from `f64217223484af8b24dc42eaa526df6bce7ed5d3` is superseded.
+The bounded re-review rejected the candidate built from `b9602fcca8f0be4c223d25c59363a059a2c07d86`.
+Core now recognizes hosted search across native provider entries. Offline compilation confirmed that
+unselected search is absent while the local query tool and unrelated native tools remain available.
+The corrected candidate has not received independent approval.
+Build source `054e826c020dc48e90c0e8276b20a74631c253db` produced `2.3.0-custom-lite.20261118.1`,
+Windows x64 bytecode with embedded WebUI, latest channel, Bun `1.4.4+38afee6c8`.
+Size: 267,940,864 bytes. SHA256: `8d108254fe6d42be8e0ee7a46ab3bd18dd1b5ebfc65e3d4301908f6630cc3e44`.
+Compiled version, Chinese help, native runtime and private service/API/WebUI/MCP smoke passed.
+The accepted November 15 executable imported two synthetic sessions with six messages
+through the private import API. Both the old executable and the candidate cold-read the
+same default database. Session IDs, titles, ordered messages, legacy checkpoint media
+and start directories survived. All 60 prior migration journal entries were preserved;
+the candidate had 63. This covers completed synthetic history, not live or unfinished sessions.
+
+Frozen installation, Core migration generation and check, and Client generation passed.
+The 46 AI update tests and AI typecheck passed. The protected working-memory part remains
+exclusive to ordinary requests. Foreground and background summary tests compare all shared
+system parts in order; full request prefixes and provider cache hits are not guaranteed.
+The summary and request-boundary suites passed (43 tests). The nested shell fixture delivered
+both reports to the immediate parent, with the same child ID and no second prompt. Separate
+full-page Chinese and English tests clicked the notification heading. Clicking the title after the
+separator was covered on wide and narrow English pages and by the Chinese component routing test.
+
+Windows root check failed on 172 grey findings: the checker matches slash-separated
+CSS exceptions against native paths. Draft checks and unresolved integration findings
+are tracked in PR #10. This build has not been promoted or released.
+
 ## November 15 synchronization — candidate verification
 
 Issue #7 and [PR #8](https://github.com/521ox/OpenCode-V2-zh-CN/pull/8) track the
