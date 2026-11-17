@@ -294,7 +294,7 @@ This does not restore the old heading-to-parent-tool jump behavior.
 - No old complex Session-ID controls, MCP-gesture or parent-tool dual-navigation
   framework. Only the explicitly selected identity, close-control and completion-
   title presentation above are restored.
-- No session-memory plugin or wholesale restoration of the previous fork's release machinery. The separately authorized native release workflow below uses the current build contract.
+- No session-memory plugin or wholesale restoration of the previous fork's release machinery. Native prereleases use the current build contract below.
 - No custom Windows build wrapper or installed-binary replacement.
 - No change to the official updater policy. Installing a custom binary and later
   accepting official updates may replace custom additions; decide release/update
@@ -304,9 +304,9 @@ This does not restore the old heading-to-parent-tool jump behavior.
 
 ### Native GitHub prereleases
 
-`release-custom-cli.yml` is a manual-only workflow for this repository's
-`v2-custom-lite` branch. Release versions follow the current root source version
-plus `-zhcn.N`; the first selected version is `2.0.12-zhcn.1`. Internal executable
+`release-custom-cli.yml` is dispatched by the integration owner on `v2-custom-lite`
+after each accepted upstream sync, as described in the [release procedure](UPSTREAM_SYNC.md#publish-the-sync).
+Release versions follow the source version plus `-zhcn.N`. Internal executable
 names stay `opencode` / `opencode.exe`, with storage channel `latest`, Bun 1.4.4,
 bytecode and the embedded WebUI. The workflow uses native Windows, Linux glibc
 and macOS runners for x64 and ARM64 rather than treating cross-compilation as

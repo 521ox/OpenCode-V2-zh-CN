@@ -14,8 +14,30 @@ implementation agent/session. Inspect newly imported workflows: preserve the for
 checks and official-only guards, and keep release publication manually dispatched.
 Complete required CI, delta-specific checks and applicable independent review,
 then merge the PR with a merge commit. The integration owner may update the local
-delivery branch to that accepted remote commit. Binary building, publishing and
-installed-client activation remain separately authorized actions.
+delivery branch to that accepted remote commit and is responsible for publishing
+its six-platform CLI prerelease. Installed-client activation is separate.
+
+### Publish the sync
+
+Starting with sync #10, authorization for an upstream sync includes one public
+prerelease after its protected merge. A green PR or local Windows build is not
+a public release. Documentation-only and other non-sync merges do not qualify.
+
+1. Take the accepted merge SHA from the sync PR. Dispatch while `v2-custom-lite`
+   points to that SHA, before merging another PR. Use the source version and the
+   next unused `-zhcn.N` revision (increment `N` if the upstream version stayed
+   the same). Check both tags and releases, including drafts. Reconcile an existing
+   run or draft for this sync before retrying; never overwrite a tag or asset.
+2. Set `version` to that release version (without the leading `v`), then run
+   `gh workflow run release-custom-cli.yml --repo 521ox/OpenCode-V2-zh-CN --ref v2-custom-lite -f "version=$version"`.
+   Confirm the run's `headSha` is the accepted merge SHA. If it differs, cancel
+   the run before publication and reconcile the branch; do not release the wrong source.
+3. Link the run in the sync PR. Delivery is complete only when it succeeds and
+   the public prerelease matches that commit and includes all six archives, their
+   six sidecars, `SHA256SUMS` and `release-manifest.json`. If any target or the
+   publish step fails, report **source merged, binaries pending** and link the
+   failed run. Only after publication, link the release in the sync PR and update
+   the download notices in both maintained READMEs through a documentation PR.
 
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
@@ -1647,8 +1669,8 @@ Do not use an implicit `git pull` in the current delivery worktree.
 6. Only after acceptance, fast-forward the custom branch to the integration
    result and create a new immutable local checkpoint tag. Do not move an old
    acceptance tag or rewrite the published checkpoint history to hide a failed sync.
-   Remote push, release publication and real-data activation require separate
-   authority.
+   Follow the current protected PR and [publication procedure](#publish-the-sync)
+   above. Activation against real user data still requires separate authority.
 
 Example starting commands, not executed by this checkpoint:
 
