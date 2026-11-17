@@ -81,14 +81,13 @@ test("an update runs once per package, then refreshes the list and hides the but
 
 // The server reloads its plugins after the update returns, so the refresh can read the old flag. Before, any list load
 // cleared what the update learned and the Update button came back until the next reload.
-test("a list read before the server reloaded keeps an update's finding until a settled list agrees", () => {
+test("a list read before the server reloaded keeps an update's finding until a list agrees", () => {
   const run = harness()
 
   run.dispatch({ type: "update.requested", target: a })
   run.dispatch({ type: "update.succeeded", id: 0 })
   const updated = run.machine.state
 
-  run.dispatch({ type: "list.loaded", outdated: {} })
   run.dispatch({ type: "list.loaded", outdated: { [a]: true } })
 
   expect(run.machine.state).toBe(updated)

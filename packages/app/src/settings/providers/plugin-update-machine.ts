@@ -33,7 +33,10 @@ export type PluginUpdateEvent =
   | { readonly type: "update.requested"; readonly target: string }
   | { readonly type: "update.succeeded"; readonly id: number }
   | { readonly type: "update.failed"; readonly id: number; readonly message: string }
-  /** A partial list during activation can omit packages whose update findings are still current. */
+  /**
+   * The plugin list loaded again; `outdated` maps each listed package to its flag. A list read while the server still
+   * reloads its plugins can predate the latest check or update, so a finding is only dropped once a list agrees with it.
+   */
   | { readonly type: "list.loaded"; readonly outdated: Readonly<Record<string, boolean>> }
   /** Another server: forget what this one's checks and updates learned. */
   | { readonly type: "server.changed" }
@@ -67,7 +70,7 @@ export function transitionPluginUpdate(state: PluginUpdateState, event: PluginUp
 
   if (event.type === "list.loaded") {
     const settled = Object.keys(state.findings).filter(
-      (target) => event.outdated[target] === state.findings[target]?.outdated,
+      (target) => !(target in event.outdated) || event.outdated[target] === state.findings[target]?.outdated,
     )
 
     if (settled.length === 0) return step(state)

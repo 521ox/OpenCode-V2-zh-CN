@@ -164,10 +164,7 @@ export const SettingsExtensions: Component<{
       () => plugins.view(),
       (current) => {
         if (current.status !== "ready") return
-        dispatchUpdate({
-          type: "list.loaded",
-          outdated: packageFlags(current.value.data),
-        })
+        dispatchUpdate({ type: "list.loaded", outdated: packageFlags(current.value.data) })
       },
       { defer: true },
     ),
