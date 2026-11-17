@@ -51,9 +51,13 @@ into `4f6dcec003b0ee67d8c5f3042427d4ad178a5111`. Merge source
 All three App files match that commit exactly; the interim fork repair and preceding candidates are superseded.
 The new-designs export dialog translates the destination label and choices while submitting `project` or `temp`.
 Following independent review, the Core request builder applies the current hosted-search selection to tool declarations throughout the request. Offline compiled-request tests cover allow, deny and explicit disable while preserving the order of other tools. The prior build from `f64217223484af8b24dc42eaa526df6bce7ed5d3` is superseded.
-Build source `b9602fcca8f0be4c223d25c59363a059a2c07d86` produced `2.3.0-custom-lite.20261118.1`,
+The bounded re-review rejected the candidate built from `b9602fcca8f0be4c223d25c59363a059a2c07d86`.
+Core now recognizes hosted search across native provider entries. Offline compilation confirmed that
+unselected search is absent while the local query tool and unrelated native tools remain available.
+The corrected candidate has not received independent approval.
+Build source `054e826c020dc48e90c0e8276b20a74631c253db` produced `2.3.0-custom-lite.20261118.1`,
 Windows x64 bytecode with embedded WebUI, latest channel, Bun `1.4.4+38afee6c8`.
-Size: 267,940,864 bytes. SHA256: `c0402228c68e6c63ef3ffaee75f4b5518c08a215472ef0e77861780284baf78d`.
+Size: 267,940,864 bytes. SHA256: `8d108254fe6d42be8e0ee7a46ab3bd18dd1b5ebfc65e3d4301908f6630cc3e44`.
 Compiled version, Chinese help, native runtime and private service/API/WebUI/MCP smoke passed.
 The accepted November 15 executable imported two synthetic sessions with six messages
 through the private import API. Both the old executable and the candidate cold-read the
