@@ -38,7 +38,7 @@ type Row = "format" | "location" | "thinking" | "tools" | "sanitize"
 
 /** Export options as a list of values, under the "new-designs" experiment: ↑/↓ moves, ←/→ or space changes. */
 function DialogExportOptionsList(props: DialogExportOptionsProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [store, setStore] = createStore({
     format: "markdown" as ExportFormat,
     location: "project" as ExportLocation,
@@ -74,11 +74,16 @@ function DialogExportOptionsList(props: DialogExportOptionsProps) {
       footer: <DialogSelectChoice value={store.format} active={selected() === "format"} />,
     },
     {
-      title: "Location",
+      title: locale() === "zh" ? "保存位置" : "Location",
       value: "location" as Row,
       onSelect: () => change("location"),
       footerOverhang: 2,
-      footer: <DialogSelectChoice value={store.location} active={selected() === "location"} />,
+      footer: (
+        <DialogSelectChoice
+          value={locale() === "zh" ? (store.location === "project" ? "当前工作目录" : "临时目录") : store.location}
+          active={selected() === "location"}
+        />
+      ),
     },
     ...(store.format === "markdown"
       ? [
