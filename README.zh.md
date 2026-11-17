@@ -64,7 +64,7 @@ bun script/build.ts --skip-install
 
 **Issue → 功能分支 → PR → 必要检查及适用审查 → merge commit。**
 
-PR 以 `v2-custom-lite` 为目标。已授权任务通过必要检查与审查后，Agent 可按任务的集成职责完成合并；重大产品决定及发布仍需单独授权。官方同步同样通过 PR，并保留上游合并祖先关系。六平台发布继续**手动触发**，不会因合并自动发布。
+PR 以 `v2-custom-lite` 为目标。每次上游同步通过检查和审查并合并后，维护者会为该版本发布六平台 CLI 预编译包。[Releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases) 出现对应的六个压缩包，才表示新版可以下载；普通功能或文档 PR 不会触发发包。
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)：任务负责人、PR 要求、CI 覆盖范围与合并权限。
 - [AGENTS.md](AGENTS.md)：仓库工程约定。
