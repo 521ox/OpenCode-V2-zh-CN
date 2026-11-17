@@ -1,32 +1,25 @@
-# OpenCode V2 zh-CN
+# OpenCode V2 zh-CN · OpenCode 汉化版
 
-**A community-maintained OpenCode V2 fork with Chinese/English interfaces and native-tool enhancements.**
+**[简体中文使用指南](README.zh.md) · [中文下载与校验说明](README.zh.md#下载)**
 
-[English](README.md) · [简体中文](README.zh.md)
+This community-maintained edition of [OpenCode](https://github.com/anomalyco/opencode) starts the terminal interface in Simplified Chinese. Switch to English, run a verified local program without a shell wrapper, or click a subagent's task title to open its conversation. This fork is independent of the official OpenCode team and is not endorsed by it.
 
-[Features](#features) · [Downloads](#downloads) · [Build](#build-from-source) · [Contribute](CONTRIBUTING.md) · [Maintenance](UPSTREAM_SYNC.md)
+[Features](#features) · [Download and verify](#downloads) · [Build from source](#build-from-source) · [Contribute](CONTRIBUTING.md)
 
-Based on [OpenCode](https://github.com/anomalyco/opencode), the open-source AI coding agent. This project is independent of, and is not endorsed by, the official OpenCode team. The maintained branch is **`v2-custom-lite`**, tracking official **`dev`**; “lite” describes a bounded maintenance approach, not a localization-only feature set.
-
-## Source and published binaries
-
-| Track             | Status as of November 15, 2026                                                                                                                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Maintained source | Official V2 **2.3.0** synchronization; candidate verification and acceptance are tracked in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).                                                                             |
-| Public binaries   | [**v2.0.22-zhcn.1**](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1), an unsigned prerelease published October 4, 2026. The 2.3.0 source is **not a published six-platform release**. |
-
-Browse [all releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases) for published assets. Legacy `main` and `v1.18.4-zhcn.*` releases do not represent this V2 branch. Official installers, npm packages and updates provide official builds and may replace the custom additions; this fork does not change that updater policy.
+**[Download the CLI for Windows, macOS or Linux: v2.0.22-zhcn.1](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.0.22-zhcn.1)** (unsigned prerelease, October 4, 2026). The maintained source is **2.3.0**; its six-platform binaries have not been published.
 
 ## Features
 
-| Area                | Custom behavior                                                                                                                                                               |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chinese / English   | Simplified Chinese interface defaults with English selection/fallback across TUI, Mini and CLI-run presentation. Model/tool output and protocol data stay unchanged.          |
-| Native tools        | `environment_tools` remembers and revalidates programs; `direct_exec` runs verified native EXE/COM entries by catalog ID and argument array, subject to execution permission. |
-| Session memory      | Root and child Sessions share a protected location for compact continuation memory, with conversation-first reads and current-state guidance.                                 |
-| Subagent navigation | Trusted completed results retain full final text within provider limits; visible Session identity and links open existing child Sessions.                                     |
-| Hosted search       | Supported native OpenAI/xAI Responses routes expose search only when effective permissions allow it; model and account availability still apply.                              |
-| Temporary artifacts | Agents receive task-owned cleanup guidance; it is not an automatic cleanup service.                                                                                           |
+These features describe `v2-custom-lite`. For an older binary, check the notes for its release tag.
+
+| Feature | What you can do |
+| --- | --- |
+| Chinese / English UI | Use the TUI, Mini and `opencode run` in Simplified Chinese, or choose English. Only interface text is translated; model replies, tool output and protocol data stay unchanged. |
+| Native tools | `environment_tools` records and revalidates programs. `direct_exec` runs a verified native EXE/COM by its catalog entry ID and argument array, subject to execution permission. With automatic grouping, consecutive calls fold into one expandable group in the TUI. |
+| Session working memory | A root session and its descendants share one protected location for compact notes. Agents use the conversation first and consult notes when needed; unrelated sessions do not share this memory. |
+| Subagent navigation | Click the task title after `·` in a completion notice to open that exact child session. The parent can receive the child's full final reply within provider limits; follow-up reports use the upstream notification mechanism. |
+| Hosted search | Use native search on supported OpenAI or xAI Responses routes when effective permissions, model capabilities and account access allow it. |
+| Temporary files | Agents are instructed to remove their own temporary files when no longer needed. This is guidance, not an automatic cleanup service. |
 
 Exact behavior, retained repairs and exclusions live in [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md). Maintenance evidence and known failures live in [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md).
 
@@ -43,6 +36,10 @@ Choose the matching asset from a **`2.x-zhcn.N` [release](https://github.com/521
 Extract the **complete archive** and run `cli-<platform>-<arch>/bin/opencode` (`opencode.exe` on Windows). These are CLI bundles with an embedded WebUI, **not Electron Desktop installers**; Linux musl is not included. Binaries are unsigned and macOS bundles are not notarized.
 
 Compare the archive digest with the release's `SHA256SUMS`: `Get-FileHash -Algorithm SHA256 <archive>` on Windows, `sha256sum <archive>` on Linux, or `shasum -a 256 <archive>` on macOS. `release-manifest.json` and per-target sidecars identify the source, runtime and digests.
+
+### Source and published binaries
+
+`v2-custom-lite` tracks official `dev`. “Lite” means we keep the patches small, not that this is a translation-only fork. See the [upstream sync record](UPSTREAM_SYNC.md) for accepted source revisions and their checks. The legacy `main` branch and `v1.18.4-zhcn.*` releases are not this V2 edition. Official installers, npm packages and updates deliver official builds and may replace this fork's additions.
 
 ## Build from source
 
