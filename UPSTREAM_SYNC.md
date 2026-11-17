@@ -28,9 +28,10 @@ into `4f6dcec003b0ee67d8c5f3042427d4ad178a5111`. Merge source
 `ea79f69bcf566aa385570814f8624a5c4fa72d7e` (#64527), bringing the official range to 136 commits.
 All three App files match that commit exactly; the interim fork repair and preceding candidates are superseded.
 The new-designs export dialog translates the destination label and choices while submitting `project` or `temp`.
-Build source `f64217223484af8b24dc42eaa526df6bce7ed5d3` produced `2.3.0-custom-lite.20261118.1`,
+Following independent review, the Core request builder applies the current hosted-search selection to tool declarations throughout the request. Offline compiled-request tests cover allow, deny and explicit disable while preserving the order of other tools. The prior build from `f64217223484af8b24dc42eaa526df6bce7ed5d3` is superseded.
+Build source `b9602fcca8f0be4c223d25c59363a059a2c07d86` produced `2.3.0-custom-lite.20261118.1`,
 Windows x64 bytecode with embedded WebUI, latest channel, Bun `1.4.4+38afee6c8`.
-Size: 267,937,792 bytes. SHA256: `963190ffe3c4485cb86684bb38d5877412ad26bf695f10a9f333ddf38a419298`.
+Size: 267,940,864 bytes. SHA256: `c0402228c68e6c63ef3ffaee75f4b5518c08a215472ef0e77861780284baf78d`.
 Compiled version, Chinese help, native runtime and private service/API/WebUI/MCP smoke passed.
 The accepted November 15 executable imported two synthetic sessions with six messages
 through the private import API. Both the old executable and the candidate cold-read the
@@ -44,7 +45,8 @@ exclusive to ordinary requests. Foreground and background summary tests compare 
 system parts in order; full request prefixes and provider cache hits are not guaranteed.
 The summary and request-boundary suites passed (43 tests). The nested shell fixture delivered
 both reports to the immediate parent, with the same child ID and no second prompt. Separate
-Chinese and English renderer tests opened the matching child from the notification title.
+full-page Chinese and English tests clicked the notification heading. Clicking the title after the
+separator was covered on wide and narrow English pages and by the Chinese component routing test.
 
 Windows root check failed on 172 grey findings: the checker matches slash-separated
 CSS exceptions against native paths. Draft checks and unresolved integration findings
