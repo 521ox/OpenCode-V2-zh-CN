@@ -20,6 +20,32 @@ installed-client activation remain separately authorized actions.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 18 synchronization — draft candidate
+
+Issue #9 and PR #10 track the merge of frozen official `64630cfd651fac7cc057c8de689f07f75ade3449`
+into `4f6dcec003b0ee67d8c5f3042427d4ad178a5111`. Merge and build source
+`12586ce715d6f9b8ac7d9976e4189ced3f1d9e97` produced `2.3.0-custom-lite.20261118.1`,
+Windows x64 bytecode with embedded WebUI, latest channel, Bun `1.4.4+38afee6c8`.
+Size: 267,936,768 bytes. SHA256: `eaaa0d6f6dd3c7f8717438067a8d90f53786a6e0dbd89f09b3f850a43292e744`.
+Compiled version, Chinese help, native runtime and private service/API/WebUI/MCP smoke passed.
+The accepted November 15 executable imported two synthetic sessions with six messages
+through the private import API. Both the old executable and the candidate cold-read the
+same default database. Session IDs, titles, ordered messages, legacy checkpoint media
+and start directories survived. All 60 prior migration journal entries were preserved;
+the candidate had 63. This covers completed synthetic history, not live or unfinished sessions.
+
+Frozen installation, Core migration generation and check, and Client generation passed.
+The 46 AI update tests and AI typecheck passed. The protected working-memory part remains
+exclusive to ordinary requests. Foreground and background summary tests compare all shared
+system parts in order; full request prefixes and provider cache hits are not guaranteed.
+The summary and request-boundary suites passed (43 tests). The nested shell fixture delivered
+both reports to the immediate parent, with the same child ID and no second prompt. Separate
+Chinese and English renderer tests opened the matching child from the notification title.
+
+Windows root check failed on 172 grey findings: the checker matches slash-separated
+CSS exceptions against native paths. Draft checks and unresolved integration findings
+are tracked in PR #10. This build has not been promoted or released.
+
 ## November 15 synchronization — candidate verification
 
 Issue #7 and [PR #8](https://github.com/521ox/OpenCode-V2-zh-CN/pull/8) track the
