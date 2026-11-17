@@ -10,9 +10,7 @@ import { WebSearch } from "../websearch.js"
 import type { SessionSchema } from "./schema.js"
 
 const nativeSearch = (tool: ToolDefinition) =>
-  [tool.native?.openai, tool.native?.xai].some(
-    (entry) => Predicate.hasProperty(entry, "type") && entry.type === "web_search",
-  )
+  Object.values(tool.native ?? {}).some((entry) => Predicate.hasProperty(entry, "type") && entry.type === "web_search")
 
 /** Historical declarations describe previous requests; the current selection owns the native search slot. */
 export const history = (message: Message, hosted: ToolDefinition | undefined, replaceLocal: boolean): Message => {
