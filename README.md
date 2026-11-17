@@ -66,7 +66,7 @@ Use a distinct version for your source revision; this example does not reproduce
 
 **Issue → feature branch → PR → required checks and applicable review → merge commit.**
 
-Use `v2-custom-lite` as the PR base. For authorized tasks, agents may merge after the necessary checks and review, subject to the task's integration owner. Major product decisions and release publication require separate authorization. Upstream synchronization also goes through a PR and preserves official merge ancestry. Six-platform releases remain **manual**, not a side effect of merging.
+Use `v2-custom-lite` as the PR base. Upstream syncs preserve official merge ancestry. After a sync passes its checks and review and is merged, its maintainer publishes a six-platform CLI prerelease. A new sync is available to download once its packages appear in [Releases](https://github.com/521ox/OpenCode-V2-zh-CN/releases). Ordinary PRs do not publish binaries.
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): task ownership, PR requirements, CI coverage and merge authority.
 - [AGENTS.md](AGENTS.md): repository engineering conventions.
