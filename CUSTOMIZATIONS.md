@@ -1,5 +1,21 @@
 # Minimal Custom V2 Distribution
 
+## November 22 synchronization
+
+The current upstream TUI enables new designs by default. Users can turn them
+off in the Experiments dialog. The upstream default theme is `opencode` and
+the previous theme remains available as `opencode-classic`. The locale owner
+still defaults to Simplified Chinese and supports English; the job status
+counter and completion notices use the same translations as other chrome.
+
+Upstream model tool selection applies in Code Mode. `direct_exec` and
+`environment_tools` remain outside its script catalog and retain their native
+permission checks. Hosted search reserves the ordinary request's search slot
+only for a supported resolved route, and does not enter the script catalog on
+that route. The existing registry and blanket authorization decide whether it
+can be advertised. Subagent reports keep the full result and immediate parent
+delivery, adopting the upstream `background-result` envelope.
+
 ## November 15 synchronization
 
 The frozen official target is `38bd73789a43bf043599d6196af96583228035d7` (2.3.0).

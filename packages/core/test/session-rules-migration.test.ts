@@ -17,9 +17,11 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
       for (const entry of completed) yield* db.run(sql`INSERT INTO migration VALUES (${entry.id}, 123)`)
       yield* db.run(sql`CREATE TABLE project (id text PRIMARY KEY, time_updated integer NOT NULL)`)
       yield* db.run(sql`INSERT INTO project VALUES ('project', 456)`)
-      yield* db.run(sql`CREATE TABLE session_v2 (id text PRIMARY KEY, parent_id text, directory text, permission text)`)
+      yield* db.run(
+        sql`CREATE TABLE session_v2 (id text PRIMARY KEY, parent_id text, project_id text, directory text, permission text)`,
+      )
       yield* db.run(sql`INSERT INTO session_v2 VALUES
-        ('ses_root', NULL, '/moved', 'keep'), ('ses_child', 'ses_root', '/child', 'child-keep')`)
+        ('ses_root', NULL, 'project', '/moved', 'keep'), ('ses_child', 'ses_root', 'project', '/child', 'child-keep')`)
       yield* db.run(sql`CREATE TABLE event (aggregate_id text, seq integer, type text, data text)`)
       const creation = JSON.stringify({ sessionID: "ses_root", location: { directory: "/created" } })
       yield* db.run(sql`INSERT INTO event VALUES ('ses_root', 0, 'session.created.1', ${creation})`)
@@ -61,6 +63,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         {
           id: "ses_child",
           parent_id: "ses_root",
+          project_id: "project",
           directory: "/child",
           permission: "child-keep",
           start_directory: null,
@@ -69,6 +72,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         {
           id: "ses_root",
           parent_id: null,
+          project_id: "project",
           directory: "/moved",
           permission: "keep",
           start_directory: applied ? "/persisted-root" : "/created",

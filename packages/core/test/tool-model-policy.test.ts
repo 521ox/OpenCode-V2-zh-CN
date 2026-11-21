@@ -20,11 +20,15 @@ import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SkillInstructions } from "@opencode/core/skill/instructions"
 import { Tool } from "@opencode/core/tool"
 import { modelTools } from "@opencode/core/tool/model-policy"
+import { DirectExecTool } from "@opencode/core/tool/plugin/direct-exec"
 import { EditTool } from "@opencode/core/tool/plugin/edit"
+import { EnvironmentToolsTool } from "@opencode/core/tool/plugin/environment-tools"
 import { PatchTool } from "@opencode/core/tool/plugin/patch"
 import { WriteTool } from "@opencode/core/tool/plugin/write"
 import { WebSearch } from "@opencode/core/websearch"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { EffectFlock } from "@opencode/util/effect-flock"
+import { AppProcess } from "@opencode/util/process"
 import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "./lib/effect"
 import { readInitial } from "./lib/instructions"
@@ -119,28 +123,40 @@ const emptyInstructions = () => Effect.succeed(Instructions.empty)
 const makeContextLayer = (overrides: string | undefined) =>
   Layer.mergeAll(
     PluginTestLayer,
-    AppNodeBuilder.build(LayerNode.group([SessionContext.node, FileMutation.node, FileWrite.node, Formatter.node]), [
-      Location.node.replace(Location.boundNode({ directory: AbsolutePath.make("/project") })),
-      Mcp.node.replace(
-        Layer.mock(Mcp.Service, {
-          awaitStartup: () => Effect.void,
-          instructions: () => Effect.succeed([{ server: Mcp.ServerName.make("alpha"), instructions: "Alpha docs" }]),
-          tools: () =>
-            Effect.succeed([{ server: Mcp.ServerName.make("alpha"), name: "search", inputSchema: { type: "object" } }]),
-        }),
-      ),
-      InstructionBuiltIns.node.replace(Layer.mock(InstructionBuiltIns.Service, { load: emptyInstructions })),
-      InstructionDiscovery.node.replace(
-        Layer.mock(InstructionDiscovery.Service, {
-          project: true,
-          global: true,
-          claude: true,
-          load: emptyInstructions,
-        }),
-      ),
-      SkillInstructions.node.replace(Layer.mock(SkillInstructions.Service, { load: emptyInstructions })),
-      ReferenceInstructions.node.replace(Layer.mock(ReferenceInstructions.Service, { load: emptyInstructions })),
-    ]),
+    AppNodeBuilder.build(
+      LayerNode.group([
+        SessionContext.node,
+        FileMutation.node,
+        FileWrite.node,
+        Formatter.node,
+        EffectFlock.node,
+        AppProcess.node,
+      ]),
+      [
+        Location.node.replace(Location.boundNode({ directory: AbsolutePath.make("/project") })),
+        Mcp.node.replace(
+          Layer.mock(Mcp.Service, {
+            awaitStartup: () => Effect.void,
+            instructions: () => Effect.succeed([{ server: Mcp.ServerName.make("alpha"), instructions: "Alpha docs" }]),
+            tools: () =>
+              Effect.succeed([
+                { server: Mcp.ServerName.make("alpha"), name: "search", inputSchema: { type: "object" } },
+              ]),
+          }),
+        ),
+        InstructionBuiltIns.node.replace(Layer.mock(InstructionBuiltIns.Service, { load: emptyInstructions })),
+        InstructionDiscovery.node.replace(
+          Layer.mock(InstructionDiscovery.Service, {
+            project: true,
+            global: true,
+            claude: true,
+            load: emptyInstructions,
+          }),
+        ),
+        SkillInstructions.node.replace(Layer.mock(SkillInstructions.Service, { load: emptyInstructions })),
+        ReferenceInstructions.node.replace(Layer.mock(ReferenceInstructions.Service, { load: emptyInstructions })),
+      ],
+    ),
   ).pipe(Layer.provide(Layer.succeed(Flag.Overrides, overrides)))
 
 const setupContext = Effect.gen(function* () {
@@ -211,14 +227,14 @@ const setupContext = Effect.gen(function* () {
     })
   })
 
-  const select = (providerID: string, id: string, permissions?: Session.Info["permissions"]) =>
+  const select = (providerID: string, id: string, permissions?: Session.Info["permissions"], kind?: "primary") =>
     sessions
       .create({
         location: Location.Ref.make({ directory: AbsolutePath.make("/project") }),
         model: Model.Ref.make({ providerID: Provider.ID.make(providerID), id: Model.ID.make(id) }),
         ...(permissions ? { permissions } : {}),
       })
-      .pipe(Effect.flatMap((session) => context.select(session.id)))
+      .pipe(Effect.flatMap((session) => context.select(session.id, kind)))
 
   return { registry, websearch, context, select }
 })
@@ -230,6 +246,42 @@ const defaultIt = testEffect(makeContextLayer(undefined))
 const codeModeIt = testEffect(makeContextLayer("full_codemode"))
 
 describe("SessionContext.select model tool policy", () => {
+  codeModeIt.effect("reserves hosted search for the native request without a local supplier", () =>
+    Effect.gen(function* () {
+      const { select, websearch } = yield* setupContext
+      yield* websearch.transform((editor) => editor.remove(WebSearch.ID.make("exa")))
+      expect(yield* websearch.available()).toBe(false)
+
+      const selected = yield* select("openai", "gpt-5", undefined, "primary")
+      expect(names(selected)).toContain("websearch")
+      expect(paths(selected)).not.toContain("websearch")
+
+      const denied = yield* select(
+        "openai",
+        "gpt-5",
+        [{ action: "websearch", resource: "*", effect: "deny" }],
+        "primary",
+      )
+      expect(names(denied)).not.toContain("websearch")
+    }),
+  )
+
+  codeModeIt.effect("local execution and catalog stay native and honor model-visible permission filtering", () =>
+    Effect.gen(function* () {
+      const { select } = yield* setupContext
+      yield* registerToolPlugin(DirectExecTool.Plugin)
+      yield* registerToolPlugin(EnvironmentToolsTool.Plugin)
+
+      const selected = yield* select("openai", "gpt-5")
+      expect(names(selected)).toEqual(["direct_exec", "environment_tools", "execute"])
+      expect(paths(selected)).not.toContain("direct_exec")
+      expect(paths(selected)).not.toContain("environment_tools")
+
+      const denied = yield* select("openai", "gpt-5", [{ action: "direct_exec", resource: "*", effect: "deny" }])
+      expect(names(denied)).toEqual(["environment_tools", "execute"])
+    }),
+  )
+
   defaultIt.effect("keeps built-in tools direct when full_codemode is off", () =>
     Effect.gen(function* () {
       const { select } = yield* setupContext

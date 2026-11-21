@@ -42,6 +42,43 @@ a public release. Documentation-only and other non-sync merges do not qualify.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 22 synchronization — draft candidate
+
+Issue #16 and PR #17 integrate official `e31eb1ebc1db7ab066e646a9b1bd2489a434de5b`
+into `aebac391dcaeb6d857e19f33622f030a26bc9614`. The merge
+`f1721e5a352de663adead47cc05252fcd02e74dc` retains both parents. The official
+range from `ea79f69bcf566aa385570814f8624a5c4fa72d7e` contains 262 commits.
+Both the root and CLI sources are version 2.3.0; the frozen install uses Bun
+1.4.4. The manual release workflow suggests `2.3.0-zhcn.2`; verify availability
+again before dispatch. This draft neither merges nor publishes the sync.
+
+The official Responses changes (#64542, #64544) use a leading developer input
+message for the fixed system text. Offline request/response fixtures exercise
+regular and compatible Responses and native compaction, including removal of
+the echoed system message from subsequent replay. This does not measure live
+provider cache hits. Core keeps the working-memory context exclusive to primary
+requests and keeps hosted search permission-gated even in full Code Mode, without
+requiring a local search supplier on a supported route.
+
+Canonical migration generation/check and Protocol/Client generation passed.
+There is no generated Protocol/Client drift; the Core registry retains the fork's
+start-directory migration. The target adds two migration bodies relative to the
+fork base; opt-in FTS is an upstream search projection, not a second history
+owner. Local Windows root `bun run check` stops at the existing slash-sensitive
+grey checker with 172 findings; it is not a full-monorepo pass.
+
+The Windows x64 candidate `2.3.0-custom-lite.20261122.1` was built from
+`dc148b5b131d6944c5952a24e7e961586430bf47` with the full embedded WebUI and
+latest storage channel. It is 278,828,032 bytes, SHA256
+`a8845da7eb8a3420016fc1fd69bf6f52d697e2791997aa47e4d8868fe1cae86f`.
+Compiled version, Chinese help, Bun `1.4.4+38afee6c8` and private service/WebUI/MCP
+smoke passed. The November 18 executable imported two synthetic sessions with
+six messages through the same private default database, cold-read them after
+restart, and was stopped before the candidate read them. Titles, ordered
+messages, stored session start directories and all 63 prior migration entries
+were preserved; the candidate had 65. SQLite quick check passed. This does
+not cover real user data, unfinished state or downgrade compatibility.
+
 ## November 18 synchronization — draft candidate
 
 Issue #9 and PR #10 track the merge of frozen official `64630cfd651fac7cc057c8de689f07f75ade3449`

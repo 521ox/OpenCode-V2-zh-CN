@@ -227,7 +227,7 @@ test("boots on the simulation renderer with the terminal title enabled", async (
       Effect.gen(function* () {
         const setup = SimulationRenderer.setupFor(yield* SimulationRenderer.create({}))
         yield* Effect.promise(async () => {
-          await using app = await createAppFixture({ setup })
+          await using app = await createAppFixture({ setup, config: { locale: "en", animations: false } })
           await app.ready
           await app.waitForFrame((frame) => frame.includes("commands"))
         })
@@ -780,6 +780,7 @@ test.each(["show", "hide"] as const)(
       config: {
         animations: false,
         tabs: { mode: "off" },
+        locale: "en",
         session: { sidebar: "hide", verbosity: "medium", thinking },
       },
       args: { sessionID: session.id },
@@ -2195,7 +2196,7 @@ test("free usage limit Subscribe handles mid-auth/mid-sync Escape, sync failure,
     width: 100,
     state: state.path,
     args: { sessionID: session.id },
-    config: { animations: false, tabs: { mode: "off" } },
+    config: { locale: "en", animations: false, tabs: { mode: "off" } },
     fetch: async (url, request) => {
       const location = { directory, project: { id: "proj_test", directory, canonical: directory } }
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
