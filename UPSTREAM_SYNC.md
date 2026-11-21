@@ -52,8 +52,9 @@ Both the root and CLI sources are version 2.3.0; the frozen install uses Bun
 1.4.4. The manual release workflow suggests `2.3.0-zhcn.2`; verify availability
 again before dispatch. This draft neither merges nor publishes the sync.
 
-The official Responses changes (#64542, #64544) use a leading developer input
-message for the fixed system text. Offline request/response fixtures exercise
+The official Responses changes (#64542, #64544) put the fixed system text in
+the first ordinary developer message, after initial inline tool declarations if
+present. Offline request/response fixtures exercise
 regular and compatible Responses and native compaction, including removal of
 the echoed system message from subsequent replay. This does not measure live
 provider cache hits. Core keeps the working-memory context exclusive to primary
@@ -67,10 +68,21 @@ fork base; opt-in FTS is an upstream search projection, not a second history
 owner. Local Windows root `bun run check` stops at the existing slash-sensitive
 grey checker with 172 findings; it is not a full-monorepo pass.
 
-The Windows x64 candidate `2.3.0-custom-lite.20261122.1` was built from
-`dc148b5b131d6944c5952a24e7e961586430bf47` with the full embedded WebUI and
-latest storage channel. It is 278,828,032 bytes, SHA256
-`a8845da7eb8a3420016fc1fd69bf6f52d697e2791997aa47e4d8868fe1cae86f`.
+The first independent review reproduced a hosted-only search slot being sent as
+local search during compaction, and English script controls in the Chinese TUI.
+The repair excludes the reserved slot from auxiliary request definitions without
+removing an available local tool; the same compaction request preparation serves
+manual, automatic, overflow, and background paths. The Scripts tab uses the
+existing locale and keymap; job titles, code and cancel targets remain unchanged.
+Both failures were reproduced on the old source before repair. Scoped reruns:
+91 Core, 15 TUI, and 320 AI passes. F1 keeps the frozen wire order; the AI test
+now asserts the ordinary developer message after initial inline declarations.
+
+The replacement Windows x64 candidate `2.3.0-custom-lite.20261122.2` was built
+from `acf62524cd465a93453f5c093c55aec9cf3f0ca7` with the full embedded WebUI and
+latest storage channel. It is 278,830,592 bytes, SHA256
+`4f27674899198478c97f48ef13eb73dde1baeeaaa04cabc7cf97e4e219b45758`.
+Candidate `.1` (`a8845da7eb8a…`) is superseded, not a fallback for this revision.
 Compiled version, Chinese help, Bun `1.4.4+38afee6c8` and private service/WebUI/MCP
 smoke passed. The November 18 executable imported two synthetic sessions with
 six messages through the same private default database, cold-read them after
