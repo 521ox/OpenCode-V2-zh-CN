@@ -125,7 +125,6 @@ function DialogExportOptionsList(props: DialogExportOptionsProps) {
     <DialogSelect
       title={t("main.export.session")}
       renderFilter={false}
-      footerGap={2}
       options={options()}
       onMove={(option) => setSelected(option.value)}
       actions={[

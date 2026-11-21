@@ -235,6 +235,7 @@ export class RunFooter implements FooterApi {
       locale: () => this.options.tuiConfig.locale,
       mono: this.miniSettings().mono,
       imagePreview: this.options.tuiConfig.session?.image_preview,
+      markdown: this.options.tuiConfig.session?.markdown,
     })
   }
 

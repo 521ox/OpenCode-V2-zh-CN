@@ -247,6 +247,7 @@ export default {
   "session.agentFrom": "代理已从 {{previous}} 切换为 {{agent}}",
   "session.agentTo": "代理已切换为 {{agent}}",
   "session.shell": "Shell",
+  "session.script": "脚本",
   "session.subagent": "子代理",
   "session.instructionsUpdated": "指令已更新",
   "session.finished": "已完成",

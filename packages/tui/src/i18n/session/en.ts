@@ -247,6 +247,7 @@ export default {
   "session.agentFrom": "Switched agent from {{previous}} to {{agent}}",
   "session.agentTo": "Switched agent to {{agent}}",
   "session.shell": "Shell",
+  "session.script": "Script",
   "session.subagent": "Subagent",
   "session.instructionsUpdated": "Instructions updated",
   "session.finished": "finished",

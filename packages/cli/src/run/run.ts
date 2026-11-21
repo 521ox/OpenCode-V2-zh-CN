@@ -2,6 +2,7 @@ import { Service, type Endpoint } from "@opencode/client/effect/service"
 import { OpenCode, type SessionMessageAssistantTool } from "@opencode/client/promise"
 import { FSUtil } from "@opencode/util/fs-util"
 import { noTimeoutFetch } from "@opencode/util/no-timeout-fetch"
+import { constants } from "node:fs"
 import { open } from "node:fs/promises"
 import path from "node:path"
 import { readStdin, readStdinIfReady } from "../util/io"
@@ -96,7 +97,10 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
           location,
           name: input.worktree === true ? undefined : input.worktree,
         })
-  if (worktree) UI.println(UI.Style.TEXT_DIM + translate(locale, "miniCli.worktree", { path: worktree.root }) + UI.Style.TEXT_NORMAL)
+  if (worktree)
+    UI.println(
+      UI.Style.TEXT_DIM + translate(locale, "miniCli.worktree", { path: worktree.root }) + UI.Style.TEXT_NORMAL,
+    )
   const target = await resolveSessionTarget({
     client,
     location: worktree ? { directory: worktree.directory } : location,
@@ -174,7 +178,10 @@ export function parseRunModel(value?: string) {
 
 async function prepareFile(input: string, directory: string, locale: Locale): Promise<FilePart> {
   const file = path.resolve(directory, input)
-  const handle = await open(file, "r").catch(() => fail(translate(locale, "miniCli.fileMissing", { path: input })))
+  // A FIFO must reach the regular-file check without waiting for a writer.
+  const handle = await open(file, process.platform === "win32" ? "r" : constants.O_RDONLY | constants.O_NONBLOCK).catch(
+    () => fail(translate(locale, "miniCli.fileMissing", { path: input })),
+  )
   try {
     const stat = await handle.stat()
     if (!stat.isFile() || stat.size > ATTACH_FILE_MAX_BYTES)
@@ -227,7 +234,10 @@ async function renderTool(part: SessionMessageAssistantTool, directory: string, 
 
 async function renderToolError(part: SessionMessageAssistantTool, directory: string, locale: Locale) {
   const info = toolInlineInfo(part, directory, locale)
-  UI.println(UI.Style.TEXT_NORMAL + "✗", UI.Style.TEXT_NORMAL + translate(locale, "miniCli.failed", { title: info.title }))
+  UI.println(
+    UI.Style.TEXT_NORMAL + "✗",
+    UI.Style.TEXT_NORMAL + translate(locale, "miniCli.failed", { title: info.title }),
+  )
 }
 
 export function reportRunError(input: Pick<RunCommandInput, "format" | "locale">, message: string, sessionID?: string) {

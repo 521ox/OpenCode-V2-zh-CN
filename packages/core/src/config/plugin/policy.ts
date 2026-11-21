@@ -7,6 +7,7 @@ import { Config } from "../../config.js"
 import { PluginHooks } from "../../plugin/hooks.js"
 import { Credential } from "../../credential.js"
 import { ManagedPolicy } from "../../managed-policy.js"
+import { Permission } from "../../permission.js"
 import { State } from "../../state.js"
 import { Wildcard } from "../../util/wildcard.js"
 import { WebSearch } from "../../websearch.js"
@@ -105,7 +106,8 @@ export const Plugin = define({
             .map((resource) =>
               current.findLast(
                 (policy) =>
-                  policy.action === "tool.use" && Wildcard.match(`${event.action}:${resource}`, policy.resource),
+                  policy.action === "tool.use" &&
+                  Wildcard.match(`${event.action}:${resource}`, policy.resource, Permission.ignoresCase(event.action)),
               ),
             )
             .find((policy) => policy?.effect === "deny")
