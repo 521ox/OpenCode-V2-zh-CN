@@ -48,7 +48,6 @@ export function DialogExportResult(props: { path: string; onClose?: () => void }
 
   return (
     <DialogLayout
-      footerGap={2}
       header={<DialogHeader title={t("main.export.done")} onClose={close} />}
       footer={{
         actions: {

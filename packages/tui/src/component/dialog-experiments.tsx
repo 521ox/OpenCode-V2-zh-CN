@@ -11,6 +11,8 @@ type Experiment = {
   id: string
   title: Key
   description: Key
+  /** Whether the experiment is on when the config does not set it. */
+  default?: boolean
 }
 
 // In-flight features anyone can opt into. Each entry is temporary: an
@@ -21,6 +23,7 @@ export const experiments: Experiment[] = [
     id: "new-designs",
     title: "main.experiments.newDesigns",
     description: "main.experiments.newDesignsDescription",
+    default: true,
   },
   {
     id: "client-mcp",
@@ -38,7 +41,8 @@ export function DialogExperiments() {
   const [selected, setSelected] = createSignal<Experiment>()
   const [saving, setSaving] = createSignal(false)
 
-  const enabled = (experiment: Experiment) => config.data.experimental?.[experiment.id] === true
+  const enabled = (experiment: Experiment) =>
+    (config.data.experimental?.[experiment.id] ?? experiment.default ?? false) === true
 
   const options = createMemo(() =>
     experiments.map((experiment) => ({

@@ -37,6 +37,7 @@ test("mounted prompt footer reacts to locale changes without changing the offici
         cost: () => 0,
         message: { list: () => [] },
       },
+      job: { list: () => [] },
       shell: { list: () => [] },
       location: { model: { list: () => [] } },
     },

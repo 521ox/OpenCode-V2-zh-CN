@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Effect } from "effect"
+import { LayerNode } from "@opencode/util/effect/layer-node"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Environment } from "@opencode/core/environment/index"
 import { Location } from "@opencode/core/location"
 import { Ripgrep } from "@opencode/core/ripgrep"
 import { RipgrepBinary } from "@opencode/core/ripgrep/binary"
@@ -11,16 +13,21 @@ import { tmpdirScoped, withTempDir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
 import { tempLocationLayer } from "./fixture/location"
 
-const it = testEffect(AppNodeBuilder.build(Ripgrep.node, [Location.node.replace(tempLocationLayer)]))
+const it = testEffect(
+  AppNodeBuilder.build(LayerNode.group([Ripgrep.node, Environment.node]), [Location.node.replace(tempLocationLayer)]),
+)
 
 describe("Ripgrep", () => {
   it.live("settles concurrent no-match grep calls", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       yield* Effect.promise(() => Bun.write(path.join(tmp.path, "haystack.txt"), "haystack\n"))
+      const environment = yield* Environment.Service
       const ripgrep = yield* Ripgrep.Service
       const results = yield* Effect.all(
-        Array.from({ length: 12 }, () => ripgrep.grep({ cwd: tmp.path, pattern: "absent-needle", limit: 10 })),
+        Array.from({ length: 12 }, () =>
+          ripgrep.grep({ environment, cwd: tmp.path, pattern: "absent-needle", limit: 10 }),
+        ),
         { concurrency: "unbounded" },
       ).pipe(Effect.timeout("3 seconds"))
       expect(results).toEqual(Array.from({ length: 12 }, () => []))
@@ -31,8 +38,9 @@ describe("Ripgrep", () => {
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       yield* Effect.promise(() => Bun.write(path.join(tmp.path, "haystack.txt"), "haystack\n"))
+      const environment = yield* Environment.Service
       const ripgrep = yield* Ripgrep.Service
-      const error = yield* ripgrep.grep({ cwd: tmp.path, pattern: "[", limit: 10 }).pipe(Effect.flip)
+      const error = yield* ripgrep.grep({ environment, cwd: tmp.path, pattern: "[", limit: 10 }).pipe(Effect.flip)
       expect(error).toBeInstanceOf(Ripgrep.InvalidPatternError)
     }),
   )
@@ -44,8 +52,9 @@ describe("Ripgrep", () => {
           yield* Effect.promise(() => Bun.write(path.join(tmp.path, "visible.ts"), "needle\n"))
           yield* Effect.promise(() => Bun.write(path.join(tmp.path, ".ignore"), "[z-a]\n"))
           yield* Effect.promise(() => fs.symlink("missing", path.join(tmp.path, "broken")))
+          const environment = yield* Environment.Service
           const ripgrep = yield* Ripgrep.Service
-          const files = yield* ripgrep.glob({ cwd: tmp.path, pattern: "*.ts", follow: true, limit: 10 })
+          const files = yield* ripgrep.glob({ environment, cwd: tmp.path, pattern: "*.ts", follow: true, limit: 10 })
           expect(files.map((file) => file.path)).toEqual([RelativePath.make("visible.ts")])
         }),
       ),
@@ -64,8 +73,10 @@ describe("Ripgrep", () => {
               ),
             ),
           )
+          const environment = yield* Environment.Service
           const ripgrep = yield* Ripgrep.Service
           const files = yield* ripgrep.glob({
+            environment,
             cwd: tmp.path,
             pattern: "**/*.ts",
             limit,
@@ -88,8 +99,9 @@ describe("Ripgrep", () => {
         yield* Effect.promise(() => fs.mkdir(path.join(tmp.path, "src")))
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "src", "match.ts"), "needle\n"))
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
-        const result = yield* ripgrep.glob({ cwd: tmp.path, pattern: "**/*.ts", limit: 10 })
+        const result = yield* ripgrep.glob({ environment, cwd: tmp.path, pattern: "**/*.ts", limit: 10 })
         expect(result.map((item) => item.path)).toEqual([RelativePath.make("src/match.ts")])
       }),
     ),
@@ -102,8 +114,10 @@ describe("Ripgrep", () => {
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "src", "match.ts"), "needle\n"))
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "src", "skip.txt"), "needle\n"))
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
         const result = yield* ripgrep.grep({
+          environment,
           cwd: tmp.path,
           pattern: "needle",
           include: "*.ts",
@@ -124,8 +138,9 @@ describe("Ripgrep", () => {
           fs.writeFile(path.join(tmp.path, "latin1.txt"), Buffer.from("needle café\n", "latin1")),
         )
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
-        const result = yield* ripgrep.grep({ cwd: tmp.path, pattern: "needle", limit: 10 })
+        const result = yield* ripgrep.grep({ environment, cwd: tmp.path, pattern: "needle", limit: 10 })
         expect(result.map((match) => [match.entry.path, match.text, match.submatches[0]?.text]).sort()).toEqual([
           [RelativePath.make("latin1.txt"), "needle caf\uFFFD\n", "needle"],
           [RelativePath.make("utf8.txt"), "needle\n", "needle"],
@@ -144,8 +159,9 @@ describe("Ripgrep", () => {
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "node_modules", "pkg", "index.js"), "ignored\n"))
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "src", "index.js"), "included\n"))
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
-        const files = yield* ripgrep.find({ cwd: tmp.path, pattern: "*", limit: 10 })
+        const files = yield* ripgrep.find({ environment, cwd: tmp.path, pattern: "*", limit: 10 })
         expect(files.map((item) => item.path)).toContain(RelativePath.make("src/index.js"))
         expect(files.map((item) => item.path)).not.toContain(RelativePath.make("node_modules/pkg/index.js"))
       }),
@@ -159,14 +175,16 @@ describe("Ripgrep", () => {
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, ".opencode", "config"), "needle\n"))
         yield* Effect.promise(() => fs.mkdir(path.join(tmp.path, ".git")))
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, ".git", "config"), "needle\n"))
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
 
-        const files = yield* ripgrep.find({ cwd: tmp.path, pattern: "**/*", limit: 10 })
+        const files = yield* ripgrep.find({ environment, cwd: tmp.path, pattern: "**/*", limit: 10 })
         expect(files.map((item) => item.path)).toContain(RelativePath.make(".opencode/config"))
         expect(files.map((item) => item.path)).not.toContain(RelativePath.make(".git/config"))
 
         const observed: string[] = []
         const limited = yield* ripgrep.find({
+          environment,
           cwd: tmp.path,
           pattern: "**/*",
           limit: 1,
@@ -174,7 +192,13 @@ describe("Ripgrep", () => {
         })
         expect(observed).toEqual(limited.map((item) => item.path))
 
-        const matches = yield* ripgrep.grep({ cwd: tmp.path, pattern: "needle", include: "config", limit: 10 })
+        const matches = yield* ripgrep.grep({
+          environment,
+          cwd: tmp.path,
+          pattern: "needle",
+          include: "config",
+          limit: 10,
+        })
         expect(matches.map((item) => item.entry.path)).toContain(RelativePath.make(".opencode/config"))
         expect(matches.map((item) => item.entry.path)).not.toContain(RelativePath.make(".git/config"))
       }),
@@ -188,8 +212,10 @@ describe("Ripgrep", () => {
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "Pictures", "private.jpg"), "private\n"))
         yield* Effect.promise(() => fs.writeFile(path.join(tmp.path, "visible.txt"), "visible\n"))
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
         const files = yield* ripgrep.find({
+          environment,
           cwd: tmp.path,
           pattern: "*",
           limit: 10,
@@ -209,8 +235,10 @@ describe("Ripgrep", () => {
           fs.writeFile(path.join(tmp.path, "generated.ts"), `Cloudflare${"x".repeat(70 * 1024)}\n`),
         )
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
         const matches = yield* ripgrep.grep({
+          environment,
           cwd: tmp.path,
           pattern: "Cloudflare",
           limit: 10,
@@ -235,8 +263,9 @@ describe("Ripgrep", () => {
           ),
         )
 
+        const environment = yield* Environment.Service
         const ripgrep = yield* Ripgrep.Service
-        const matches = yield* ripgrep.grep({ cwd: tmp.path, pattern: "tail", limit: 10 })
+        const matches = yield* ripgrep.grep({ environment, cwd: tmp.path, pattern: "tail", limit: 10 })
 
         expect(matches.map((match) => match.text)).toEqual([
           `${"x".repeat(1_998)}😀...`,

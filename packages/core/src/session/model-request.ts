@@ -80,13 +80,23 @@ export interface Prepared<Event = SessionRequest> {
   readonly executeTool: (
     input: Parameters<Tool.Snapshot["execute"]>[0],
   ) => Effect.Effect<Tool.NormalizedResult, ExecuteError>
+  /**
+   * When `name` isn't a tool this request advertised but is one of its Code Mode tools, the expression a program calls
+   * it by, so the call can be recorded and run as the `execute` program it should have been.
+   */
+  readonly codeModeExpression?: (name: string) => string | undefined
+}
+
+export interface Tools extends Tool.Snapshot {
+  /** The search registration is a hosted-search slot, not an available local executor. */
+  readonly hostedSearchOnly?: true
 }
 
 export interface Input {
   readonly session: SessionSchema.Info
   readonly agent: Agent.ID
   readonly model: SessionRunnerModel.Resolved
-  readonly tools?: Tool.Snapshot
+  readonly tools?: Tools
   readonly system: Array<SystemPart>
   readonly messages: Array<SessionRequestMessage>
   readonly toolChoice?: LLM.LLMRequestInput["toolChoice"]
@@ -285,12 +295,16 @@ export const layer = Layer.effect(
         definitions: [],
         execute: () => new Tool.Error({ message: "Tools are not available for this request" }),
       }
+      const definitions =
+        kind !== "primary" && input.tools?.hostedSearchOnly
+          ? tools.definitions.filter((tool) => tool.name !== HostedWebSearch.localName)
+          : tools.definitions
       // Remember which tool each definition object came from. Hooks rename a tool by moving
       // its definition to a new key, so after the hook we find the tool by object identity.
       // Definitions are shared across steps and sessions, and hooks may edit schemas in place,
       // so each hook gets a deep copy.
       const given = new Map(
-        tools.definitions.map(
+        definitions.map(
           (t) => [{ description: t.description, input: JSON.parse(JSON.stringify(t.inputSchema)) }, t] as const,
         ),
       )
@@ -313,7 +327,7 @@ export const layer = Layer.effect(
       )
       // Match by identity first, then by key. Entries matching neither were invented by a
       // hook and are dropped. `t.name` stays the real name so execution can map renames back.
-      const byName = new Map(tools.definitions.map((t) => [t.name, t]))
+      const byName = new Map(definitions.map((t) => [t.name, t]))
       const hooked = new Map(
         Object.entries(shaped.tools ?? {}).flatMap(([name, d]) => {
           const t = given.get(d) ?? byName.get(name)
@@ -326,6 +340,7 @@ export const layer = Layer.effect(
         sessionID: session.id,
         agent: input.agent,
         tools: hooked,
+        hostedSearchOnly: input.tools?.hostedSearchOnly,
       }).pipe(
         Effect.provideService(Permission.Service, permission),
         Effect.provideService(WebSearch.Service, websearch),
@@ -468,6 +483,8 @@ export const layer = Layer.effect(
         // catch them and turn a "no" into model-visible output. Recover them here as failures,
         // including declines a tool rethrew and its wrapper attached to a Tool.Error, as Promise
         // plugin tools do.
+        codeModeExpression: (name: string) =>
+          hooked.has(name) || !hooked.has("execute") ? undefined : input.tools?.codeModeExpression?.(name),
         executeTool: (call: Parameters<Prepared["executeTool"]>[0]) =>
           tools.execute({ ...call, definitions: search.tools }).pipe(
             Effect.catchCauseFilter(

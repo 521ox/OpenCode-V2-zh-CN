@@ -5,7 +5,7 @@ import "../component/spinner-renderable"
 import { Show, createMemo, createSignal, indexArray } from "solid-js"
 import { SPINNER_FRAMES } from "../component/spinner-frames"
 import { RunEntryContent, separatorRows } from "./scrollback.writer"
-import type { FooterSubagentDetail, FooterSubagentTab, RunTuiConfig } from "./types"
+import type { FooterSubagentDetail, FooterSubagentTab, RunTuiConfig, ScrollbackOptions } from "./types"
 import type { RunFooterTheme, RunTheme } from "./theme"
 import { stringWidth } from "../util/string-width"
 import { footerMenuText } from "./footer.menu"
@@ -60,6 +60,7 @@ export function RunFooterSubagentBody(props: {
   interrupt?: () => string | undefined
   shellOutput?: () => boolean
   mono?: boolean
+  markdown?: ScrollbackOptions["markdown"]
 }) {
   const t = (key: Key, params?: Params) => translate(resolveLocale(props.locale), key, params)
   const dims = useTerminalDimensions()
@@ -99,7 +100,12 @@ export function RunFooterSubagentBody(props: {
       <RunEntryContent
         commit={commit()}
         theme={theme()}
-        opts={{ shellOutput: props.shellOutput?.() ?? true, mono: props.mono, locale: props.locale }}
+        opts={{
+          shellOutput: props.shellOutput?.() ?? true,
+          mono: props.mono,
+          markdown: props.markdown,
+          locale: props.locale,
+        }}
       />
     </box>
   ))

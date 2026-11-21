@@ -38,6 +38,7 @@ test("prompt footer separates simultaneous subagent, shell, and usage status", a
         cost: () => 1,
         message: { list: () => [] },
       },
+      job: { list: () => [] },
       shell: {
         list: () => [{ metadata: { sessionID: "session" } }],
       },
@@ -127,6 +128,7 @@ test("prompt footer can hide details", async () => {
           ],
         },
       },
+      job: { list: () => [] },
       shell: { list: () => [] },
       location: {
         model: { list: () => [{ providerID: "provider", id: "model", limit: { context: 10_000 } }] },
@@ -212,6 +214,7 @@ test.each(["en", "zh"] as const)("prompt footer shows the session's goal and ope
         cost: () => 0,
         message: { list: () => [] },
       },
+      job: { list: () => [] },
       shell: { list: () => [] },
       location: { model: { list: () => [] } },
     },
@@ -266,3 +269,62 @@ function findText(node: Renderable, text: string): TextRenderable | undefined {
     .map((child) => findText(child, text))
     .find((found) => found !== undefined)
 }
+
+test.each([
+  ["en", "1 script · 2 subagents · 2 shells"],
+  ["zh", "1 个脚本 · 2 个子代理 · 2 个 shell"],
+] as const)("prompt footer counts jobs in %s and opens the scripts tab", async (locale, status) => {
+  const color = RGBA.fromInts(200, 200, 200)
+  const dispatched: [string, string | undefined][] = []
+  const sessions: Record<string, { id: string; parentID?: string; location: { directory: string } }> = {
+    session: { id: "session", location: { directory: "/workspace" } },
+    child: { id: "child", parentID: "session", location: { directory: "/workspace" } },
+    running: { id: "running", parentID: "session", location: { directory: "/workspace" } },
+  }
+  const context = {
+    location: { directory: "/workspace" },
+    theme: { text: { base: color, muted: color } },
+    keymap: {
+      shortcuts: (id: string) => (id === "session.child.first" ? ["ctrl+j"] : []),
+      dispatch: (id: string, input?: string) => dispatched.push([id, input]),
+    },
+    client: { rpc: () => ({ get: () => Promise.resolve(null), events: { on: () => () => {} } }) },
+    data: {
+      on: () => () => {},
+      session: {
+        family: () => ["session", "child", "running"],
+        status: (id: string) => (id === "running" ? "running" : "idle"),
+        get: (id: string) => sessions[id],
+        cost: () => 0,
+        message: { list: () => [] },
+      },
+      job: {
+        list: () => [
+          { kind: "codemode", id: "cm_main", sessionID: "session", status: "running", time: { started: 1 } },
+          { kind: "codemode", id: "cm_child", sessionID: "child", status: "running", time: { started: 1 } },
+        ],
+      },
+      shell: { list: () => [{ metadata: { sessionID: "session" } }, { metadata: { sessionID: "session" } }] },
+      location: { model: { list: () => [] } },
+    },
+  } as unknown as Context
+  const app = await testRender(
+    () => (
+      <ConfigProvider config={createTuiResolvedConfig({ locale })}>
+        <I18nProvider>
+          <PromptFooter context={context} sessionID="session" mode="normal" showDetails={false} />
+        </I18nProvider>
+      </ConfigProvider>
+    ),
+    { width: 80, height: 2 },
+  )
+
+  try {
+    await app.renderOnce()
+    expect(app.captureCharFrame()).toContain(`ctrl+j ${status}`)
+    await app.mockMouse.click(2, 0)
+    expect(dispatched).toEqual([["session.child.first", "scripts"]])
+  } finally {
+    app.renderer.destroy()
+  }
+})

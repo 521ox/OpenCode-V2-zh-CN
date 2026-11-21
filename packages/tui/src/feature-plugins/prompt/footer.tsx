@@ -7,6 +7,7 @@ import { useInteractivity } from "../../context/interactivity"
 import { stringWidth } from "../../util/string-width"
 import { useI18n } from "../../context/i18n"
 import { createGoal, GoalStatus } from "./goal"
+import { busyCounts, busyTab } from "../../routes/session/composer/tabs"
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -22,22 +23,11 @@ export function PromptFooter(props: {
   const i18n = useI18n()
   const dimensions = useTerminalDimensions()
   const [liveHovered, setLiveHovered] = createSignal(false)
-  const subagents = createMemo(() => {
-    if (!props.sessionID) return 0
-    const count = props.context.data.session
-      .family(props.sessionID)
-      .filter((id) => id !== props.sessionID && props.context.data.session.status(id) === "running").length
-    return count
-      ? i18n.t(count === 1 ? "feature.prompt.subagentOne" : "feature.prompt.subagents", { count })
-      : undefined
-  })
-  const shells = createMemo(() => {
-    if (!props.sessionID) return 0
-    const count = props.context.data.shell
-      .list(props.context.location)
-      .filter((shell) => shell.metadata.sessionID === props.sessionID).length
-    return count ? i18n.t(count === 1 ? "feature.prompt.shellOne" : "feature.prompt.shells", { count }) : undefined
-  })
+  const counts = createMemo(() =>
+    props.sessionID
+      ? busyCounts({ data: props.context.data, sessionID: props.sessionID, location: props.context.location })
+      : { scripts: 0, subagents: 0, shells: 0 },
+  )
   const status = createMemo(() => {
     if (!props.sessionID) return []
     const session = props.context.data.session.get(props.sessionID)
@@ -53,7 +43,23 @@ export function PromptFooter(props: {
       cost > 0 ? money.format(cost) : undefined,
     ].filter((item): item is string => Boolean(item))
   })
-  const live = createMemo(() => Boolean(subagents() || shells()))
+  const live = createMemo(() => {
+    const countsNow = counts()
+    return [
+      countsNow.scripts &&
+        i18n.t(countsNow.scripts === 1 ? "feature.prompt.scriptOne" : "feature.prompt.scripts", {
+          count: countsNow.scripts,
+        }),
+      countsNow.subagents &&
+        i18n.t(countsNow.subagents === 1 ? "feature.prompt.subagentOne" : "feature.prompt.subagents", {
+          count: countsNow.subagents,
+        }),
+      countsNow.shells &&
+        i18n.t(countsNow.shells === 1 ? "feature.prompt.shellOne" : "feature.prompt.shells", {
+          count: countsNow.shells,
+        }),
+    ].filter((item): item is string => Boolean(item))
+  })
   const goal = createGoal(props.context, () => props.sessionID)
   // Prompt hints read as disabled while the session does not own input, e.g. while a side panel is focused.
   const interactive = useInteractivity()
@@ -72,16 +78,14 @@ export function PromptFooter(props: {
     <Switch>
       <Match when={props.mode === "normal"}>
         <Switch>
-          <Match when={goal() || live() || status().length > 0}>
+          <Match when={goal() || live().length > 0 || status().length > 0}>
             <box flexDirection="row" flexShrink={props.showDetails && layout().usage ? 0 : 1} minWidth={0}>
-              <Show when={live()}>
+              <Show when={live().length > 0}>
                 <box
                   flexShrink={0}
                   onMouseOver={() => setLiveHovered(true)}
                   onMouseOut={() => setLiveHovered(false)}
-                  onMouseUp={() =>
-                    props.context.keymap.dispatch("session.child.first", subagents() ? "subagents" : "shell")
-                  }
+                  onMouseUp={() => props.context.keymap.dispatch("session.child.first", busyTab(counts()))}
                 >
                   <text
                     fg={liveHovered() ? props.context.theme.text.base : props.context.theme.text.muted}
@@ -90,14 +94,12 @@ export function PromptFooter(props: {
                     <Show when={shortcut("session.child.first")}>
                       {(value) => <span style={{ fg: props.context.theme.text.base }}>{value()} </span>}
                     </Show>
-                    <Show when={subagents()}>{(value) => <>{value()}</>}</Show>
-                    <Show when={subagents() && shells()}> · </Show>
-                    <Show when={shells()}>{(value) => <>{value()}</>}</Show>
+                    {live().join(" · ")}
                   </text>
                 </box>
               </Show>
               <Show when={props.sessionID && goal()}>
-                <Show when={live()}>
+                <Show when={live().length > 0}>
                   <text fg={props.context.theme.text.muted} wrapMode="none" flexShrink={0}>
                     {" · "}
                   </text>
@@ -106,7 +108,7 @@ export function PromptFooter(props: {
               </Show>
               <Show when={props.showDetails && layout().usage && status().length > 0}>
                 <text fg={props.context.theme.text.muted} wrapMode="none" flexShrink={0}>
-                  <Show when={live() || goal()}> · </Show>
+                  <Show when={live().length > 0 || goal()}> · </Show>
                   {status().join(" · ")}
                 </text>
               </Show>

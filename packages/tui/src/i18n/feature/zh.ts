@@ -51,6 +51,8 @@ export default {
   "feature.mcp.signIn": "登录",
   "feature.home.mcpFailed": "{{count}} 个 MCP 失败",
   "feature.prompt.subagentOne": "{{count}} 个子代理",
+  "feature.prompt.scriptOne": "{{count}} 个脚本",
+  "feature.prompt.scripts": "{{count}} 个脚本",
   "feature.prompt.subagents": "{{count}} 个子代理",
   "feature.prompt.shellOne": "{{count}} 个 shell",
   "feature.prompt.shells": "{{count}} 个 shell",

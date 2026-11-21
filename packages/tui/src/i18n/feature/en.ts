@@ -50,6 +50,8 @@ export default {
   "feature.mcp.signIn": "Sign in",
   "feature.home.mcpFailed": "{{count}} MCP failed",
   "feature.prompt.subagentOne": "{{count}} subagent",
+  "feature.prompt.scriptOne": "{{count}} script",
+  "feature.prompt.scripts": "{{count}} scripts",
   "feature.prompt.subagents": "{{count}} subagents",
   "feature.prompt.shellOne": "{{count}} shell",
   "feature.prompt.shells": "{{count}} shells",
