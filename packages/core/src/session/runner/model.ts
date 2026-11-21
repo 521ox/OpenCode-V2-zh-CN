@@ -4,7 +4,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { LanguageModel } from "@opencode/ai/effect"
 import { Model } from "@opencode/schema/model"
 import { Provider } from "@opencode/schema/provider"
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Effect, Layer, Schema, type Result } from "effect"
 import type { SessionRequestKind } from "@opencode/plugin/effect/session"
 import { Agent } from "../../agent.js"
 import { ModelResolver } from "../../model-resolver.js"
@@ -35,19 +35,20 @@ export class ModelUnavailableError extends Schema.TaggedError<ModelUnavailableEr
 export type Error = ModelNotSelectedError | ModelUnavailableError | ModelResolver.Error
 export type Resolved = ModelResolver.Resolved
 
+type Selected = { readonly info: Model.Info; readonly variant: Model.VariantID | undefined }
+type SelectionError = ModelNotSelectedError | ModelUnavailableError
+
 export interface Interface {
   readonly select: (
     session: SessionSchema.Info,
     available: () => Effect.Effect<ReadonlyArray<Model.Info>>,
-  ) => Effect.Effect<
-    { readonly info: Model.Info; readonly variant: Model.VariantID | undefined },
-    ModelNotSelectedError | ModelUnavailableError
-  >
+  ) => Effect.Effect<Selected, SelectionError>
   /** Availability is sampled lazily for each explicitly selected model resolution. */
   readonly resolve: (
     session: SessionSchema.Info,
     available: () => Effect.Effect<ReadonlyArray<Model.Info>>,
     request: { readonly kind: SessionRequestKind; readonly agent: Agent.ID },
+    selection?: Result.Result<Selected, SelectionError>,
   ) => Effect.Effect<Resolved, Error>
 }
 
@@ -107,8 +108,8 @@ const layer = Layer.effect(
     })
     return Service.of({
       select,
-      resolve: Effect.fn("SessionRunnerModel.resolve")(function* (session, available, request) {
-        const selected = yield* select(session, available)
+      resolve: Effect.fn("SessionRunnerModel.resolve")(function* (session, available, request, selection) {
+        const selected = yield* selection ? Effect.fromResult(selection) : select(session, available)
         const ref = Model.Ref.make({
           providerID: selected.info.providerID,
           id: selected.info.id,

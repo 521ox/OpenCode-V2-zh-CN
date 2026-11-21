@@ -22,9 +22,12 @@ describe("Ripgrep", () => {
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       yield* Effect.promise(() => Bun.write(path.join(tmp.path, "haystack.txt"), "haystack\n"))
+      const environment = yield* Environment.Service
       const ripgrep = yield* Ripgrep.Service
       const results = yield* Effect.all(
-        Array.from({ length: 12 }, () => ripgrep.grep({ cwd: tmp.path, pattern: "absent-needle", limit: 10 })),
+        Array.from({ length: 12 }, () =>
+          ripgrep.grep({ environment, cwd: tmp.path, pattern: "absent-needle", limit: 10 }),
+        ),
         { concurrency: "unbounded" },
       ).pipe(Effect.timeout("3 seconds"))
       expect(results).toEqual(Array.from({ length: 12 }, () => []))
@@ -35,8 +38,9 @@ describe("Ripgrep", () => {
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       yield* Effect.promise(() => Bun.write(path.join(tmp.path, "haystack.txt"), "haystack\n"))
+      const environment = yield* Environment.Service
       const ripgrep = yield* Ripgrep.Service
-      const error = yield* ripgrep.grep({ cwd: tmp.path, pattern: "[", limit: 10 }).pipe(Effect.flip)
+      const error = yield* ripgrep.grep({ environment, cwd: tmp.path, pattern: "[", limit: 10 }).pipe(Effect.flip)
       expect(error).toBeInstanceOf(Ripgrep.InvalidPatternError)
     }),
   )

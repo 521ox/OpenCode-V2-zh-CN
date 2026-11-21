@@ -2,7 +2,7 @@ export * as SessionContext from "./context.js"
 
 import { Model } from "../model.js"
 import { Permission } from "../permission.js"
-import { Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer, Result } from "effect"
 import { Agent } from "../agent.js"
 import type { SessionRequestKind } from "@opencode/plugin/effect/session"
 import { CodeModeInstructions } from "../codemode/instructions.js"
@@ -26,6 +26,7 @@ import { Tool } from "../tool.js"
 import { modelTools } from "../tool/model-policy.js"
 import { WebSearch } from "../websearch.js"
 import { AgentNotFoundError } from "./error.js"
+import { HostedWebSearch } from "./hosted-web-search.js"
 import { SessionHistory } from "./history.js"
 import { InstructionEntry } from "./instruction-entry.js"
 import { SessionMessage } from "./message.js"
@@ -39,6 +40,7 @@ export interface Selection {
   readonly agent: Agent.Selection & { readonly info: Agent.Info }
   readonly instructions: Instructions.List
   readonly tools: Tool.Snapshot
+  readonly primary?: Result.Result<SessionRunnerModel.Resolved, SessionRunnerModel.Error>
 }
 
 export interface Loaded {
@@ -52,14 +54,14 @@ export interface Loaded {
 
 /**
  * Resolves model-request state in two phases: `select` fixes the Session,
- * agent, instruction sources, and tool snapshot; `load` adds the model and
- * active history for that selection. Auxiliary operations resolve only the
+ * agent, instruction sources, and tool snapshot; `load` adds active history and
+ * surfaces model resolution failures for that selection. Auxiliary operations resolve only the
  * capabilities they need; request preparation stays separate from selection.
  */
 export interface Interface {
   /** Selects the Session, agent, instructions, and tools used by subsequent work. */
-  readonly select: (sessionID: SessionSchema.ID) => Effect.Effect<Selection, AgentNotFoundError>
-  /** Resolves the model and active history for that selection. */
+  readonly select: (sessionID: SessionSchema.ID, kind?: "primary") => Effect.Effect<Selection, AgentNotFoundError>
+  /** Loads active history and obtains the primary model for that selection. */
   readonly load: (selection: Selection) => Effect.Effect<Loaded, SessionRunnerModel.Error>
   readonly resolveModel: (
     session: SessionSchema.Info,
@@ -145,7 +147,7 @@ const layer = Layer.effect(
       return { agent, primary, selected }
     })
 
-    const select = Effect.fn("SessionContext.select")(function* (sessionID: SessionSchema.ID) {
+    const select = Effect.fn("SessionContext.select")(function* (sessionID: SessionSchema.ID, kind?: "primary") {
       const session = yield* store.get(sessionID)
       if (!session) return yield* Effect.die(new Error(`Session not found: ${sessionID}`))
       if (session.location.directory !== location.directory || session.location.workspaceID !== location.workspaceID)
@@ -157,23 +159,27 @@ const layer = Layer.effect(
       // Session permissions narrow discovery the same way they narrow the tool snapshot.
       const permissions = Permission.merge(agent.info.permissions, session.permissions ?? [])
       const [selected, hasWebSearch, fullCodeMode] = yield* Effect.all(
-        [
-          models.select(session, model.available).pipe(Effect.orElseSucceed(() => undefined)),
-          websearch.available(),
-          flags.enabled("full_codemode"),
-        ],
+        [Effect.result(models.select(session, model.available)), websearch.available(), flags.enabled("full_codemode")],
         { concurrency: "unbounded" },
       )
       const fallbackRef = session.model ?? agent.info.model
-      const policyModel = selected?.info ?? (fallbackRef && Model.Info.default(fallbackRef.providerID, fallbackRef.id))
+      const policyModel = Result.isSuccess(selected)
+        ? selected.success.info
+        : fallbackRef && Model.Info.default(fallbackRef.providerID, fallbackRef.id)
+      const primary =
+        kind && (yield* Effect.result(models.resolve(session, model.available, { kind, agent: agent.id }, selected)))
+      const hosted = primary && Result.isSuccess(primary) && HostedWebSearch.factoryFor(primary.success.model)
+      const policy = modelTools({
+        model: policyModel,
+        websearch: hasWebSearch || Boolean(hosted),
+        // An agent that can't run `execute` (such as explore) keeps every tool direct.
+        fullCodeMode: fullCodeMode && Tool.codeModeAvailable(permissions),
+      })
+      // Hosted search replaces the registered local definition at request preparation, not inside a script.
+      if (hosted) policy.direct.add("websearch")
       const tools = yield* registry.snapshot(permissions, {
         services,
-        // An agent that can't run `execute` (such as explore) keeps every tool direct, so give it the flag-off policy.
-        tools: modelTools({
-          model: policyModel,
-          websearch: hasWebSearch,
-          fullCodeMode: fullCodeMode && Tool.codeModeAvailable(permissions),
-        }),
+        tools: policy,
       })
       const loaded = yield* Effect.all(
         {
@@ -204,11 +210,14 @@ const layer = Layer.effect(
           loaded.entries,
         ]),
         tools,
+        primary,
       }
     })
 
     const load = Effect.fn("SessionContext.load")(function* (selection: Selection) {
-      const model = yield* resolveModel(selection.session, { kind: "primary", agent: selection.agent.id })
+      const model = yield* selection.primary
+        ? Effect.fromResult(selection.primary)
+        : resolveModel(selection.session, { kind: "primary", agent: selection.agent.id })
       const history = yield* SessionHistory.entriesForRunner(
         db,
         selection.session.id,

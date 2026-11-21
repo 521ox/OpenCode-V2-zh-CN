@@ -62,7 +62,7 @@ test.each([
   ["default", undefined],
   ["explicit false", false],
 ] as const)(
-  "the real experiment dialog is opt-in from %s, persists its toggle and reacts to locale",
+  "the real experiment dialog honors %s, persists its toggle and reacts to locale",
   async (_label, initial) => {
     await using root = await tmpdir()
     const fixture = await mount(
@@ -79,25 +79,26 @@ test.each([
     try {
       await app.waitForFrame((frame) => frame.includes("新版设计"))
       await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
-      expect(fixture.enabled()).toBe(false)
+      const enabled = initial ?? true
+      expect(fixture.enabled()).toBe(enabled)
       expect(fixture.current().experimental?.["new-designs"]).toBe(initial)
       app.mockInput.pressEnter()
-      await app.waitFor(() => fixture.enabled())
-      expect(fixture.current().experimental?.["new-designs"]).toBe(true)
+      await app.waitFor(() => fixture.enabled() === !enabled)
+      expect(fixture.current().experimental?.["new-designs"]).toBe(!enabled)
       await fixture.i18n().setLocale("en")
       await app.waitForFrame((frame) => frame.includes("New designs"))
-      expect(fixture.enabled()).toBe(true)
+      expect(fixture.enabled()).toBe(!enabled)
       await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
       app.mockInput.pressEnter()
-      await app.waitFor(() => !fixture.enabled())
-      expect(fixture.current().experimental?.["new-designs"]).toBe(false)
+      await app.waitFor(() => fixture.enabled() === enabled)
+      expect(fixture.current().experimental?.["new-designs"]).toBe(enabled)
     } finally {
       app.renderer.destroy()
     }
   },
 )
 
-test("opted-in title search keeps translated placeholders and the existing close control", async () => {
+test("default title search keeps translated placeholders and the existing close control", async () => {
   await using root = await tmpdir()
   function Select() {
     const { t } = useI18n()
@@ -110,12 +111,7 @@ test("opted-in title search keeps translated placeholders and the existing close
       />
     )
   }
-  const fixture = await mount(
-    root.path,
-    () => <Select />,
-    { locale: "en", animations: false, experimental: { "new-designs": true } },
-    100,
-  )
+  const fixture = await mount(root.path, () => <Select />, { locale: "en", animations: false }, 100)
   const { app } = fixture
   try {
     await app.waitForFrame((frame) => frame.includes("Search commands"))

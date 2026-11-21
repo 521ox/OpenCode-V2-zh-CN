@@ -132,7 +132,7 @@ describe("subagent observer lifetime", () => {
           expect(notices).toHaveLength(1)
           expect(notices[0]).toMatchObject({ metadata: { source: "subagent", childID: child.id, state: outcome } })
           expect(notices[0]?.text).toBe(
-            `<subagent sessionID="${child.id}" state="${outcome}" description="Review fixture">\n${outcome === "completed" ? conclusion : "Subagent cancelled"}\n</subagent>`,
+            `<background-result kind="subagent" sessionID="${child.id}" state="${outcome}" description="Review fixture">\n${outcome === "completed" ? conclusion : "Subagent cancelled"}\n</background-result>`,
           )
           expect(yield* jobs.pendingBackground).toEqual([])
           yield* locations.invalidate(parent.location)

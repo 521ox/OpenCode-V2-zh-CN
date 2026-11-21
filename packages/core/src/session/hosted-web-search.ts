@@ -12,6 +12,9 @@ import type { SessionSchema } from "./schema.js"
 const nativeSearch = (tool: ToolDefinition) =>
   Object.values(tool.native ?? {}).some((entry) => Predicate.hasProperty(entry, "type") && entry.type === "web_search")
 
+export const factoryFor = (model: LanguageModel) =>
+  OpenAI.supportsWebSearch(model) ? OpenAI.webSearch : XAI.supportsWebSearch(model) ? XAI.webSearch : undefined
+
 /** Historical declarations describe previous requests; the current selection owns the native search slot. */
 export const history = (message: Message, hosted: ToolDefinition | undefined, replaceLocal: boolean): Message => {
   if (message.role !== "system" || !message.tools) return message
@@ -36,11 +39,7 @@ export const select = Effect.fn("HostedWebSearch.select")(function* (input: {
   readonly agent: Agent.ID
   readonly tools: ReadonlyMap<string, ToolDefinition>
 }) {
-  const factory = OpenAI.supportsWebSearch(input.model)
-    ? OpenAI.webSearch
-    : XAI.supportsWebSearch(input.model)
-      ? XAI.webSearch
-      : undefined
+  const factory = factoryFor(input.model)
   const entries = Array.from(input.tools).filter(([, tool]) => !nativeSearch(tool))
   const registered = entries.length === input.tools.size ? input.tools : new Map(entries)
   const replaceLocal = input.kind === "primary" && !!factory

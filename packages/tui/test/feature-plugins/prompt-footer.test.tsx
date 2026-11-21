@@ -270,7 +270,10 @@ function findText(node: Renderable, text: string): TextRenderable | undefined {
     .find((found) => found !== undefined)
 }
 
-test("prompt footer counts scripts, subagents with jobs, and shells and opens the scripts tab", async () => {
+test.each([
+  ["en", "1 script · 2 subagents · 2 shells"],
+  ["zh", "1 个脚本 · 2 个子代理 · 2 个 shell"],
+] as const)("prompt footer counts jobs in %s and opens the scripts tab", async (locale, status) => {
   const color = RGBA.fromInts(200, 200, 200)
   const dispatched: [string, string | undefined][] = []
   const sessions: Record<string, { id: string; parentID?: string; location: { directory: string } }> = {
@@ -306,13 +309,19 @@ test("prompt footer counts scripts, subagents with jobs, and shells and opens th
     },
   } as unknown as Context
   const app = await testRender(
-    () => <PromptFooter context={context} sessionID="session" mode="normal" showDetails={false} />,
+    () => (
+      <ConfigProvider config={createTuiResolvedConfig({ locale })}>
+        <I18nProvider>
+          <PromptFooter context={context} sessionID="session" mode="normal" showDetails={false} />
+        </I18nProvider>
+      </ConfigProvider>
+    ),
     { width: 80, height: 2 },
   )
 
   try {
     await app.renderOnce()
-    expect(app.captureCharFrame()).toContain("ctrl+j 1 script · 2 subagents · 2 shells")
+    expect(app.captureCharFrame()).toContain(`ctrl+j ${status}`)
     await app.mockMouse.click(2, 0)
     expect(dispatched).toEqual([["session.child.first", "scripts"]])
   } finally {

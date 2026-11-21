@@ -3731,6 +3731,7 @@ function Edit(props: ToolProps) {
 
 function ApplyPatch(props: ToolProps) {
   const { t } = useI18n()
+  const ctx = use()
   const theme = useTheme()
   const pathFormatter = usePathFormatter()
   const files = createMemo(() => parseApplyPatchFiles(props.metadata.files))

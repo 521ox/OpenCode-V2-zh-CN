@@ -29,7 +29,6 @@ const it = testEffect(
         project: false,
         global: false,
         claude: false,
-        claudeGlobal: false,
         load: () => Effect.succeed(Instructions.empty),
       }),
     ),

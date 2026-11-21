@@ -271,7 +271,7 @@ describe("SubagentTool", () => {
             expect(result.metadata).toEqual({ sessionID: childID, status: "running" })
             const admission = Array.from(yield* Fiber.join(admitted))[0]
             if (admission?.data.item.type !== "synthetic") return yield* Effect.die("Expected synthetic inbox item")
-            const expected = `<subagent sessionID="${childID}" state="completed" description="${conclusion.title}">\n${conclusion.text}\n</subagent>`
+            const expected = `<background-result kind="subagent" sessionID="${childID}" state="completed" description="${conclusion.title}">\n${conclusion.text}\n</background-result>`
             expect(admission.data.item.payload.text).toBe(expected)
             const jobs = yield* Job.Service
             yield* jobs.pendingBackground.pipe(Effect.repeat({ until: (pending) => pending.length === 0 }))
