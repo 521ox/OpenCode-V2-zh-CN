@@ -4,7 +4,7 @@
 
 [English](README.md) · [功能](#功能) · [下载与校验](#下载) · [从源码构建](#从源码构建) · [贡献指南](CONTRIBUTING.md)
 
-**[下载 Windows、macOS 或 Linux 预编译包：v2.3.0-zhcn.1](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.3.0-zhcn.1)**（未签名预发布）。三个系统均提供 x64 和 ARM64 包，均由[本分支的 2.3.0 源码](https://github.com/521ox/OpenCode-V2-zh-CN/commit/6a74bb086c327eecf8c8a7f8c61d1d7878f0fda8)构建。
+**[下载 Windows、macOS 或 Linux 预编译包：v2.3.0-zhcn.2](https://github.com/521ox/OpenCode-V2-zh-CN/releases/tag/v2.3.0-zhcn.2)**（未签名预发布）。三个系统均提供 x64 和 ARM64 包，均由[本分支的 2.3.0 源码](https://github.com/521ox/OpenCode-V2-zh-CN/commit/46ff955de969d0825683c3022268772832837228)构建。
 
 ## 功能
 
