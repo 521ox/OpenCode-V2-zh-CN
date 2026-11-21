@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { Agent } from "@opencode/core/agent"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Bus } from "@opencode/core/bus"
+import { Database } from "@opencode/core/database/database"
 import { FileMutation } from "@opencode/core/file-mutation"
 import { FileWrite } from "@opencode/core/file-write"
 import { Flag } from "@opencode/core/flag"
@@ -16,6 +18,7 @@ import { ReferenceInstructions } from "@opencode/core/reference/instructions"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionContext } from "@opencode/core/session/context"
+import { InstructionState } from "@opencode/core/session/instruction-state"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SkillInstructions } from "@opencode/core/skill/instructions"
 import { Tool } from "@opencode/core/tool"
@@ -246,6 +249,34 @@ const defaultIt = testEffect(makeContextLayer(undefined))
 const codeModeIt = testEffect(makeContextLayer("full_codemode"))
 
 describe("SessionContext.select model tool policy", () => {
+  defaultIt.effect("compaction using the primary snapshot advertises only genuinely available local search", () =>
+    Effect.gen(function* () {
+      const { select, websearch, context } = yield* setupContext
+      const database = yield* Database.Service
+      const bus = yield* Bus.Service
+      const compactionTools = Effect.fnUntraced(function* () {
+        const selection = yield* select("openai", "gpt-5", undefined, "primary")
+        yield* InstructionState.prepare(database.db, bus, selection.instructions, selection.session.id)
+        const loaded = yield* context.load(selection)
+        const prepared = yield* context.request.compaction({
+          session: loaded.session,
+          agent: loaded.agent.id,
+          model: loaded.model,
+          tools: loaded.tools,
+          system: [],
+          messages: [],
+        })
+        return prepared.request.tools.map((tool) => tool.name)
+      })
+
+      const withLocal = yield* compactionTools()
+      expect(withLocal).toEqual(["glob", "grep", "patch", "read", "shell", "webfetch", "websearch", "execute"])
+      yield* websearch.transform((editor) => editor.remove(WebSearch.ID.make("exa")))
+      yield* websearch.select(false)
+      expect(yield* compactionTools()).toEqual(["glob", "grep", "patch", "read", "shell", "webfetch", "execute"])
+    }),
+  )
+
   codeModeIt.effect("reserves hosted search for the native request without a local supplier", () =>
     Effect.gen(function* () {
       const { select, websearch } = yield* setupContext

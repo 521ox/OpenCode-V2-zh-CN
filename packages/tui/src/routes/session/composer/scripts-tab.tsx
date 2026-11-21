@@ -4,12 +4,14 @@ import { TextAttributes, ScrollBoxRenderable } from "@opentui/core"
 import { useData } from "../../../context/data"
 import { useClient } from "../../../context/client"
 import { useTheme } from "../../../context/theme"
+import { useI18n } from "../../../context/i18n"
 import { Keymap } from "../../../context/keymap"
 import { Locale } from "../../../util/locale"
 import { scriptLabel } from "../../../util/session"
 import { useComposerTab } from "./context"
 
 export function ScriptsTab(props: { sessionID: string }) {
+  const { t } = useI18n()
   const data = useData()
   const client = useClient()
   const theme = useTheme()
@@ -28,7 +30,7 @@ export function ScriptsTab(props: { sessionID: string }) {
     const messages = data.session.message.list(props.sessionID)
     return runningScripts().map((job) => ({
       id: job.id,
-      label: scriptLabel(messages, job),
+      label: scriptLabel(messages, job) ?? t("session.script"),
       started: job.time.started,
     }))
   })
@@ -68,10 +70,12 @@ export function ScriptsTab(props: { sessionID: string }) {
         onCleanup(
           composer.register({
             id: "scripts",
-            label: "Scripts",
+            get label() {
+              return t("session.scripts")
+            },
             hints: () =>
               runningScripts()[store.selected]
-                ? [{ label: "cancel", shortcut: shortcuts.get("composer.script.cancel") ?? "" }]
+                ? [{ label: t("session.cancel"), shortcut: shortcuts.get("composer.script.cancel") ?? "" }]
                 : [],
           }),
         )
@@ -86,8 +90,8 @@ export function ScriptsTab(props: { sessionID: string }) {
     commands: [
       {
         id: "composer.script.up",
-        title: "Previous script",
-        group: "Composer",
+        title: t("session.previousScript"),
+        group: t("session.composer"),
         run() {
           if (store.selected === 0) {
             composer.close()
@@ -98,8 +102,8 @@ export function ScriptsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.script.down",
-        title: "Next script",
-        group: "Composer",
+        title: t("session.nextScript"),
+        group: t("session.composer"),
         run() {
           const count = runningScripts().length
           if (count === 0) return
@@ -108,8 +112,8 @@ export function ScriptsTab(props: { sessionID: string }) {
       },
       {
         id: "composer.script.cancel",
-        title: "Cancel script",
-        group: "Composer",
+        title: t("session.cancelScript"),
+        group: t("session.composer"),
         run() {
           const job = runningScripts()[store.selected]
           if (job) void client.api.experimental.job.cancel({ id: job.id })

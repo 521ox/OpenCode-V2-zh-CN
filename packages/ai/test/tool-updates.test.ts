@@ -564,14 +564,18 @@ describe("OpenAI Responses tool updates", () => {
 
   it.effect("declares every tool in a leading additional_tools item and leaves top-level tools out", () =>
     Effect.gen(function* () {
-      const prepared = yield* compileRequest(ai.request({ model: astra, tools: [read, edit], prompt: "Go." }))
+      const prepared = yield* compileRequest(
+        ai.request({ model: astra, tools: [read, edit], system: "Fixed instructions.", prompt: "Go." }),
+      )
       const plain = yield* compileRequest(
         ai.request({ model: openai("gpt-6-astra"), tools: [read, edit], prompt: "Go." }),
       )
 
       expect(prepared.body.tools).toBeUndefined()
+      expect(prepared.body.instructions).toBeUndefined()
       expect(prepared.body.input).toEqual([
         { type: "additional_tools", role: "developer", tools: plain.body.tools },
+        { type: "message", role: "developer", content: "Fixed instructions." },
         { type: "message", role: "user", content: [{ type: "input_text", text: "Go." }] },
       ])
       expect(additional(plain.body)).toEqual([])

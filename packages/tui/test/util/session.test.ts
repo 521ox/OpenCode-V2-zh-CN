@@ -66,5 +66,5 @@ test("scriptLabel names a script by its first line of code, then its title", () 
   ] as unknown as SessionMessageInfo[]
   expect(scriptLabel(messages, job)).toBe("// Build both")
   expect(scriptLabel([], { ...job, title: "Build" })).toBe("Build")
-  expect(scriptLabel([], job)).toBe("Script")
+  expect(scriptLabel([], job)).toBeUndefined()
 })

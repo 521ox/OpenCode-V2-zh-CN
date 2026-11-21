@@ -99,5 +99,5 @@ export function scriptLabel(messages: readonly SessionMessageInfo[], job: JobInf
     ?.split("\n")
     .map((item) => item.trim())
     .find((item) => item.length > 0)
-  return line ?? job.title ?? "Script"
+  return line ?? job.title
 }

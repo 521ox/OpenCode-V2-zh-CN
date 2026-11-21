@@ -39,7 +39,7 @@ export interface Selection {
   readonly session: SessionSchema.Info
   readonly agent: Agent.Selection & { readonly info: Agent.Info }
   readonly instructions: Instructions.List
-  readonly tools: Tool.Snapshot
+  readonly tools: SessionModelRequest.Tools
   readonly primary?: Result.Result<SessionRunnerModel.Resolved, SessionRunnerModel.Error>
 }
 
@@ -49,7 +49,7 @@ export interface Loaded {
   readonly model: SessionRunnerModel.Resolved
   readonly initial: ReadonlyArray<Instructions.Rendered>
   readonly messages: ReadonlyArray<SessionMessage.Info>
-  readonly tools: Tool.Snapshot
+  readonly tools: SessionModelRequest.Tools
 }
 
 /**
@@ -176,7 +176,7 @@ const layer = Layer.effect(
         fullCodeMode: fullCodeMode && Tool.codeModeAvailable(permissions),
       })
       // Hosted search replaces the registered local definition at request preparation, not inside a script.
-      if (hosted) policy.direct.add("websearch")
+      if (hosted) policy.direct.add(HostedWebSearch.localName)
       const tools = yield* registry.snapshot(permissions, {
         services,
         tools: policy,
@@ -209,7 +209,7 @@ const layer = Layer.effect(
           loaded.builtins,
           loaded.entries,
         ]),
-        tools,
+        tools: hosted && !hasWebSearch ? { ...tools, hostedSearchOnly: true as const } : tools,
         primary,
       }
     })
