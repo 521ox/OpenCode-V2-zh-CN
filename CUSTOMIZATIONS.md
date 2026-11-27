@@ -167,6 +167,14 @@ not rewrite the root's creation directory. Resolution does not read or create
 files, and missing or unsafe facts produce an unavailable result rather than a
 guessed location. User instructions and authoritative project paths take priority.
 
+For a root created on the local host, changing the working directory to another
+machine does not move its rules directory. On a host Location with `machines`
+enabled, primary guidance gives the `local:` tool path when that syntax can
+represent the stored path. Use it with machine-aware file tools from a remote
+working directory, not with shell commands or the local OS. The JSON
+`rules_directory` remains the bare absolute path. An absolute path is not proof
+of where a root was created; sandbox Locations do not receive the host tool path.
+
 The context is appended after normal context hooks and is omitted from title,
 generate and compaction requests. Historical rows are backfilled only from exact
 persisted creation facts or a valid direct historical start-directory fact.
