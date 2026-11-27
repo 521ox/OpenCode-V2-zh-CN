@@ -62,13 +62,18 @@ export function resolve(current: string, lookup: (id: string) => Effect.Effect<R
   })
 }
 
-export function render(context: Context) {
+export function render(context: Context, localToolPath?: string) {
   return [
     "Session working-memory context (JSON):",
     JSON.stringify(context),
     context.status === "available"
       ? [
           "This directory is for compact session working memory, not general working documents or a chronological session record. Keep only what is needed to resume after context loss or interruption. The root session and all descendants share it.",
+          ...(localToolPath
+            ? [
+                `If the root session was created on this local host, its rules directory stays on this host. When the working directory is on another machine, use ${JSON.stringify(localToolPath)} as the directory for machine-aware file tools and append any file name to that path. The prefix is tool syntax, not part of the filesystem path or a shell command argument. The absolute path alone does not identify the root session's creation environment.`,
+              ]
+            : []),
           "Use the live conversation first. Read only relevant memory when information needed to continue is missing or uncertain; do not routinely scan or reread the directory.",
           "Keep only essential continuation facts: the current goal, accepted decisions and their sources, actual progress, unresolved issues, necessary recovery constraints, and the next action. Prefer brief facts and pointers to existing project artifacts or evidence.",
           "Write only when new or changed information needs to survive a later continuation and is not already adequately captured. Reading memory, completing a step, receiving a subagent result, or compacting context is not by itself a reason to write.",

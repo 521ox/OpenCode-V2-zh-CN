@@ -6,9 +6,9 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { AppProcess } from "@opencode/util/process"
 import { Duration, Effect, PlatformError, Redacted, Schema } from "effect"
 import { ChildProcess } from "effect/process"
+import { Environment } from "../../environment/index.js"
 import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
 import { FileAccess } from "../../file-access.js"
-import { Location } from "../../location.js"
 import { Permission } from "../../permission.js"
 
 const DEFAULT_TIMEOUT_MS = 120_000
@@ -77,7 +77,6 @@ export const Plugin = {
   effect: Effect.fn("DirectExecTool.Plugin")(function* (ctx: Context) {
     const catalog = yield* EnvironmentToolsCatalog.make()
     const fs = yield* FSUtil.Service
-    const location = yield* Location.Service
     const access = yield* FileAccess.Service
     const permission = yield* Permission.Service
     const appProcess = yield* AppProcess.Service
@@ -102,10 +101,12 @@ export const Plugin = {
               if (valid instanceof ToolFailure) return yield* valid
               const source = { type: "tool" as const, messageID: context.messageID, id: context.id }
               const initial = yield* catalog.resolveExecutable(valid.id)
-              const target = yield* access.resolve({ path: input.cwd ?? location.directory, kind: "directory" })
+              const target = yield* access.resolve({ path: input.cwd ?? ".", kind: "directory" })
+              if (target.environment.id !== Environment.localID)
+                return yield* new ToolFailure({ message: "direct_exec requires a local working directory" })
               const canonical = yield* directory(target.absolute)
               // FileAccess owns approval resources. Check both the requested path and its real destination.
-              const destination = yield* access.resolve({ path: canonical, kind: "directory" })
+              const destination = yield* access.resolve({ path: canonical, base: target, kind: "directory" })
               yield* access.authorizeExternal([target, destination], context, { path: target.absolute })
               yield* permission.assert({
                 action: "direct_exec",

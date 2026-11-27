@@ -15,7 +15,7 @@ import { ThemeProvider } from "../../src/context/theme"
 import { ToastProvider } from "../../src/ui/toast"
 import { DialogProvider, useDialog } from "../../src/ui/dialog"
 import type { ModelPreference } from "../../src/model-preference"
-import { tmpdir } from "./fixture"
+import { tmpdir } from "../../../core/test/fixture/tmpdir"
 import { createApi, createEventStream, createFetch, directory, json, type FetchHandler } from "./tui-client"
 import { TestTuiContexts } from "./tui-environment"
 import { createTuiResolvedConfig } from "./tui-runtime"
@@ -27,10 +27,11 @@ export async function renderLocal(
     sessions?: SessionInfo[]
     preferences?: Partial<ModelPreference>
     args?: Args
+    config?: Parameters<typeof createTuiResolvedConfig>[0]
     fetch?: FetchHandler
   } = {},
 ) {
-  const temporary = await tmpdir()
+  const temporary = await tmpdir("opencode-tui-local-")
   await Bun.write(path.join(temporary.path, "model.json"), JSON.stringify(input.preferences ?? {}))
   const events = createEventStream()
   const calls = createFetch(async (url, request) => {
@@ -61,7 +62,7 @@ export async function renderLocal(
     () => (
       <TestTuiContexts paths={{ state: temporary.path }}>
         <ArgsProvider {...input.args}>
-          <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en", ...input.config })}>
             <I18nProvider>
               <Keymap.Provider>
                 <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>

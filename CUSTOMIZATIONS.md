@@ -1,5 +1,23 @@
 # Minimal Custom V2 Distribution
 
+## November 28 synchronization
+
+Upstream's session Find experiment is off unless `experimental["session-find"]`
+is enabled in the TUI config. `/find` and the upstream Find shortcuts keep their
+behavior, with Chinese and English search controls. The model picker follows
+upstream's integration scoping and separate model speed selection. The fork does
+not enable upstream server experiments such as `compaction_jobs` in releases.
+When the flag is enabled, upstream checkpoints retain direct-child references
+and background work; the fork still delivers complete child conclusions to the
+immediate parent through the ordinary background-report path.
+
+`direct_exec` uses the current local working directory when `cwd` is omitted.
+If a session's current working directory is on another machine, give a local
+`cwd` or use the upstream shell for remote work. A remote directory never becomes
+the working directory of a host process. The root session's stored creation
+directory is separate from the current working directory and still anchors the
+shared working-memory path.
+
 ## November 22 synchronization
 
 The current upstream TUI enables new designs by default. Users can turn them
@@ -148,6 +166,14 @@ share the root location through persisted parent lineage. Session movement does
 not rewrite the root's creation directory. Resolution does not read or create
 files, and missing or unsafe facts produce an unavailable result rather than a
 guessed location. User instructions and authoritative project paths take priority.
+
+For a root created on the local host, changing the working directory to another
+machine does not move its rules directory. On a host Location with `machines`
+enabled, primary guidance gives the `local:` tool path when that syntax can
+represent the stored path. Use it with machine-aware file tools from a remote
+working directory, not with shell commands or the local OS. The JSON
+`rules_directory` remains the bare absolute path. An absolute path is not proof
+of where a root was created; sandbox Locations do not receive the host tool path.
 
 The context is appended after normal context hooks and is omitted from title,
 generate and compaction requests. Historical rows are backfilled only from exact

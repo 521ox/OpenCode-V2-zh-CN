@@ -143,7 +143,7 @@ describe("native hosted web search", () => {
           const custom = ToolDefinition.make({ ...local, freeform: { type: "text" } })
           const prepared = yield* compileRequest(
             ai.request({
-              model: provider.model,
+              model: LanguageModel.update(provider.model, { capabilities: { tools: { freeform: ["text"] } } }),
               prompt: "Search then read",
               tools: [provider.tool, custom],
               providerOptions: { allowedTools: { toolNames: [provider.tool.name, custom.name], mode: "required" } },

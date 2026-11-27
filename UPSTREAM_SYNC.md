@@ -42,6 +42,62 @@ a public release. Documentation-only and other non-sync merges do not qualify.
 The dated records below describe earlier local deliveries and their evidence;
 their task-specific no-publication statements do not replace this current PR flow.
 
+## November 28 synchronization — draft candidate
+
+Issue #20 and PR #22 merge the frozen official `dev` at
+`68ea328db1978f31bc0ab42e1cba618d79eeac92` into
+`6fb9a7e1b4d67d2b2732552aa588b5b9edb802bf`. Both parents are retained in
+`4c96cb7ab328ad8084aa0039128e6d1fcee19abb`. The 409-commit official range
+ends at source version 2.4.1, not the 2.4.2 release tag. The final integration
+`290c80f9d8915806a91c852321c7e1588191ec2a` also retains the protected fork
+merge for #19, `805ffa44f149e7ba6f1d5c55ab513e779f32e52e`.
+
+The first review evaluated `24f81800466d986a52557afebfe0d8e69ecfd5d5`.
+Finding `SYNC-22-F1` showed that a bare working-memory path followed a remote
+cwd. The bounded revision uses the existing machine path syntax in primary
+guidance, conditional on local host creation, without rewriting the bare path or
+assuming it proves the creation host. Tests reproduced the old misrouting and
+verified the offered path with real `FileAccess.locate`, from parent and child
+requests with a synthetic remote cwd. The guidance is stable across cwd changes;
+the permission, sandbox, machines-off and auxiliary-request boundaries remain.
+The focused revision checks passed 154 tests plus two existing boundary cases.
+
+Windows x64 candidate `2.4.1-custom-lite.20261128.2` was rebuilt from
+`588434ee092f29b39ff7c8e8f0fd00ba8b46f5de`, with only this documentation
+changed afterward. It is 279,957,504 bytes, SHA256
+`1c53f58271df28421edc25fa6c26482f2341c170e888fa5d577bd9c50a15347f`.
+The prior `.20261128.1` build (SHA256
+`7ff8095c2123d25bff66f1a682c0cb8a35bcdf8c305206b2f1ac709e427df664`)
+is superseded and must not be exported. The refreshed candidate uses the
+`latest` storage channel, embedded WebUI and Bun `1.4.4+38afee6c8`.
+Version, Chinese help, embedded Windows x64 runtime and artifact verification
+passed. The isolated compiled service smoke passed authenticated API, embedded
+WebUI, client MCP and owned shutdown. The election loser exited 0; the stopped
+owner exited 1 and its registration was removed.
+
+The exact previous `2.3.0-custom-lite.20261122.2` executable imported a
+synthetic parent and child with six completed messages through the public API,
+then cold-read them after restart. The rebuilt `.20261128.2` candidate read the
+same private default `opencode.db`, with both session IDs, lineage, titles,
+message rows and creation directories unchanged. SQLite `quick_check` passed.
+All 65 previous migration records were preserved, and the only new one was
+`20261123115523_space`.
+No real user data, unfinished history, downgrade or live provider was tested.
+
+The focused native suite launches a real copied Windows executable with a
+single 30,000-UTF-16-unit synthetic PR-style body. Its digest matches the original
+argv, including multiline Chinese, quoting and trailing backslash. Overflow cases
+retain the `--body-file` hint and verify that DEBUG output and failure spans do
+not expose the raw argument. No PR comment was sent to exercise the tool.
+
+Frozen install, canonical migration and Protocol/Client generation, and 13
+scoped typechecks passed. The clean Windows root lint passes with the upstream
+greys-path correction; the complete root check is not green because of six Site
+imports that also fail on archived first-parent source with current deps. Two
+Client reconnect failures also reproduce under that comparison. The PR carries
+the applicable offline checks and final required CI; independent acceptance and
+release publication are separate and are not implied by this candidate.
+
 ## November 22 synchronization — draft candidate
 
 Issue #16 and PR #17 integrate official `e31eb1ebc1db7ab066e646a9b1bd2489a434de5b`

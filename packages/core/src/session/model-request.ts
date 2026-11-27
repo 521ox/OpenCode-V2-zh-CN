@@ -34,6 +34,9 @@ import { Cause, Context, Effect, Layer, Result, Stream } from "effect"
 import { HttpClientRequest, HttpClientResponse } from "effect/http"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { App } from "../app.js"
+import { Environment } from "../environment/index.js"
+import { EnvironmentPath } from "../environment/path.js"
+import { Flag } from "../flag.js"
 import { Instructions } from "../instructions/index.js"
 import { Permission } from "../permission.js"
 import { WebSearch } from "../websearch.js"
@@ -80,11 +83,6 @@ export interface Prepared<Event = SessionRequest> {
   readonly executeTool: (
     input: Parameters<Tool.Snapshot["execute"]>[0],
   ) => Effect.Effect<Tool.NormalizedResult, ExecuteError>
-  /**
-   * When `name` isn't a tool this request advertised but is one of its Code Mode tools, the expression a program calls
-   * it by, so the call can be recorded and run as the `execute` program it should have been.
-   */
-  readonly codeModeExpression?: (name: string) => string | undefined
 }
 
 export interface Tools extends Tool.Snapshot {
@@ -285,6 +283,18 @@ export const layer = Layer.effect(
     const websearch = yield* WebSearch.Service
     const store = yield* SessionStore.Service
     const app = yield* App.Service
+    const environment = yield* Environment.Service
+    const flags = yield* Flag.Service
+    const rulesPart = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
+      const rules = yield* store.rulesLocation(sessionID)
+      const toolPath =
+        rules.rules_directory && environment.local && (yield* flags.enabled("machines"))
+          ? EnvironmentPath.format(environment.id, rules.rules_directory)
+          : undefined
+      return SystemPart.make(
+        SessionRulesLocation.render(rules, toolPath && EnvironmentPath.parse(toolPath) ? toolPath : undefined),
+      )
+    })
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },
     >(kind: SessionRequestKind, input: Input, shape: (draft: SessionRequest, tools: Definitions) => Effect.Effect<S>) {
@@ -366,10 +376,7 @@ export const layer = Layer.effect(
         // TODO: Persist cache lineage so nested forks reuse the root session's cache key.
         promptCacheKey: /^ses_[0-9a-f]{64}$/.test(affinity) ? affinity.slice(4) : affinity,
         cache: model.cache?.ttl === undefined ? undefined : { ttl: model.cache.ttl },
-        system:
-          kind === "primary"
-            ? [...shaped.system, SystemPart.make(SessionRulesLocation.render(yield* store.rulesLocation(session.id)))]
-            : shaped.system,
+        system: kind === "primary" ? [...shaped.system, yield* rulesPart(session.id)] : shaped.system,
         // Strip the stored metadata hooks could read, so it never reaches the provider.
         messages: boundImages(
           unsupportedParts(
@@ -386,11 +393,7 @@ export const layer = Layer.effect(
           ),
         ),
         tools: [
-          ...Array.from(search.tools, ([name, t]) => ({
-            ...t,
-            name,
-            freeform: t.freeform && model.capabilities.freeform?.includes(t.freeform.type) ? t.freeform : undefined,
-          })),
+          ...Array.from(search.tools, ([name, t]) => ({ ...t, name })),
           ...(search.hosted ? [search.hosted] : []),
         ],
         toolChoice: input.toolChoice,
@@ -483,8 +486,6 @@ export const layer = Layer.effect(
         // catch them and turn a "no" into model-visible output. Recover them here as failures,
         // including declines a tool rethrew and its wrapper attached to a Tool.Error, as Promise
         // plugin tools do.
-        codeModeExpression: (name: string) =>
-          hooked.has(name) || !hooked.has("execute") ? undefined : input.tools?.codeModeExpression?.(name),
         executeTool: (call: Parameters<Prepared["executeTool"]>[0]) =>
           tools.execute({ ...call, definitions: search.tools }).pipe(
             Effect.catchCauseFilter(
@@ -519,5 +520,14 @@ export const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, SessionModelTransport.node, App.node, SessionStore.node, Permission.node, WebSearch.node],
+  deps: [
+    PluginHooks.node,
+    SessionModelTransport.node,
+    App.node,
+    SessionStore.node,
+    Permission.node,
+    WebSearch.node,
+    Environment.node,
+    Flag.node,
+  ],
 })

@@ -4,6 +4,7 @@ import path from "node:path"
 import { Cause, Effect, Exit, Formatter, Layer, Logger, Redacted, References, Tracer } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { EnvironmentToolsCatalog } from "@opencode/core/environment-tools/catalog"
+import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
 import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
@@ -37,7 +38,12 @@ const node = makeLocationNode({
     AppProcess.node,
   ],
 })
-const layer = (root: string, assert: Permission.Interface["assert"], run?: AppProcess.Interface["run"]) =>
+const layer = (
+  root: string,
+  assert: Permission.Interface["assert"],
+  run?: AppProcess.Interface["run"],
+  resolve?: FileAccess.Interface["resolve"],
+) =>
   AppNodeBuilder.build(LayerNode.group([Tool.node, FSUtil.node, Global.node, EffectFlock.node, node]), [
     Location.node.replace(
       Layer.succeed(Location.Service, location({ directory: AbsolutePath.make(path.join(root, "project")) })),
@@ -53,6 +59,7 @@ const layer = (root: string, assert: Permission.Interface["assert"], run?: AppPr
       }),
     ),
     ...(run ? [AppProcess.node.replace(Layer.mock(AppProcess.Service, { run }))] : []),
+    ...(resolve ? [FileAccess.node.replace(Layer.mock(FileAccess.Service, { resolve }))] : []),
   ])
 const call = (id: string, input: unknown) => ({
   sessionID: Session.ID.make("ses_e1_direct"),
@@ -75,6 +82,28 @@ const native = (file: string) =>
 const noSpawn: AppProcess.Interface["run"] = () => Effect.die("must not spawn")
 
 describe("DirectExecTool authorization", () => {
+  it.live("never uses a non-local working directory for a host process", () =>
+    withTempDir((tmp) => {
+      const absolute = AbsolutePath.make(path.join(tmp.path, "project"))
+      const machine = Environment.ID.make("remote")
+      const resolve: FileAccess.Interface["resolve"] = () =>
+        Effect.succeed({
+          absolute,
+          environment: Environment.unavailable(machine, new Error("offline fixture")),
+          machine,
+          resource: `remote:${absolute}`,
+        })
+      return Effect.gen(function* () {
+        const entry = yield* native(yield* prepare(tmp.path))
+        const registry = yield* Tool.Service
+        expect(yield* executeTool(registry, call("remote", { id: entry.id }))).toMatchObject({
+          status: "error",
+          error: { message: "direct_exec requires a local working directory" },
+        })
+      }).pipe(Effect.provide(layer(tmp.path, () => Effect.die("must not request permission"), noSpawn, resolve)))
+    }),
+  )
+
   it.live("registers argv-only schema and sends literal argv with shell:false and no caller environment", () =>
     withTempDir((tmp) => {
       const assertions: Permission.AssertInput[] = []
@@ -300,7 +329,7 @@ describe("DirectExecTool authorization", () => {
         const catalog = yield* EnvironmentToolsCatalog.make()
         const registry = yield* Tool.Service
         const first = yield* catalog.upsert({ name: "bun", path: file, source: "resolved" })
-        const body = '## 验收 🧪\r\n- "路径": C:\\test\\file\\\\"quoted"\n'.repeat(180) + "末尾 \\"
+        const body = '## 验收 🧪\r\n- "路径": C:\\test\\file\\\\"quoted"\n'.repeat(180).padEnd(29_996, "段") + "末尾 \\"
         for (const value of [body, "🧪".repeat(15_000)]) {
           const args = ["pr", "comment", "42", "--body", value, "", "a&b", "*.txt"]
           const result = yield* executeTool(registry, call("native", { id: first.entry.id, args: [script, ...args] }))

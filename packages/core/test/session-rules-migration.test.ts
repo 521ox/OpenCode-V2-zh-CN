@@ -53,6 +53,7 @@ test.each([false, true])("merged registry upgrades existing history (rules alrea
         "20261116213417_automation_active_index",
         "20261119211416_machine",
         "20261120004954_machine-key",
+        "20261123115523_space",
       ])
       yield* DatabaseMigration.apply(db)
       expect(yield* db.get(sql`SELECT time_active FROM project`)).toEqual({ time_active: 456 })

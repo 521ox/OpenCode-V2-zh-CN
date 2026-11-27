@@ -77,16 +77,17 @@ test.each([
     )
     const { app } = fixture
     try {
-      await app.waitForFrame((frame) => frame.includes("新版设计"))
+      await app.waitForFrame((frame) => frame.includes("新版设计") && frame.includes("在会话中查找"))
       await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
       const enabled = initial ?? true
       expect(fixture.enabled()).toBe(enabled)
       expect(fixture.current().experimental?.["new-designs"]).toBe(initial)
+      expect(fixture.current().experimental?.["session-find"]).toBeUndefined()
       app.mockInput.pressEnter()
       await app.waitFor(() => fixture.enabled() === !enabled)
       expect(fixture.current().experimental?.["new-designs"]).toBe(!enabled)
       await fixture.i18n().setLocale("en")
-      await app.waitForFrame((frame) => frame.includes("New designs"))
+      await app.waitForFrame((frame) => frame.includes("New designs") && frame.includes("Find in session"))
       expect(fixture.enabled()).toBe(!enabled)
       await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
       app.mockInput.pressEnter()

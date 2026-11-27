@@ -43,6 +43,7 @@ export function SubagentsTab(props: { sessionID: string }) {
   const [filter, updateFilter] = useStorage().memory("subagents-filter", { initial: { active: true } })
 
   const entries = createMemo<SubagentEntry[]>(() => {
+    if (!composer.active("subagents")) return []
     const current = session()
     if (!current) return []
 
