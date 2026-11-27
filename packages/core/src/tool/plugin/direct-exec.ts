@@ -4,7 +4,7 @@ import { ToolFailure } from "@opencode/ai/effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import { FSUtil } from "@opencode/util/fs-util"
 import { AppProcess } from "@opencode/util/process"
-import { Duration, Effect, PlatformError, Schema } from "effect"
+import { Duration, Effect, PlatformError, Redacted, Schema } from "effect"
 import { ChildProcess } from "effect/process"
 import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
 import { FileAccess } from "../../file-access.js"
@@ -133,8 +133,9 @@ export const Plugin = {
                   message: "Working directory changed while execution permission was pending",
                 })
               const startedAt = Date.now()
+              const launchArgs = valid.args.map((arg) => Redacted.make(arg))
               const result = yield* appProcess.run(
-                ChildProcess.make(executable.path, valid.args, {
+                ChildProcess.make(executable.path, launchArgs, {
                   cwd: canonical,
                   shell: false,
                   extendEnv: true,

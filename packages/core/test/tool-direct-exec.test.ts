@@ -1,7 +1,7 @@
 import { describe, expect } from "bun:test"
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { Cause, Effect, Layer } from "effect"
+import { Cause, Effect, Exit, Formatter, Layer, Logger, Redacted, References, Tracer } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { EnvironmentToolsCatalog } from "@opencode/core/environment-tools/catalog"
 import { FileAccess } from "@opencode/core/file-access"
@@ -109,7 +109,7 @@ describe("DirectExecTool authorization", () => {
         expect(command._tag).toBe("StandardCommand")
         if (command._tag === "StandardCommand") {
           expect(command.command).toBe(entry.path)
-          expect(command.args).toEqual(args)
+          expect(command.args.map((arg) => (Redacted.isRedacted(arg) ? Redacted.value(arg) : arg))).toEqual(args)
           expect(command.options).toMatchObject({
             cwd: path.join(tmp.path, "project"),
             shell: false,
@@ -311,15 +311,51 @@ describe("DirectExecTool authorization", () => {
             stdoutTruncated: false,
           })
         }
+        const sentinel = "synthetic-direct-exec-overflow-body"
+        const debug: string[] = []
+        const logger = Logger.make((entry) => {
+          if (entry.logLevel !== "Debug") return
+          const message = Formatter.format(entry.message)
+          if (message.includes("spawning process")) debug.push(message)
+        })
+        const spans: Tracer.NativeSpan[] = []
+        const tracer = Tracer.make({
+          span(options) {
+            const span = new Tracer.NativeSpan(options)
+            if (span.name === "AppProcess.run") spans.push(span)
+            return span
+          },
+        })
         // Both raw argv totals fit; the executable path or quote escaping pushes the command line over the limit.
-        for (const value of ["x".repeat(32_766 - script.length), '"'.repeat(17_000)]) {
-          const result = yield* executeTool(registry, call("overflow", { id: first.entry.id, args: [script, value] }))
+        for (const value of [sentinel.padEnd(32_766 - script.length, "x"), sentinel + '"'.repeat(17_000)]) {
+          const result = yield* executeTool(
+            registry,
+            call("overflow", { id: first.entry.id, args: [script, value] }),
+          ).pipe(
+            Effect.provideService(References.MinimumLogLevel, "Debug"),
+            Effect.provideService(Logger.CurrentLoggers, new Set([logger])),
+            Effect.withTracer(tracer),
+          )
           expect(result.status, `overflow with ${value.length} UTF-16 input units`).toBe("error")
           expect(result.error?.message).toContain("Windows command line")
           expect(result.error?.message).toContain("--body-file")
-          expect(result.error?.message).not.toContain(value.slice(0, 32))
+          expect(result.error?.message?.includes(sentinel)).toBe(false)
         }
         expect(yield* Effect.promise(() => readFile(`${script}.runs`, "utf8"))).toBe("ran\nran\n")
+        expect(debug).toHaveLength(2)
+        const failures = spans.flatMap((span) =>
+          span.status._tag === "Ended" && Exit.isFailure(span.status.exit)
+            ? Cause.prettyErrors(span.status.exit.cause, { includeCauseInStack: true })
+            : [],
+        )
+        expect(failures).toHaveLength(2)
+        expect({
+          debug: debug.some((line) => line.includes(sentinel)),
+          trace: failures.some((failure) => failure.message.includes(sentinel) || failure.stack?.includes(sentinel)),
+        }).toEqual({
+          debug: false,
+          trace: false,
+        })
         const second = yield* catalog.upsert({ name: "bun", path: replacement, source: "resolved" })
         expect(second.entry.id).toBe(first.entry.id)
         expect(

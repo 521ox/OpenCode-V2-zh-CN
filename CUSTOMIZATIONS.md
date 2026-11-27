@@ -170,6 +170,7 @@ On Windows, a long value such as a Markdown comment can be passed as one argumen
 The 32,767 UTF-16 code-unit limit applies to the entire native command line,
 including the executable path, separators, quoting, escaping and the terminating
 NUL. If a GitHub comment does not fit, pass a file explicitly with `gh --body-file`.
+Process-launch diagnostics redact argument values; execution approval still shows them.
 
 Both native tools have explicit TUI classifications and reuse the official
 `BlockTool` presentation: a raised block with a left border, selection-aware
