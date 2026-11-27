@@ -1,11 +1,15 @@
 import type { Plugin } from "@opencode/plugin/tui"
 import { Goal } from "@opencode/schema/goal"
+import type { ScrollBoxRenderable } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, on, onCleanup, Show, type Accessor } from "solid-js"
+import { useConfig } from "../../config"
 import { Keymap } from "../../context/keymap"
 import { useTheme } from "../../context/theme"
 import { useI18n } from "../../context/i18n"
 import type { Key, Translator } from "../../i18n"
 import { DialogFooter, DialogHeader, DialogLayout, type DialogFooterAction } from "../../ui/dialog"
+import { getScrollAcceleration } from "../../util/scroll"
 
 /**
  * The goal `/goal` set on a Session, from the goal plugin's RPC: fetched when the Session changes or the server
@@ -107,9 +111,30 @@ function showGoal(
   context.ui.dialog.show(() => <GoalDialog context={context} sessionID={sessionID} goal={goal} />)
 }
 
-function GoalDialog(props: { context: Plugin.Context; sessionID: string; goal: Accessor<Goal.State | undefined> }) {
+export function GoalDialog(props: {
+  context: {
+    ui: {
+      dialog: Pick<Plugin.Context["ui"]["dialog"], "clear">
+      toast: Pick<Plugin.Context["ui"]["toast"], "show">
+    }
+    client: {
+      session: Pick<Plugin.Context["client"]["session"], "command">
+    }
+  }
+  sessionID: string
+  goal: Accessor<Goal.State | undefined>
+}) {
   const { t } = useI18n()
   const theme = useTheme().surface("dialog")
+  const config = useConfig().data
+  const dimensions = useTerminalDimensions()
+  const maxHeight = createMemo(() =>
+    Math.max(
+      3,
+      Math.min(Math.floor(dimensions().height * 0.6), dimensions().height - Math.ceil(dimensions().height / 4) - 8),
+    ),
+  )
+  const [scroll, setScroll] = createSignal<ScrollBoxRenderable>()
   const goal = props.goal
   const run = (text: "pause" | "resume" | "clear") => {
     if (text === "clear") props.context.ui.dialog.clear()
@@ -159,6 +184,22 @@ function GoalDialog(props: { context: Plugin.Context; sessionID: string; goal: A
         enabled: goal() !== undefined,
         run: () => run("clear"),
       },
+      ...["up", "k"].map((bind) => ({
+        bind,
+        title: t("session.scrollUp"),
+        group: "Dialog",
+        run: () => scroll()?.scrollBy(-1),
+      })),
+      ...["down", "j"].map((bind) => ({
+        bind,
+        title: t("session.scrollDown"),
+        group: "Dialog",
+        run: () => scroll()?.scrollBy(1),
+      })),
+      { bind: "pageup", title: t("session.pageUp"), group: "Dialog", run: () => scroll()?.scrollBy(-maxHeight()) },
+      { bind: "pagedown", title: t("session.pageDown"), group: "Dialog", run: () => scroll()?.scrollBy(maxHeight()) },
+      { bind: "home", title: t("session.scrollTop"), group: "Dialog", run: () => scroll()?.scrollTo(0) },
+      { bind: "end", title: t("session.scrollBottom"), group: "Dialog", run: () => scroll()?.scrollTo(Infinity) },
     ],
   }))
 
@@ -170,20 +211,28 @@ function GoalDialog(props: { context: Plugin.Context; sessionID: string; goal: A
           footer={{ actions: { primary: actions() } }}
           legacyFooter={<DialogFooter actions={{ primary: actions() }} />}
         >
-          <box gap={1}>
-            <text fg={theme.text.base}>{current().objective}</text>
-            <box>
-              <text fg={goalColor(theme, current())} wrapMode="none">
-                ◎{" "}
-                {current().status === "active"
-                  ? t("feature.goal.active")
-                  : current().status === "paused"
-                    ? t("feature.goal.paused")
-                    : t("feature.goal.met")}
-              </text>
-              <Show when={current().reason}>{(reason) => <text fg={theme.text.muted}>{reason()}</text>}</Show>
+          <scrollbox
+            ref={setScroll}
+            maxHeight={maxHeight()}
+            contentOptions={{ minHeight: 0 }}
+            scrollbarOptions={{ visible: false }}
+            scrollAcceleration={getScrollAcceleration(config)}
+          >
+            <box gap={1}>
+              <text fg={theme.text.base}>{current().objective}</text>
+              <box>
+                <text fg={goalColor(theme, current())} wrapMode="none">
+                  ◎{" "}
+                  {current().status === "active"
+                    ? t("feature.goal.active")
+                    : current().status === "paused"
+                      ? t("feature.goal.paused")
+                      : t("feature.goal.met")}
+                </text>
+                <Show when={current().reason}>{(reason) => <text fg={theme.text.muted}>{reason()}</text>}</Show>
+              </box>
             </box>
-          </box>
+          </scrollbox>
         </DialogLayout>
       )}
     </Show>

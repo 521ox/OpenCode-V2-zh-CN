@@ -5,9 +5,12 @@ import { Permission } from "../permission.js"
 import { Context, Effect, Layer, Result } from "effect"
 import { Agent } from "../agent.js"
 import type { SessionRequestKind } from "@opencode/plugin/effect/session"
+import { CodeModeAgents } from "../codemode/agents.js"
+import { CodeModeApi } from "../codemode/api.js"
 import { CodeModeInstructions } from "../codemode/instructions.js"
 import { CodeModeTool } from "../codemode/tool.js"
 import { Database } from "../database/database.js"
+import { Environment } from "../environment/index.js"
 import { FileAccess } from "../file-access.js"
 import { FileMutation } from "../file-mutation.js"
 import { FileWrite } from "../file-write.js"
@@ -15,9 +18,11 @@ import { Flag } from "../flag.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { InstructionDiscovery } from "../instruction-discovery.js"
 import { Instructions } from "../instructions/index.js"
+import { AgentInstructions } from "../instructions/agent.js"
 import { InstructionBuiltIns } from "../instructions/builtins.js"
 import { Location } from "../location.js"
 import { MachineInstructions } from "../machine/instructions.js"
+import { Environments } from "../environment/environments.js"
 import { McpInstructions } from "../mcp/instructions.js"
 import { McpTool } from "../tool/mcp.js"
 import { ReferenceInstructions } from "../reference/instructions.js"
@@ -25,6 +30,8 @@ import { SkillInstructions } from "../skill/instructions.js"
 import { Tool } from "../tool.js"
 import { modelTools } from "../tool/model-policy.js"
 import { WebSearch } from "../websearch.js"
+import { SessionCwd } from "./cwd.js"
+import { SessionCwdInstructions } from "./cwd-instructions.js"
 import { AgentNotFoundError } from "./error.js"
 import { HostedWebSearch } from "./hosted-web-search.js"
 import { SessionHistory } from "./history.js"
@@ -92,7 +99,10 @@ const layer = Layer.effect(
     const discovery = yield* InstructionDiscovery.Service
     const entries = yield* InstructionEntry.Service
     const flags = yield* Flag.Service
+    const environment = yield* Environment.Service
     const location = yield* Location.Service
+    const sessionCwd = yield* SessionCwd.make
+    const cwdInstructions = yield* SessionCwdInstructions.Service
     const machineInstructions = yield* MachineInstructions.Service
     const mcpInstructions = yield* McpInstructions.Service
     const mcpTools = yield* McpTool.Service
@@ -103,6 +113,8 @@ const layer = Layer.effect(
     const store = yield* SessionStore.Service
     const registry = yield* Tool.Service
     const services = yield* CodeModeTool.services
+    const api = yield* CodeModeApi.Service
+    const agentRunner = yield* CodeModeAgents.Service
     const websearch = yield* WebSearch.Service
 
     const resolveModel = (
@@ -157,9 +169,15 @@ const layer = Layer.effect(
       const agent = yield* agents.select(session.agent)
       if (!agent.info) return yield* new AgentNotFoundError({ sessionID: session.id, agent: session.agent ?? agent.id })
       // Session permissions narrow discovery the same way they narrow the tool snapshot.
-      const permissions = Permission.merge(agent.info.permissions, session.permissions ?? [])
-      const [selected, hasWebSearch, fullCodeMode] = yield* Effect.all(
-        [Effect.result(models.select(session, model.available)), websearch.available(), flags.enabled("full_codemode")],
+      const policy = Permission.Policy.fromRules(agent.info.permissions, session.permissions ?? [])
+      const [selected, hasWebSearch, fullCodeMode, opencodeApi, codeModeAgents] = yield* Effect.all(
+        [
+          Effect.result(models.select(session, model.available)),
+          websearch.available(),
+          flags.enabled("full_codemode"),
+          flags.enabled("opencode_api"),
+          flags.enabled("codemode_agents"),
+        ],
         { concurrency: "unbounded" },
       )
       const fallbackRef = session.model ?? agent.info.model
@@ -169,23 +187,28 @@ const layer = Layer.effect(
       const primary =
         kind && (yield* Effect.result(models.resolve(session, model.available, { kind, agent: agent.id }, selected)))
       const hosted = primary && Result.isSuccess(primary) && HostedWebSearch.factoryFor(primary.success.model)
-      const policy = modelTools({
+      const toolPolicy = modelTools({
         model: policyModel,
         websearch: hasWebSearch || Boolean(hosted),
-        // An agent that can't run `execute` (such as explore) keeps every tool direct.
-        fullCodeMode: fullCodeMode && Tool.codeModeAvailable(permissions),
+        fullCodeMode: fullCodeMode && Tool.codeModeAvailable(policy),
       })
       // Hosted search replaces the registered local definition at request preparation, not inside a script.
-      if (hosted) policy.direct.add(HostedWebSearch.localName)
-      const tools = yield* registry.snapshot(permissions, {
+      if (hosted) toolPolicy.direct.add(HostedWebSearch.localName)
+      const tools = yield* registry.snapshot(policy, {
         services,
-        tools: policy,
+        api: Context.make(CodeModeApi.Service, opencodeApi ? api : CodeModeApi.disabled).pipe(
+          Context.add(Location.Service, location),
+        ),
+        ...(codeModeAgents ? { agents: Context.make(CodeModeAgents.Service, agentRunner) } : {}),
+        tools: toolPolicy,
       })
+      const cwd = yield* sessionCwd.current(session.id)
       const loaded = yield* Effect.all(
         {
-          builtins: builtins.load(),
+          builtins: builtins.load({ cwd: cwd && SessionCwd.describe(cwd, environment.id) }),
+          cwd: cwdInstructions.load(cwd, session.id),
           discovery: discovery.load(),
-          skills: skillInstructions.load(permissions),
+          skills: skillInstructions.load(policy),
           references: referenceInstructions.load(),
           mcp: mcpInstructions.load(tools),
           machines: machineInstructions.load(),
@@ -201,13 +224,17 @@ const layer = Layer.effect(
         // the date and environment, which vary by day and directory.
         instructions: Instructions.combine([
           CodeModeInstructions.make(tools.codeModeCatalog),
+          CodeModeAgents.instructions(codeModeAgents && tools.codeModeCatalog !== undefined),
           loaded.mcp,
           loaded.references,
           loaded.skills,
           loaded.machines,
           loaded.discovery,
           loaded.builtins,
+          loaded.cwd,
           loaded.entries,
+          // Last: it changes whenever the user switches agents, so the sources above stay cached.
+          AgentInstructions.make(agent.info),
         ]),
         tools: hosted && !hasWebSearch ? { ...tools, hostedSearchOnly: true as const } : tools,
         primary,
@@ -258,8 +285,11 @@ export const node = makeLocationNode({
   layer,
   deps: [
     Agent.node,
+    CodeModeAgents.node,
+    CodeModeApi.node,
     Model.node,
     Database.node,
+    Environment.node,
     FileAccess.node,
     FileMutation.node,
     FileWrite.node,
@@ -269,9 +299,11 @@ export const node = makeLocationNode({
     InstructionEntry.node,
     Location.node,
     MachineInstructions.node,
+    Environments.node,
     McpInstructions.node,
     McpTool.node,
     ReferenceInstructions.node,
+    SessionCwdInstructions.node,
     SessionRunnerModel.node,
     SessionModelRequest.node,
     SessionStore.node,

@@ -1,5 +1,23 @@
 # Minimal Custom V2 Distribution
 
+## November 28 synchronization
+
+Upstream's session Find experiment is off unless `experimental["session-find"]`
+is enabled in the TUI config. `/find` and the upstream Find shortcuts keep their
+behavior, with Chinese and English search controls. The model picker follows
+upstream's integration scoping and separate model speed selection. The fork does
+not enable upstream server experiments such as `compaction_jobs` in releases.
+When the flag is enabled, upstream checkpoints retain direct-child references
+and background work; the fork still delivers complete child conclusions to the
+immediate parent through the ordinary background-report path.
+
+`direct_exec` uses the current local working directory when `cwd` is omitted.
+If a session's current working directory is on another machine, give a local
+`cwd` or use the upstream shell for remote work. A remote directory never becomes
+the working directory of a host process. The root session's stored creation
+directory is separate from the current working directory and still anchors the
+shared working-memory path.
+
 ## November 22 synchronization
 
 The current upstream TUI enables new designs by default. Users can turn them

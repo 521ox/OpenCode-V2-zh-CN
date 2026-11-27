@@ -27,6 +27,7 @@ export async function renderLocal(
     sessions?: SessionInfo[]
     preferences?: Partial<ModelPreference>
     args?: Args
+    config?: Parameters<typeof createTuiResolvedConfig>[0]
     fetch?: FetchHandler
   } = {},
 ) {
@@ -61,7 +62,7 @@ export async function renderLocal(
     () => (
       <TestTuiContexts paths={{ state: temporary.path }}>
         <ArgsProvider {...input.args}>
-          <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en", ...input.config })}>
             <I18nProvider>
               <Keymap.Provider>
                 <ThemeProvider mode="dark" source={{ discover: async () => ({}) }}>

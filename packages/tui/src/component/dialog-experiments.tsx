@@ -30,6 +30,11 @@ export const experiments: Experiment[] = [
     title: "main.experiments.tuiTools",
     description: "main.experiments.tuiToolsDescription",
   },
+  {
+    id: "session-find",
+    title: "session.find",
+    description: "session.find.description",
+  },
 ]
 
 export function DialogExperiments() {

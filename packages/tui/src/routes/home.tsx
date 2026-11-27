@@ -17,8 +17,6 @@ import { useExit } from "../context/exit"
 import { FadeInText } from "../component/fade-in-text"
 import { useI18n } from "../context/i18n"
 
-let once = false
-
 export function Home() {
   const { t } = useI18n()
   const placeholder = () => ({
@@ -28,6 +26,7 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const [ref, setRef] = createSignal<PromptRef | undefined>()
+  const [startup, setStartup] = createSignal<string>()
   const args = useArgs()
   const local = useLocal()
   const editor = useEditorContext()
@@ -42,9 +41,10 @@ export function Home() {
 
   // Track only the route location and (when absent) the default location; location.set
   // reads other signals internally and tracking them would re-assert the route location
-  // after the user overrides it with /cd.
+  // after the user overrides it with /cd. Copy the fields: navigating Home to Home reconciles
+  // the route's location object in place, so tracking the object alone misses the change.
   createEffect(() => {
-    const target = currentLocation()
+    const target = { ...currentLocation() }
     untrack(() => location.set(target))
   })
 
@@ -55,9 +55,11 @@ export function Home() {
   const bind = (r: PromptRef | undefined) => {
     setRef(r)
     promptRef.set(r)
-    if (once || !r || route.prompt || !args.prompt) return
-    r.set({ text: args.prompt, files: [], agents: [], pasted: [] })
-    once = true
+    if (!r || route.prompt) return
+    const text = args.takePrompt()
+    if (!text) return
+    r.set({ text, files: [], agents: [], pasted: [] })
+    setStartup(text)
   }
 
   createEffect(() => {
@@ -70,12 +72,12 @@ export function Home() {
   // Wait for everything submit needs before auto-submitting --prompt; it runs once.
   createEffect(() => {
     const r = ref()
+    const text = startup()
     if (sent) return
-    if (!r) return
+    if (!r || !text) return
     if (!local.model.ready || !local.model.catalogReady) return
     if (!local.agent.current() || !local.model.current()) return
-    if (!args.prompt) return
-    if (r.current.text !== args.prompt) return
+    if (r.current.text !== text) return
     sent = true
     r.submit()
   })
