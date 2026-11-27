@@ -329,7 +329,7 @@ describe("DirectExecTool authorization", () => {
         const catalog = yield* EnvironmentToolsCatalog.make()
         const registry = yield* Tool.Service
         const first = yield* catalog.upsert({ name: "bun", path: file, source: "resolved" })
-        const body = '## 验收 🧪\r\n- "路径": C:\\test\\file\\\\"quoted"\n'.repeat(180) + "末尾 \\"
+        const body = '## 验收 🧪\r\n- "路径": C:\\test\\file\\\\"quoted"\n'.repeat(180).padEnd(29_996, "段") + "末尾 \\"
         for (const value of [body, "🧪".repeat(15_000)]) {
           const args = ["pr", "comment", "42", "--body", value, "", "a&b", "*.txt"]
           const result = yield* executeTool(registry, call("native", { id: first.entry.id, args: [script, ...args] }))
