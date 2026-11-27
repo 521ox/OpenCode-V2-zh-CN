@@ -166,6 +166,11 @@ stdin or background execution. Catalog membership is not execution permission;
 executable identity and working directory are checked around approval. Use the
 ordinary shell tool for operations that require shell semantics.
 
+On Windows, a long value such as a Markdown comment can be passed as one argument.
+The 32,767 UTF-16 code-unit limit applies to the entire native command line,
+including the executable path, separators, quoting, escaping and the terminating
+NUL. If a GitHub comment does not fit, pass a file explicitly with `gh --body-file`.
+
 Both native tools have explicit TUI classifications and reuse the official
 `BlockTool` presentation: a raised block with a left border, selection-aware
 click handling, and the standard running, permission and error display. Click

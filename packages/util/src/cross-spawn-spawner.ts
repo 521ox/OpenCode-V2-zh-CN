@@ -390,7 +390,13 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
     Effect.callback<Spawned, PlatformError.PlatformError>((resume) => {
       const closed = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const exited = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
-      const proc = launch(file, command.args.map(unwrap), opts)
+      let proc: NodeChildProcess.ChildProcess
+      try {
+        // cross-spawn can invoke cmd.exe when its Windows executable lookup fails, even with shell: false.
+        proc = (opts.shell === false ? NodeChildProcess.spawn : launch)(file, command.args.map(unwrap), opts)
+      } catch (err) {
+        return resume(Effect.fail(toPlatformError("spawn", toError(err), command)))
+      }
       let settle = () => {}
       let end = false
       let exit: readonly [code: number | null, signal: NodeJS.Signals | null] | undefined

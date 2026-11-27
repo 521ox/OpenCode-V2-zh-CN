@@ -8,6 +8,7 @@ import { Effect, Exit, Fiber, Stream } from "effect"
 import { ChildProcess } from "effect/process"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { AppProcess } from "@opencode/util/process"
+import { withTempDir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 
 // Every test spawns a real child, so all of them use the live clock. The spawner's 1s post-exit capture deadline
@@ -59,6 +60,19 @@ describe("AppProcess", () => {
         expect(error).toBeInstanceOf(AppProcess.AppProcessError)
         expect(error.command).toBe(NODE)
       }),
+    )
+
+    const windows = process.platform === "win32" ? it.live : it.live.skip
+    windows("explicit shell:false rejects a batch file instead of running it through cmd.exe", () =>
+      withTempDir((tmp) =>
+        Effect.gen(function* () {
+          const script = path.join(tmp.path, "runner.cmd")
+          yield* Effect.promise(() => fs.writeFile(script, "@exit /b 0\r\n"))
+          const svc = yield* AppProcess.Service
+          const error = yield* svc.run(ChildProcess.make(script, [], { shell: false })).pipe(Effect.flip)
+          expect(error).toBeInstanceOf(AppProcess.AppProcessError)
+        }),
+      ),
     )
 
     it.live(

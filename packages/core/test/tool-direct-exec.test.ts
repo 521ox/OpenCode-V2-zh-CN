@@ -160,13 +160,13 @@ describe("DirectExecTool authorization", () => {
           { timeoutMs: 99 },
           { timeoutMs: 600_001 },
           { timeoutMs: 100.5 },
-          { args: ["\0"] },
-          { args: ["x".repeat(4097)] },
-          { args: Array(9).fill("x".repeat(4096)) },
           { args: Array(129).fill("x") },
         ]) {
           expect((yield* executeTool(registry, call("invalid", { id: entry.id, ...extra }))).status).toBe("error")
         }
+        const nul = yield* executeTool(registry, call("nul", { id: entry.id, args: ["before\0after"] }))
+        expect(nul.status).toBe("error")
+        expect(nul.error?.message).toContain("NUL")
         expect((yield* executeTool(registry, call("raw", { id: file }))).status).toBe("error")
         expect((yield* executeTool(registry, call("unknown", { id: "unknown" }))).status).toBe("error")
         const script = path.join(tmp.path, "script.cmd")
@@ -279,28 +279,47 @@ describe("DirectExecTool authorization", () => {
   )
 
   const windows = process.platform === "win32" ? it.live : it.live.skip
-  windows("executes a synthetic copied native binary with argv unchanged and a program-wide stable ID", () =>
+  windows("passes long native argv intact, rejects full command-line overflow, and preserves the program ID", () =>
     withTempDir((tmp) => {
       const assertions: Permission.AssertInput[] = []
       return Effect.gen(function* () {
         yield* prepare(tmp.path)
-        const file = path.join(tmp.path, "bun.exe")
+        const file = path.join(tmp.path, "bun child.exe")
         const replacement = path.join(tmp.path, "bun-new.exe")
         const script = path.join(tmp.path, "project", "argv.js")
         yield* Effect.promise(async () => {
           await copyFile(process.execPath, file)
           await copyFile(process.execPath, replacement)
-          await writeFile(script, "process.stdout.write(JSON.stringify(process.argv.slice(2)))")
+          await writeFile(
+            script,
+            `const { appendFileSync } = require("node:fs")
+             appendFileSync(import.meta.path + ".runs", "ran\\n")
+             process.stdout.write(Bun.CryptoHasher.hash("sha256", JSON.stringify(process.argv.slice(2)), "hex"))`,
+          )
         })
         const catalog = yield* EnvironmentToolsCatalog.make()
         const registry = yield* Tool.Service
         const first = yield* catalog.upsert({ name: "bun", path: file, source: "resolved" })
-        const result = yield* executeTool(
-          registry,
-          call("native-1", { id: first.entry.id, args: [script, "a&b", "x y", "*.txt"] }),
-        )
-        expect(result.status).toBe("completed")
-        expect(JSON.parse(result.output.stdout)).toEqual(["a&b", "x y", "*.txt"])
+        const body = '## 验收 🧪\r\n- "路径": C:\\test\\file\\\\"quoted"\n'.repeat(180) + "末尾 \\"
+        for (const value of [body, "🧪".repeat(15_000)]) {
+          const args = ["pr", "comment", "42", "--body", value, "", "a&b", "*.txt"]
+          const result = yield* executeTool(registry, call("native", { id: first.entry.id, args: [script, ...args] }))
+          if (result.status === "error") throw new Error(result.error?.message)
+          expect(result.output).toMatchObject({
+            exitCode: 0,
+            stdout: Bun.CryptoHasher.hash("sha256", JSON.stringify(args), "hex"),
+            stdoutTruncated: false,
+          })
+        }
+        // Both raw argv totals fit; the executable path or quote escaping pushes the command line over the limit.
+        for (const value of ["x".repeat(32_766 - script.length), '"'.repeat(17_000)]) {
+          const result = yield* executeTool(registry, call("overflow", { id: first.entry.id, args: [script, value] }))
+          expect(result.status, `overflow with ${value.length} UTF-16 input units`).toBe("error")
+          expect(result.error?.message).toContain("Windows command line")
+          expect(result.error?.message).toContain("--body-file")
+          expect(result.error?.message).not.toContain(value.slice(0, 32))
+        }
+        expect(yield* Effect.promise(() => readFile(`${script}.runs`, "utf8"))).toBe("ran\nran\n")
         const second = yield* catalog.upsert({ name: "bun", path: replacement, source: "resolved" })
         expect(second.entry.id).toBe(first.entry.id)
         expect(
@@ -310,7 +329,7 @@ describe("DirectExecTool authorization", () => {
           )).status,
         ).toBe("completed")
         const direct = assertions.filter((request) => request.action === "direct_exec")
-        expect(direct.map((request) => request.save)).toEqual([[first.entry.id], [first.entry.id]])
+        expect(direct.map((request) => request.save)).toEqual(Array.from({ length: 5 }, () => [first.entry.id]))
         expect(assertions.filter((request) => request.action === "external_directory")).toHaveLength(1)
       }).pipe(
         Effect.provide(
