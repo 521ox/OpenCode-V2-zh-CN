@@ -4,7 +4,7 @@ import { ToolFailure } from "@opencode/ai/effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import { FSUtil } from "@opencode/util/fs-util"
 import { AppProcess } from "@opencode/util/process"
-import { Duration, Effect, Schema } from "effect"
+import { Duration, Effect, PlatformError, Redacted, Schema } from "effect"
 import { ChildProcess } from "effect/process"
 import { Environment } from "../../environment/index.js"
 import { EnvironmentToolsCatalog } from "../../environment-tools/catalog.js"
@@ -14,8 +14,6 @@ import { Permission } from "../../permission.js"
 const DEFAULT_TIMEOUT_MS = 120_000
 const MAX_TIMEOUT_MS = 600_000
 const MAX_ARGS = 128
-const MAX_ARG_LENGTH = 4_096
-const MAX_ARGS_LENGTH = 32_768
 const MAX_OUTPUT_BYTES = 65_536
 
 export const Input = Schema.toStandardSchemaV1(
@@ -54,10 +52,7 @@ const validateInput = (input: typeof Input.Type) => {
   if (!id || id.length > 256) return new ToolFailure({ message: "Catalog entry id must be 1 to 256 characters" })
   if (args.length > MAX_ARGS)
     return new ToolFailure({ message: `Direct execution accepts at most ${MAX_ARGS} arguments` })
-  if (args.some((arg) => arg.length > MAX_ARG_LENGTH || arg.includes("\0")))
-    return new ToolFailure({ message: `Each argument must be at most ${MAX_ARG_LENGTH} characters and contain no NUL` })
-  if (args.reduce((total, arg) => total + arg.length, 0) > MAX_ARGS_LENGTH)
-    return new ToolFailure({ message: `Direct execution arguments are limited to ${MAX_ARGS_LENGTH} characters` })
+  if (args.some((arg) => arg.includes("\0"))) return new ToolFailure({ message: "Arguments must not contain NUL" })
   if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > MAX_TIMEOUT_MS)
     return new ToolFailure({ message: `timeoutMs must be an integer from 100 to ${MAX_TIMEOUT_MS}` })
   if (input.cwd !== undefined && (!input.cwd.trim() || input.cwd.length > 4_096 || input.cwd.includes("\0")))
@@ -70,6 +65,13 @@ const sameExecutable = (left: EnvironmentToolsCatalog.Entry, right: EnvironmentT
   left.identity.size === right.identity.size &&
   left.identity.modifiedAt === right.identity.modifiedAt
 
+const isWindowsLaunchTooLong = (error: AppProcess.AppProcessError) => {
+  if (process.platform !== "win32" || !PlatformError.isPlatformError(error.cause)) return false
+  const reason = error.cause.reason
+  const cause = reason.cause
+  return reason.method === "spawn" && cause instanceof Error && "code" in cause && cause.code === "ENAMETOOLONG"
+}
+
 export const Plugin = {
   id: "opencode.tool.direct-exec",
   effect: Effect.fn("DirectExecTool.Plugin")(function* (ctx: Context) {
@@ -77,7 +79,7 @@ export const Plugin = {
     const fs = yield* FSUtil.Service
     const access = yield* FileAccess.Service
     const permission = yield* Permission.Service
-    const process = yield* AppProcess.Service
+    const appProcess = yield* AppProcess.Service
     const directory = Effect.fn("DirectExecTool.directory")(function* (target: string) {
       const canonical = yield* fs.realPath(target)
       const stat = yield* fs.stat(canonical)
@@ -132,8 +134,9 @@ export const Plugin = {
                   message: "Working directory changed while execution permission was pending",
                 })
               const startedAt = Date.now()
-              const result = yield* process.run(
-                ChildProcess.make(executable.path, valid.args, {
+              const launchArgs = valid.args.map((arg) => Redacted.make(arg))
+              const result = yield* appProcess.run(
+                ChildProcess.make(executable.path, launchArgs, {
                   cwd: canonical,
                   shell: false,
                   extendEnv: true,
@@ -172,13 +175,17 @@ export const Plugin = {
                 },
               }
             }).pipe(
-              Effect.mapError((error) =>
-                error instanceof ToolFailure
-                  ? error
-                  : error instanceof EnvironmentToolsCatalog.CatalogError
-                    ? new ToolFailure({ message: error.message })
-                    : new ToolFailure({ message: "Unable to execute cataloged program directly", error }),
-              ),
+              Effect.mapError((error) => {
+                if (error instanceof ToolFailure) return error
+                if (error instanceof EnvironmentToolsCatalog.CatalogError)
+                  return new ToolFailure({ message: error.message })
+                if (error instanceof AppProcess.AppProcessError && isWindowsLaunchTooLong(error))
+                  return new ToolFailure({
+                    message:
+                      "The Windows command line or launch path is too long. The limit for the entire command line is 32,767 UTF-16 code units including the final NUL. Shorten the arguments or use a file option such as gh --body-file.",
+                  })
+                return new ToolFailure({ message: "Unable to execute cataloged program directly", error })
+              }),
             ),
         }),
       )
@@ -189,7 +196,5 @@ export const constants = {
   DEFAULT_TIMEOUT_MS,
   MAX_TIMEOUT_MS,
   MAX_ARGS,
-  MAX_ARG_LENGTH,
-  MAX_ARGS_LENGTH,
   MAX_OUTPUT_BYTES,
 } as const
