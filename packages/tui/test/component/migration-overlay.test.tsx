@@ -4,6 +4,7 @@ import { testRender } from "@opentui/solid"
 import { ConfigProvider } from "../../src/config"
 import { MigrationOverlay } from "../../src/component/migration-overlay"
 import { ClientProvider } from "../../src/context/client"
+import { I18nProvider } from "../../src/context/i18n"
 import { ThemeProvider } from "../../src/context/theme"
 import { ToastProvider, useToast, type ToastContext } from "../../src/ui/toast"
 import { emptyThemeSource } from "../fixture/fixture"
@@ -31,13 +32,15 @@ async function mount(responses: Array<() => Response>) {
   const app = await testRender(() => (
     <TestTuiContexts>
       <ClientProvider api={createApi(calls.fetch)}>
-        <ConfigProvider config={createTuiResolvedConfig()}>
-          <ThemeProvider mode="dark" source={emptyThemeSource}>
-            <ToastProvider>
-              <Probe />
-              <MigrationOverlay interval={1} />
-            </ToastProvider>
-          </ThemeProvider>
+        <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+          <I18nProvider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <ToastProvider>
+                <Probe />
+                <MigrationOverlay interval={1} />
+              </ToastProvider>
+            </ThemeProvider>
+          </I18nProvider>
         </ConfigProvider>
       </ClientProvider>
     </TestTuiContexts>

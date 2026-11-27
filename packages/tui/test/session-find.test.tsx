@@ -12,6 +12,7 @@ import {
 } from "../src/routes/session/find"
 import type { SessionRow } from "../src/routes/session/rows"
 import { createAppFixture } from "./fixture/app"
+import { waitForHighlightedFrame } from "./fixture/frame"
 import { directory, json } from "./fixture/tui-client"
 
 const chunk = (text: string): TextChunk => ({ __isChunk: true, text })
@@ -293,21 +294,21 @@ test.each(["en", "zh"] as const)("Find renders and navigates matches in %s", asy
   await app.mockInput.typeText("needle")
   // The first match is the oldest, so the transcript scrolls up to it.
   await app.waitForFrame((frame) => frame.includes("Find · 1 of 5") && frame.includes("Where is the needle?"))
-  await app.waitFor(() => painted().length === 4)
+  await waitForHighlightedFrame(app, () => painted().length === 4)
   expect(painted()).toEqual(["needle", "Needle", "needle", "needle"])
-  await app.waitFor(() => currentOn().length === 1)
+  await waitForHighlightedFrame(app, () => currentOn().length === 1)
   expect(currentOn()).toEqual(["Where is the needle?"])
 
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Find · 2 of 5"))
-  await app.waitFor(() => currentOn()[0] === "The Needle is in the code:")
+  await waitForHighlightedFrame(app, () => currentOn()[0] === "The Needle is in the code:")
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Find · 3 of 5"))
-  await app.waitFor(() => currentOn()[0] === "const needle = 1")
+  await waitForHighlightedFrame(app, () => currentOn()[0] === "const needle = 1")
   // The cell's text also appears in the code block above it.
   app.mockInput.pressEnter()
   await app.waitForFrame((frame) => frame.includes("Find · 4 of 5"))
-  await app.waitFor(() => currentOn().length === 1 && currentOn()[0]!.includes("hay"))
+  await waitForHighlightedFrame(app, () => currentOn().length === 1 && currentOn()[0]!.includes("hay"))
   app.mockInput.pressArrow("up")
   app.mockInput.pressArrow("up")
   app.mockInput.pressArrow("up")
@@ -321,7 +322,7 @@ test.each(["en", "zh"] as const)("Find renders and navigates matches in %s", asy
     const focused = app.renderer.currentFocusedRenderable
     return focused instanceof TextareaRenderable && !(focused instanceof InputRenderable)
   })
-  await app.waitFor(() => painted().length === 0)
+  await waitForHighlightedFrame(app, () => painted().length === 0)
 
   // Matches count what markdown shows: not the fence's language, and across concealed markers.
   const search = async (query: string) => {
@@ -335,7 +336,7 @@ test.each(["en", "zh"] as const)("Find renders and navigates matches in %s", asy
   }
   await search("typescript")
   await app.waitForFrame((frame) => frame.includes("Find · 1 of 1"))
-  await app.waitFor(() => currentOn("typescript")[0] === "We use typescript, foobar.")
+  await waitForHighlightedFrame(app, () => currentOn("typescript")[0] === "We use typescript, foobar.")
   // A code block streamed in after the current match while Find is open is counted and painted.
   app.events.emit({
     id: "evt_find_stream",
@@ -344,15 +345,15 @@ test.each(["en", "zh"] as const)("Find renders and navigates matches in %s", asy
     data: { sessionID, assistantMessageID: "message-01a", ordinal: 0, delta: "\n\n```sh\necho typescript\n```" },
   })
   await app.waitForFrame((frame) => frame.includes("Find · 1 of 2"))
-  await app.waitFor(() => painted("typescript").length === 2)
+  await waitForHighlightedFrame(app, () => painted("typescript").length === 2)
   app.mockInput.pressEscape()
   await app.waitForFrame((frame) => frame.includes("Demo Model"))
   await search("foobar")
   await app.waitForFrame((frame) => frame.includes("Find · 1 of 1"))
-  await app.waitFor(() => currentOn("foobar")[0] === "We use typescript, foobar.")
+  await waitForHighlightedFrame(app, () => currentOn("foobar")[0] === "We use typescript, foobar.")
   app.mockInput.pressEscape()
   await app.waitForFrame((frame) => frame.includes("Demo Model"))
   await search("haystack")
   await app.waitForFrame((frame) => frame.includes("Find · 1 of 1"))
-  await app.waitFor(() => currentOn("haystack")[0] === "The haystack was summarized.")
+  await waitForHighlightedFrame(app, () => currentOn("haystack")[0] === "The haystack was summarized.")
 })

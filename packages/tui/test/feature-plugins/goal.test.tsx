@@ -3,6 +3,7 @@ import { testRender } from "@opentui/solid"
 import { expect, test } from "bun:test"
 import { createSignal, onMount } from "solid-js"
 import { ConfigProvider } from "../../src/config"
+import { I18nProvider } from "../../src/context/i18n"
 import { Keymap } from "../../src/context/keymap"
 import { ThemeProvider } from "../../src/context/theme"
 import { GoalDialog } from "../../src/feature-plugins/prompt/goal"
@@ -65,16 +66,18 @@ test.each([
     const app = await testRender(
       () => (
         <TestTuiContexts directory={temporary.path} paths={{ state: temporary.path, home: temporary.path }}>
-          <ConfigProvider config={createTuiResolvedConfig()}>
-            <ThemeProvider mode="dark" source={emptyThemeSource}>
-              <Keymap.Provider>
-                <ToastProvider>
-                  <DialogProvider>
-                    <Open />
-                  </DialogProvider>
-                </ToastProvider>
-              </Keymap.Provider>
-            </ThemeProvider>
+          <ConfigProvider config={createTuiResolvedConfig({ locale: "en" })}>
+            <I18nProvider>
+              <ThemeProvider mode="dark" source={emptyThemeSource}>
+                <Keymap.Provider>
+                  <ToastProvider>
+                    <DialogProvider>
+                      <Open />
+                    </DialogProvider>
+                  </ToastProvider>
+                </Keymap.Provider>
+              </ThemeProvider>
+            </I18nProvider>
           </ConfigProvider>
         </TestTuiContexts>
       ),

@@ -8,6 +8,7 @@ import { ConfigProvider } from "../../../src/config"
 import { ArgsProvider } from "../../../src/context/args"
 import { ClientProvider } from "../../../src/context/client"
 import { DataProvider } from "../../../src/context/data"
+import { I18nProvider } from "../../../src/context/i18n"
 import { Keymap } from "../../../src/context/keymap"
 import { LocalProvider, useLocal } from "../../../src/context/local"
 import { LocationProvider } from "../../../src/context/location"
@@ -76,38 +77,41 @@ async function renderSessionList(
             <ArgsProvider>
               <ConfigProvider
                 config={createTuiResolvedConfig({
+                  locale: "en",
                   tabs: { mode: "off" },
                   animations: false,
                   experimental: { "new-designs": options.newDesigns ?? false },
                 })}
               >
-                <Keymap.Provider>
-                  <ToastProvider>
-                    <RouteProvider
-                      initialRoute={
-                        options.current ? { type: "session", sessionID: options.current } : { type: "home" }
-                      }
-                    >
-                      <ClientProvider api={createApi(calls.fetch)}>
-                        <PermissionProvider>
-                          <DataProvider directory={directory}>
-                            <LocationProvider>
-                              <SessionTabsProvider>
-                                <ThemeProvider mode="dark" source={emptyThemeSource}>
-                                  <LocalProvider>
-                                    <DialogProvider>
-                                      <Probe />
-                                    </DialogProvider>
-                                  </LocalProvider>
-                                </ThemeProvider>
-                              </SessionTabsProvider>
-                            </LocationProvider>
-                          </DataProvider>
-                        </PermissionProvider>
-                      </ClientProvider>
-                    </RouteProvider>
-                  </ToastProvider>
-                </Keymap.Provider>
+                <I18nProvider>
+                  <Keymap.Provider>
+                    <ToastProvider>
+                      <RouteProvider
+                        initialRoute={
+                          options.current ? { type: "session", sessionID: options.current } : { type: "home" }
+                        }
+                      >
+                        <ClientProvider api={createApi(calls.fetch)}>
+                          <PermissionProvider>
+                            <DataProvider directory={directory}>
+                              <LocationProvider>
+                                <SessionTabsProvider>
+                                  <ThemeProvider mode="dark" source={emptyThemeSource}>
+                                    <LocalProvider>
+                                      <DialogProvider>
+                                        <Probe />
+                                      </DialogProvider>
+                                    </LocalProvider>
+                                  </ThemeProvider>
+                                </SessionTabsProvider>
+                              </LocationProvider>
+                            </DataProvider>
+                          </PermissionProvider>
+                        </ClientProvider>
+                      </RouteProvider>
+                    </ToastProvider>
+                  </Keymap.Provider>
+                </I18nProvider>
               </ConfigProvider>
             </ArgsProvider>
           </StorageProvider>
